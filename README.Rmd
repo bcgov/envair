@@ -1,30 +1,44 @@
 ---
-title: "Readme"
-author: "Jerome Robles"
-date: "June 10, 2019"
-output: html_document
+output: 
+github_document:
+  html_preview: true
+
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r, echo = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+# envair 
+
+## Overview
+
+This is an R packages developed by the BC Ministry of Environment and Climate Change Strategy  Knowledge Management Branch/Environmental and Climate Monitoring Section (ENV/KMB/ECMS) air quality monitoring unit. The package allows retrieval and processing of air quality monitoring data.
+
+## Installation 
+
+You can install `envair` directly from this GitHub repository. To proceed, you will need the [remotes](https://cran.r-project.org/package=remotes) package:
+
+```{r, eval=FALSE}
+install.packages("remotes")
 ```
 
-## R Markdown
+Next, install and load the `envair` package using `remotes::install_github()`:
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+```{r, eval=FALSE}
+remotes::install_github("bcgov/envair")
+library(envair)
 ```
 
-## Including Plots
+## Functions
 
-You can also embed plots, for example:
+`GET_STATION_DETAILS_FTP()`  Retrieves station details
 
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
+`GET_VALID_DATA_PARAMETER()` Retrieves data that has completed ENV's annual validation process. Parameters include PM25, PM10, NO, NO2, SO2, TRS, H2S
+
+`GET_RECENT_DATA_STATION_FTP()` Retrieve the most recent data. 
+
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
