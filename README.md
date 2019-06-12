@@ -1,18 +1,40 @@
-envair
-Overview
-This is an R packages developed by the BC Ministry of Environment and Climate Change Strategy Knowledge Management Branch/Environmental and Climate Monitoring Section (ENV/KMB/ECMS) air quality monitoring unit. The package allows retrieval and processing of air quality monitoring data.
+---
+output: 
+html_document:
+  keep_md: true
+---
 
-Installation
-You can install envair directly from this GitHub repository. To proceed, you will need the remotes package:
 
+# envair 
+
+## Overview
+
+This is an R packages developed by the BC Ministry of Environment and Climate Change Strategy  Knowledge Management Branch/Environmental and Climate Monitoring Section (ENV/KMB/ECMS) air quality monitoring unit. The package allows retrieval and processing of air quality monitoring data.
+
+## Installation 
+
+You can install `envair` directly from this GitHub repository. To proceed, you will need the [remotes](https://cran.r-project.org/package=remotes) package:
+
+
+```r
 install.packages("remotes")
-Next, install and load the envair package using remotes::install_github():
+```
 
+Next, install and load the `envair` package using `remotes::install_github()`:
+
+
+```r
 remotes::install_github("bcgov/envair")
 library(envair)
-Functions
-GET_STATION_DETAILS_FTP() Retrieves station details
+```
 
-GET_VALID_DATA_PARAMETER() Retrieves data that has completed ENV’s annual validation process. Parameters include PM25, PM10, NO, NO2, SO2, TRS, H2S
+## Functions
 
-GET_RECENT_DATA_STATION_FTP() Retrieve the most recent data.
+`GET_STATION_DETAILS_FTP()`  Retrieves station details
+
+`GET_VALID_DATA_PARAMETER()` Retrieves data that has completed ENV's annual validation process. Parameters include PM25, PM10, NO, NO2, SO2, TRS, H2S
+
+`GET_RECENT_DATA_STATION_FTP()` Retrieve the most recent data. 
+
+
+

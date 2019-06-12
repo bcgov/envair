@@ -1,7 +1,7 @@
 ---
 output: 
-md_document:
-  html_preview: false
+html_document:
+  keep_md: true
 ---
 
 ```{r, echo = FALSE}
