@@ -15,5 +15,7 @@ GET_VALID_DATA_PARAMETER(data.parameter, year.start, year.end = NULL)
 GET_VALID_DATA_PARAMETER()}
 }
 \description{
-This function retrieves parameter data from the open data portal
+This function retrieves parameter data from the open data portal by saving in temporary folder.
+The temporary folder is in  the working directory ~/TEMP
+file is only downloaded if MD5 checksum of file is different than specified in FTP
 }

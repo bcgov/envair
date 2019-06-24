@@ -2,7 +2,7 @@
 % Please edit documentation in R/envairfunctions.R
 \name{RUN_PACKAGE}
 \alias{RUN_PACKAGE}
-\title{Install and Load specific libraries that are useful for the ENV AIR package}
+\title{Install and Load specific libraries that are useful for the envair package}
 \usage{
 RUN_PACKAGE(packages = c("dplyr", "ggplot2", "reshape", "lazyeval",
   "zoo", "DataCombine", "data.table", "fasttime", "readr", "RCurl",

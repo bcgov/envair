@@ -174,7 +174,7 @@ GET_STATION_DETAILS_FTP<-function(data.year=as.character(format(Sys.Date(),'%Y')
 
   }
 
-
+  station.details <- data.frame(lapply(station.details, as.character), stringsAsFactors=FALSE)
   file.remove(file.temp)   #delete the temporary file
   return(station.details)
 
@@ -260,12 +260,12 @@ GET_RECENT_DATA_STATION_FTP<-function(STATION='ALL')
 
   }
 
-
+  data.output <- data.frame(lapply(data.output, as.character), stringsAsFactors=FALSE)
   return(data.output)
 }
 
 
-#' Install and Load specific libraries that are useful for the ENV AIR package
+#' Install and Load specific libraries that are useful for the envair package
 #'
 #' This function isntalls and loads packages if needed
 #' @param packages vector string listing the packages
@@ -320,7 +320,9 @@ RUN_PACKAGE<-function(packages=c('dplyr','ggplot2','reshape',
 
 #' GET VALID PARAMETER DATA FUNCTION
 #'
-#' This function retrieves parameter data from the open data portal
+#' This function retrieves parameter data from the open data portal by saving in temporary folder.
+#' The temporary folder is in  the working directory ~/TEMP
+#' file is only downloaded if MD5 checksum of file is different than specified in FTP
 #' @param data.parameter the air quality parameter. can be PM25, PM10, SO2, TRS, H2S, etc.
 #' @param year.start the beginning of query, year only
 #' @param year.end the end of query, year only. Latest valid year if unspecified
@@ -331,8 +333,8 @@ GET_VALID_DATA_PARAMETER<-function(data.parameter,
 
 {
   #debug
-  # data.parameter<-'trs'
-  # year.start<-2018
+  # data.parameter<-'co'
+  # year.start<-2019
   # year.end=NULL
 
   #end debug lines
@@ -361,22 +363,61 @@ GET_VALID_DATA_PARAMETER<-function(data.parameter,
   #file.remove(file.data.temp)
 
   data.result<-NULL
-  for (data.year in year.start:year.end) #scan one year at a time, create a combined feather file
+  #scan one year at a time, create a combined feather file
+  for (data.year in year.start:year.end)
   {
 
     #get the file source
 
-    if (data.year<=validation.lastvalidationcycle) {
-
+    if (data.year<=validation.lastvalidationcycle)
+    {
       data.url<-paste(data.source,data.year,"/",data.parameter,".csv",sep="")
     } else
     {
       data.url<-paste(data.unvalidated_source,data.parameter,".csv",sep="")
-
     }
     print(paste('Retrieving data from:',data.url))
-    download.file(url=data.url,
-                  destfile=paste(path.data.temp,data.parameter,'_',data.year,'.csv',sep=''))
+
+    #get address to retrieve and write the md5
+    md5.file.source<-gsub('.csv','.md5',paste(data.url),ignore.case=TRUE)
+    if (RCurl::url.exists(md5.file.source) & file.exists(paste(path.data.temp,data.parameter,'_',data.year,'.csv',sep='')))
+    {
+      md5.source<-readLines(md5.file.source)
+      md5.target<-as.character(tools::md5sum(paste(path.data.temp,data.parameter,'_',data.year,'.csv',sep='')))
+      if (!identical(md5.source,md5.target))
+      {
+        #this means file has to be downloaded
+        print(paste('Downloading into',path.data.temp,'...'))
+        file.remove(paste(path.data.temp,data.parameter,'_',data.year,'.csv',sep=''))
+        download.file(url=data.url,
+                      destfile=paste(path.data.temp,
+                                     data.parameter,'_',data.year,'.csv',sep=''),
+                      quiet = TRUE)
+
+      }
+    } else
+    {
+      md5.source<-NULL
+
+      print(paste('Downloading into',path.data.temp,'...'))
+      download.file(url=data.url,
+                    destfile=paste(path.data.temp,
+                                   data.parameter,'_',data.year,'.csv',sep=''),
+                    quiet = TRUE)
+      md5.target<-as.character(tools::md5sum(paste(path.data.temp,data.parameter,'_',data.year,'.csv',sep='')))
+
+    }
+    #get target md5 value, whether downloaded recently or not
+    #check if new md5 has to be updated in source
+    md5.target<-as.character(tools::md5sum(paste(path.data.temp,data.parameter,'_',data.year,'.csv',sep='')))
+    if (!identical(md5.source,md5.target))
+    {
+      #save new md5 only if user has access rights
+      md5.file.source<-gsub('ftp://ftp.env.gov.bc.ca/','//ftpenv.nrs.bcgov/ftpenv/',
+                            md5.file.source,ignore.case=TRUE)
+      try(writeLines(md5.target,md5.file.source),silent=TRUE)
+    }
+
     data.temp<-read.table(paste(path.data.temp,data.parameter,'_',data.year,'.csv',sep=''),
                           header=TRUE,sep=',')%>%
       dplyr::mutate(VALIDATION_STATUS=ifelse(data.year<= validation.lastvalidationcycle,
@@ -405,7 +446,10 @@ GET_VALID_DATA_PARAMETER<-function(data.parameter,
       plyr::rbind.fill(data.temp)%>%
       dplyr::arrange(STATION_NAME,DATE_PST)%>%
       COLUMN_REORDER(columns=c('DATE_PST','DATE','TIME'))
-    file.remove(paste(path.data.temp,data.parameter,'_',data.year,'.csv',sep=''))
+
+    data.result <- data.frame(lapply(data.result, as.character), stringsAsFactors=FALSE)
+    #file.remove(paste(path.data.temp,data.parameter,'_',data.year,'.csv',sep=''))
+
   }
 
 
@@ -426,5 +470,82 @@ COLUMN_REORDER<-function(data.input,columns=c(''))
   data.input%>%
     dplyr::select(c(columns,column.nonsort))%>%
     return()
+}
+
+IsDate <- function(mydate) {
+  tryCatch(!is.na(as.Date(mydate,tryFormats = c("%Y-%m-%d", "%Y/%m/%d","%d-%m-%Y","%m-%d-%Y",
+                                                "%d-%B-%Y","%d/%B/%Y","%A %B %d, %Y"))),
+           error = function(err) {FALSE})
+}
+#Returns all items in a list that ARE contained in toMatch
+#toMatch can be a single item or a list of items
+include <- function (theList, toMatch){
+  matches <- unique (grep(paste(toMatch,collapse="|"),
+                          theList, value=TRUE))
+  return(matches)
+}
+readKML <- function(file,keep_name_description=FALSE,layer,...) {
+  # Set keep_name_description = TRUE to keep "Name" and "Description" columns
+  #   in the resulting SpatialPolygonsDataFrame. Only works when there is
+  #   ExtendedData in the kml file.
+
+  sp_obj<-readOGR(file,layer,...)
+  xml1<-read_xml(file)
+  if (!missing(layer)) {
+    different_layers <- xml_find_all(xml1, ".//d1:Folder")
+    layer_names <- different_layers %>%
+      xml_find_first(".//d1:name") %>%
+      xml_contents() %>%
+      xml_text()
+
+    selected_layer <- layer_names==layer
+    if (!any(selected_layer)) stop("Layer does not exist.")
+    xml2 <- different_layers[selected_layer]
+  } else {
+    xml2 <- xml1
+  }
+
+  # extract name and type of variables
+
+  variable_names1 <-
+    xml_find_first(xml2, ".//d1:ExtendedData") %>%
+    xml_children()
+
+  while(variable_names1 %>%
+        xml_attr("name") %>%
+        is.na() %>%
+        any()&variable_names1 %>%
+        xml_children() %>%
+        length>0) variable_names1 <- variable_names1 %>%
+    xml_children()
+
+  variable_names <- variable_names1 %>%
+    xml_attr("name") %>%
+    unique()
+
+  # return sp_obj if no ExtendedData is present
+  if (is.null(variable_names)) return(sp_obj)
+
+  data1 <- xml_find_all(xml2, ".//d1:ExtendedData") %>%
+    xml_children()
+
+  while(data1 %>%
+        xml_children() %>%
+        length>0) data1 <- data1 %>%
+    xml_children()
+
+  data <- data1 %>%
+    xml_text() %>%
+    matrix(.,ncol=length(variable_names),byrow = TRUE) %>%
+    as.data.frame()
+
+  colnames(data) <- variable_names
+
+  if (keep_name_description) {
+    sp_obj@data <- data
+  } else {
+    try(sp_obj@data <- cbind(sp_obj@data,data),silent=TRUE)
+  }
+  sp_obj
 }
 
