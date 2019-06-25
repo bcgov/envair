@@ -1,7 +1,8 @@
 ---
 output: 
-github_document:
-  html_preview: true
+github_document: 
+  html_preview: no
+  
 ---
 
 ```{r, echo = FALSE}

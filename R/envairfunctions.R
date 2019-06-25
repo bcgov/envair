@@ -103,7 +103,7 @@ GET_STATION_DETAILS_FTP<-function(data.year=as.character(format(Sys.Date(),'%Y')
   file.temp<-paste(dir.temp,'/stationdetails.csv',sep="")
   #temp<-RCurl::getURL(ftp.station,ftp.use.epsv=FALSE,header=TRUE)
 
-  download.file(ftp.station,destfile=file.temp,quiet=TRUE)
+  download.file(ftp.station,destfile=file.temp,quiet=FALSE)
   station.details<-read.csv(file.temp)%>%
     dplyr::mutate(STATUS=ifelse(STATUS==1,'ACTIVE','INACTIVE'))
 
@@ -399,7 +399,7 @@ GET_VALID_DATA_PARAMETER<-function(data.parameter,
         download.file(url=data.url,
                       destfile=paste(path.data.temp,
                                      data.parameter,'_',data.year,'.csv',sep=''),
-                      quiet = TRUE)
+                      quiet = FALSE)
 
       }
     } else
@@ -410,7 +410,7 @@ GET_VALID_DATA_PARAMETER<-function(data.parameter,
       download.file(url=data.url,
                     destfile=paste(path.data.temp,
                                    data.parameter,'_',data.year,'.csv',sep=''),
-                    quiet = TRUE)
+                    quiet = FALSE)
       md5.target<-as.character(tools::md5sum(paste(path.data.temp,data.parameter,'_',data.year,'.csv',sep='')))
 
     }
