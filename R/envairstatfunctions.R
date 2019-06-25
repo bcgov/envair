@@ -1110,7 +1110,7 @@ GET_DATEPADDED_DATA<-function(data.unpadded,column.datefield='DATE_PST',column.s
   return(data.result)
 }
 
-#
+
 GET_DAILY_MAX<-function(data.input,column.name='ROUNDED_VALUE',column.date='DATE_PST',
                         data.threshold=0.75,exception_threshold=9999999)
   #PURPOSE: Gets the daily maximum from the spciefied column name and using the specified column date
