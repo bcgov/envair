@@ -1,9 +1,4 @@
----
-# output: 
-# github_document: 
-#   html_preview: yes
-#   
----
+
 
 ```{r, echo = FALSE}
 knitr::opts_chunk$set(
