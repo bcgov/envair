@@ -7,8 +7,7 @@
 GET_VENTING_OBSCR(path.output = NULL)
 }
 \arguments{
-\item{path.output}{where kml files will be saved. If null, function returns shape file
-GET_VENTING_OBSCR()}
+\item{path.output}{where kml files will be saved. If null, function returns shape file}
 }
 \description{
 This function creates kml files using the new OBSCR sensitivity zones and venting regions

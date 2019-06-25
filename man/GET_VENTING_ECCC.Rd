@@ -7,8 +7,7 @@
 GET_VENTING_ECCC(date.start = NULL)
 }
 \arguments{
-\item{date.start}{string year in YYYY-mm-dd
-GET_VENTING_ECCC()}
+\item{date.start}{string year in YYYY-mm-dd}
 }
 \description{
 This function connects to ECCC datamart and retrieves venting data

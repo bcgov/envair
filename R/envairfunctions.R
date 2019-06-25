@@ -5,6 +5,7 @@
 #' @param data.station dataframe input
 #' @param colname.orig string vector containing the column to be deleted or renamed
 #' @param colname.new string vector containing the new name for the column. if NULL, it deletes the specified column
+#' @export
 #' @keywords rename dataframe
 #' RENAME_COLUMN()
 RENAME_COLUMN<-function(data.station,colname.orig,colname.new=NULL)
@@ -48,6 +49,7 @@ RENAME_COLUMN<-function(data.station,colname.orig,colname.new=NULL)
 #' This function makes a simple rounding off
 #' @param x the as.numeric input
 #' @param n the number of decimal places for resulting output
+#' @export
 #' round2()
 round2 = function(x,n)
 {
@@ -64,6 +66,7 @@ round2 = function(x,n)
 #'
 #' This function retrieves latest station details or deteails during specific year from the ftp feed
 #' @param data.year the year where station details are retrieved from. Defaults to current year
+#' @export
 #' GET_STATION_DETAILS_FTP()
 GET_STATION_DETAILS_FTP<-function(data.year=as.character(format(Sys.Date(),'%Y')))
 {
@@ -185,6 +188,7 @@ GET_STATION_DETAILS_FTP<-function(data.year=as.character(format(Sys.Date(),'%Y')
 #'
 #' This function retrieves the recent 1 month of data from the ftp feed
 #' @param STATION vector string of the air quality monitoring station, note this excludes
+#' @export
 #' the underscore naming system, e.g., Prince George Plaza 400 NOT Prince George Plaza 400 Met_60
 #' GET_RECENT_DATA_STATION_FTP()
 GET_RECENT_DATA_STATION_FTP<-function(STATION='ALL')
@@ -270,6 +274,7 @@ GET_RECENT_DATA_STATION_FTP<-function(STATION='ALL')
 #' This function isntalls and loads packages if needed
 #' @param packages vector string listing the packages
 #' @param lib.pack path of library, defaults to current lib paths
+#' @export
 #' RUN_PACKAGE()
 RUN_PACKAGE<-function(packages=c('dplyr','ggplot2','reshape',
                                  'lazyeval','zoo','DataCombine','data.table',
@@ -326,6 +331,7 @@ RUN_PACKAGE<-function(packages=c('dplyr','ggplot2','reshape',
 #' @param data.parameter the air quality parameter. can be PM25, PM10, SO2, TRS, H2S, etc.
 #' @param year.start the beginning of query, year only
 #' @param year.end the end of query, year only. Latest valid year if unspecified
+#' @export
 #' GET_VALID_DATA_PARAMETER()
 GET_VALID_DATA_PARAMETER<-function(data.parameter,
                                    year.start,
@@ -461,6 +467,8 @@ GET_VALID_DATA_PARAMETER<-function(data.parameter,
 #' This function reorders the columns of a dataframe based on the order it is specified in columns
 #' @param data.input the input data frame
 #' @param columns the vector of strings listing the column names in desired order. Columns not listed are added at the end
+#' @export
+#' COLUMN_REORDER()
 COLUMN_REORDER<-function(data.input,columns=c(''))
 {
   #reorders column based on the defined vlaue in columns

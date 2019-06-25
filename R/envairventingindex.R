@@ -22,6 +22,7 @@ GET_URL_FOLDERS<-function(source.url='http://dd.weatheroffice.ec.gc.ca/bulletins
 #'
 #' This function connects to ECCC datamart and retrieves venting data
 #' @param date.start string year in YYYY-mm-dd
+#' @export
 #' GET_VENTING_ECCC()
 GET_VENTING_ECCC<-function(date.start=NULL)
 {
@@ -147,6 +148,7 @@ GET_VENTING_ECCC<-function(date.start=NULL)
 #'
 #' This function creates kml files using the new OBSCR sensitivity zones and venting regions
 #' @param path.output where kml files will be saved. If null, function returns shape file
+#' @export
 #' GET_VENTING_OBSCR()
 GET_VENTING_OBSCR<-function(path.output=NULL)
 {
