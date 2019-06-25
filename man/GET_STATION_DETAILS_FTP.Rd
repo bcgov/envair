@@ -8,7 +8,8 @@ GET_STATION_DETAILS_FTP(data.year = as.character(format(Sys.Date(),
   "\%Y")))
 }
 \arguments{
-\item{data.year}{the year where station details are retrieved from. Defaults to current year}
+\item{data.year}{the year where station details are retrieved from. Defaults to current year
+GET_STATION_DETAILS_FTP()}
 }
 \description{
 This function retrieves latest station details or deteails during specific year from the ftp feed

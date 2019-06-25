@@ -11,7 +11,8 @@ RUN_PACKAGE(packages = c("dplyr", "ggplot2", "reshape", "lazyeval",
 \arguments{
 \item{packages}{vector string listing the packages}
 
-\item{lib.pack}{path of library, defaults to current lib paths}
+\item{lib.pack}{path of library, defaults to current lib paths
+RUN_PACKAGE()}
 }
 \description{
 This function isntalls and loads packages if needed

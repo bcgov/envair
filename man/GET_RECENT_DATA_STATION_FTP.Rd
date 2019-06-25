@@ -7,7 +7,9 @@
 GET_RECENT_DATA_STATION_FTP(STATION = "ALL")
 }
 \arguments{
-\item{STATION}{vector string of the air quality monitoring station, note this excludes}
+\item{STATION}{vector string of the air quality monitoring station, note this excludes
+the underscore naming system, e.g., Prince George Plaza 400 NOT Prince George Plaza 400 Met_60
+GET_RECENT_DATA_STATION_FTP()}
 }
 \description{
 This function retrieves the recent 1 month of data from the ftp feed

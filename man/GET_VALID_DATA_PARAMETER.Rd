@@ -11,7 +11,8 @@ GET_VALID_DATA_PARAMETER(data.parameter, year.start, year.end = NULL)
 
 \item{year.start}{the beginning of query, year only}
 
-\item{year.end}{the end of query, year only. Latest valid year if unspecified}
+\item{year.end}{the end of query, year only. Latest valid year if unspecified
+GET_VALID_DATA_PARAMETER()}
 }
 \description{
 This function retrieves parameter data from the open data portal by saving in temporary folder.

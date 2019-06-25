@@ -5,9 +5,9 @@
 #' @param parameter string or vector containing the parameter that will be evaluated.
 #' @param instrument.ignore if specified, ignores the instrument technology and merges dataset during statistical calculations. Default is FALSE for particulate (PM25,PM10) instruments
 #' @data.source defines the source of data if manually downloaded, default of NULL means it grabs from the BC ENV's open data portal
-#' @export
 #' @keywords statistics, annual data, valid data, unverified data
 #' GET_STATISTICS_PARAMETER()
+#' @export
 GET_STATISTICS_PARAMETER<-function(data.year,parameter,instrument.ignore=!(tolower(parameter) %in% c('pm25','pm10')),data.source=NULL)
 {
   #gets the statistics for that parameter at the particular year
@@ -602,8 +602,8 @@ GET_STATISTICS_PARAMETER<-function(data.year,parameter,instrument.ignore=!(tolow
 #' @param day.threshold
 #' @param precision
 #' @param Q2Q3 only
-#' @export
 #' GET_VALID_COUNT()
+#' @export
 GET_VALID_COUNT<-function(data.hourly,day.threshold=0.75,precision=1,Q2Q3only=FALSE)
   #Counts the number of valid hours and days
   #this will group the counts based on STATION_NAME,PARAMETER,INSTRUMENT

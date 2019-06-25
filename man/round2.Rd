@@ -11,7 +11,8 @@ round2(x, n)
 \arguments{
 \item{x}{the as.numeric input}
 
-\item{n}{the number of decimal places for resulting output}
+\item{n}{the number of decimal places for resulting output
+round2()}
 }
 \description{
 rounding off function

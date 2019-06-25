@@ -8,7 +8,8 @@ GET_VALID_COUNT(data.hourly, day.threshold = 0.75, precision = 1,
   Q2Q3only = FALSE)
 }
 \arguments{
-\item{Q2Q3}{only}
+\item{Q2Q3}{only
+GET_VALID_COUNT()}
 }
 \description{
 This function counts the number of valid hours
