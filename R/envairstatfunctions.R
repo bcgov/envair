@@ -24,7 +24,7 @@ GET_STATISTICS_PARAMETER<-function(data.year,parameter,instrument.ignore=!(tolow
   # #
 
   #
-  parameter<- tolower(parameter)
+  parameter<-tolower(parameter)
   RUN_PACKAGE()
   #download data if not provided
 
