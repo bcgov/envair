@@ -1,8 +1,8 @@
 ---
-output: 
-github_document: 
-  html_preview: no
-  
+# output: 
+# github_document: 
+#   html_preview: yes
+#   
 ---
 
 ```{r, echo = FALSE}
@@ -38,9 +38,9 @@ library(envair)
 
 `GET_VALID_DATA_PARAMETER()` Retrieves data that has completed ENV's annual validation process. Parameters include PM25, PM10, NO, NO2, NOX, SO2, TRS, H2S, CO, TEMP_MEAN, SNOW, PRECIP, WDIR_VECT, WSPD_VECT, WDIR_UVEC, WSPD_SCLR
 
-`GET_RECENT_DATA_STATION_FTP()` Retrieve the recent 1-month data. Data retrieved from Open Data Portal catalogue of (unverified hourly data)[https://catalogue.data.gov.bc.ca/dataset/air-quality-monitoring-unverified-hourly-air-quality-and-meteorological-data]
+`GET_RECENT_DATA_STATION_FTP()` Retrieve the recent 1-month data. Data retrieved from Open Data Portal catalogue of [unverified hourly data](https://catalogue.data.gov.bc.ca/dataset/air-quality-monitoring-unverified-hourly-air-quality-and-meteorological-data)
 
-`RUN_PACKAGE()` Installs and loads (Cran-R)[https://cran.r-project.org/] packages into the library specified in .libPaths()
+`RUN_PACKAGE()` Installs and loads [Cran-R](https://cran.r-project.org/) packages into the library specified in .libPaths()[1])
 
 `GET_VENTING_ECCC()` Retrieve the venting index FLCN39 from Environment and Climate Change Canada datamart
 `GET_VENTING_OBSCR()` Creates a kml or shape file based on the proposed (2019) OBSCR rules. This incorporates venting index and sensitivity zones.
