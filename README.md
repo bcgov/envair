@@ -31,4 +31,10 @@ library(envair)
 
 `RUN_PACKAGE()` Installs and loads (Cran-R)[https://cran.r-project.org/] packages into the library specified in .libPaths()
 
+`GET_VENTING_ECCC()` Retrieve the venting index FLCN39 from Environment and Climate Change Canada datamart
+
+`GET_VENTING_OBSCR()` Creates a kml or shape file based on the proposed (2019) OBSCR rules. This incorporates venting index and sensitivity zones.
+
+`GET_STATISTICS_PARAMETER()` Calculates basic statistics (daily max, percentiles, exceedances) from validated and, if unavailable, unverified data sets.
+
 
