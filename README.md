@@ -39,3 +39,4 @@ library(envair)
 
 `GET_STATISTICS_PARAMETER()` Calculates basic statistics (daily max, percentiles, exceedances) from validated and, if unavailable, unverified data sets.
 
+`GET_ECCC_FORECAST()` Retrieves AQHI, PM2.5, PM10, O3, and NO2 forecasts from the ECCC datamart
