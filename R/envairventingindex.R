@@ -1,22 +1,5 @@
 
 
-GET_URL_FOLDERS<-function(source.url='http://dd.weatheroffice.ec.gc.ca/bulletins/alphanumeric/' )
-{
-  #retrieves list of files from the URL
-  RUN_PACKAGE(c('dplyr','tidyr'))
-  data.frame(LINES=unlist(strsplit(RCurl::getURL(url=source.url,dirListonly=TRUE,
-                                                 ftp.use.epsv=FALSE),split='\n')))%>%
-    dplyr::filter(grepl('alt="\\[',LINES))%>%
-    dplyr::mutate(LINES=as.character(LINES))%>%
-    tidyr::separate(col='LINES',into=c("LINE1","LINE2","LINE3","TYPE",
-                                       "LINE5","FOLDER","LINE7"),sep='"',remove=FALSE)%>%
-    tidyr::separate(col="LINE7",into=c("","DATE"),sep="  +")%>%
-    dplyr::select(TYPE,FOLDER,DATE)%>%
-    dplyr::filter(grepl('\\[',TYPE))%>%
-    #dplyr::filter(!is.null(TYPE))%>%
-    return()
-}
-
 
 #' Retrieves the venting index FLCN 39 from ECCC data mart
 #'
@@ -33,8 +16,8 @@ GET_VENTING_ECCC<-function(date.start=NULL)
   #PURPOSE: Retrieves venting data from the specified URL
   #venting.metadata='ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/Air_Quality/VentingMetaData.csv'
   venting.url='http://dd.weatheroffice.ec.gc.ca/bulletins/alphanumeric/'    #ECCC venting index data
-  venting.metadata='ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/Air_Quality/VentingMetaData.csv'
-
+  #venting.metadata='ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/Air_Quality/VentingMetaData.csv'
+  venting.metadata='https://envistaweb.env.gov.bc.ca/aqo/files/VentingMetaData.csv'
   if (is.null(date.start))
   {
     #get the latest venting files
@@ -100,7 +83,8 @@ GET_VENTING_ECCC<-function(date.start=NULL)
   #get venting metadata,check if file exist first
   venting.meta<-(read.table(venting.metadata,sep=',',header=TRUE))%>%
     RENAME_COLUMN('')
-  #scan each line and parse details
+
+  #scan each line and retrieve date details
   venting.date<-NULL
 
   for (i in 1:length(venting.content))
@@ -174,8 +158,8 @@ GET_VENTING_OBSCR<-function(path.output=NULL)
   path.temp<-paste(getwd(),'/TEMP',sep='')
   dir.create(path.temp,showWarnings = FALSE)
   file.temp<-paste(path.temp,'/venting.kml',sep='')
-  URL.shapefile<-'http://www.env.gov.bc.ca/epd/bcairquality/aqo/csv/Venting_Blank.kml'
-  URL.inserfile<-'http://www.env.gov.bc.ca/epd/bcairquality/aqo/csv/Venting_format.xml'
+  URL.shapefile<-'https://envistaweb.env.gov.bc.ca/aqo/files/Venting_Blank.kml'
+  URL.inserfile<-'https://envistaweb.env.gov.bc.ca/aqo/files/Venting_format.xml'
   download.file(URL.shapefile,file.temp)
 
   #read KML file
@@ -234,22 +218,26 @@ GET_VENTING_OBSCR<-function(path.output=NULL)
   venting.data.final<-venting.data.final%>%
     dplyr::mutate(BURN_DURATION='N/A')%>% #define the initial burn duration
     dplyr::mutate(BURN_DURATION=ifelse(SENSI=='HIGH' & VI_NUMERIC %in% c(21,22),'\u2264 2 days*',BURN_DURATION))%>%
-    dplyr::mutate(BURN_DURATION=ifelse(SENSI=='HIGH' & VI_NUMERIC==20,'1-DAY',BURN_DURATION))%>%
-    dplyr::mutate(BURN_DURATION=ifelse(SENSI=='HIGH' & VI_NUMERIC %in% c(00,01,02,10,11,12),'0',BURN_DURATION))%>%
+        dplyr::mutate(BURN_DURATION=ifelse(SENSI=='HIGH' & VI_NUMERIC %in% c(00,01,02,10,11,12),'0',BURN_DURATION))%>%
     dplyr::mutate(BURN_DURATION=ifelse(SENSI=='LOW' & VI_NUMERIC %in% c(11,12,21,22),'\u2264 6 days*',BURN_DURATION))%>%
     dplyr::mutate(BURN_DURATION=ifelse(SENSI=='LOW' & VI_NUMERIC %in% c(00,01,02,10,20),'0',BURN_DURATION))%>%
     dplyr::mutate(BURN_DURATION=ifelse(SENSI=='MEDIUM' & VI_NUMERIC %in% c(21,22),'\u2264 4 days*',BURN_DURATION))%>%
-    dplyr::mutate(BURN_DURATION=ifelse(SENSI=='MEDIUM' & VI_NUMERIC %in% c(00,01,02,10,11,12,20),'0',BURN_DURATION))%>%
+    dplyr::mutate(BURN_DURATION=ifelse(SENSI=='MEDIUM' & VI_NUMERIC %in% c(00,01,02,10,11,12),'0',BURN_DURATION))%>%
+    #Current condition good, on medium and high sensitivity zone
+    dplyr::mutate(BURN_DURATION=ifelse(SENSI=='MEDIUM' & VI_NUMERIC %in% c(20),'1-DAY*',BURN_DURATION))%>%
+    dplyr::mutate(BURN_DURATION=ifelse(SENSI=='HIGH' & VI_NUMERIC==20,'1-DAY*',BURN_DURATION))%>%
+
     dplyr::mutate(BURN='N/A')%>%
     dplyr::mutate(BURN=ifelse(BURN_DURATION=='0','NO',BURN))%>%
     dplyr::mutate(BURN=ifelse(!BURN_DURATION %in% c('N/A','NOT ALLOWED','NO','NA','0'),
                               'YES (1-DAY)',BURN))%>%
-    dplyr::mutate(BURN=ifelse(!BURN_DURATION %in% c('N/A','NOT ALLOWED','NO','NA','0','1-DAY'),
+    dplyr::mutate(BURN=ifelse(!BURN_DURATION %in% c('N/A','NOT ALLOWED','NO','NA','0','1-DAY','1-DAY*'),
                               'YES (>1 DAY)',BURN))%>%
     dplyr::mutate(NOTE='')%>%
     dplyr::mutate(NOTE=ifelse(BURN_DURATION=='\u2264 2 days*','*Up to 2 days burn, subject to start and end times specified in regulation',NOTE))%>%
     dplyr::mutate(NOTE=ifelse(BURN_DURATION=='\u2264 4 days*','*Up to 4 days burn, subject to start and end times specified in regulation',NOTE))%>%
     dplyr::mutate(NOTE=ifelse(BURN_DURATION=='\u2264 6 days*','*Up to 6 days burn, subject to start and end times specified in regulation',NOTE))%>%
+    dplyr::mutate(NOTE=ifelse(BURN_DURATION=='1-DAY*','*Open burning ends by 4 p.m. or two hours before sunset, whichever is later, on the same day the open burning starts.',NOTE))%>%
     RENAME_COLUMN(c('NAME'),c('Name'))
 
 
@@ -272,7 +260,7 @@ GET_VENTING_OBSCR<-function(path.output=NULL)
                                          '<br/><b>Burn Duration:</b> ',venting.shapefile$BURN_DURATION,
                                          "<br/><b>Today's Index:</b> ",venting.shapefile$TODAY_VI_DESC,
                                          ' (',venting.shapefile$TODAY_VI,')',
-                                         "<br/><b>Today's Wind Speed:</b> ",venting.shapefile$TODAY_WSPD,' m/s',
+                                         "<br/><b>Today's Wind Speed:</b> ",venting.shapefile$TODAY_WSPD,' km/h',
                                          "<br/><b>Today's Mix Height:</b> ",
                                          format(as.numeric(venting.shapefile$TODAY_MIX_HEIGHT),big.mark = ','),' m',
                                          "<br/><br/><b>Tomorrow's Index:</b> ",venting.shapefile$TOMORROW_VI_DESC,' (',venting.shapefile$TOMORROW_VI,')',
@@ -284,7 +272,7 @@ GET_VENTING_OBSCR<-function(path.output=NULL)
     temp<-venting.insert[grep('<Metro_description>',x=venting.insert,ignore.case=TRUE)]
     temp<-gsub(pattern="<Metro_description>",replacement="",x=temp,ignore.case=TRUE)
     temp<-gsub(pattern="</Metro_description>",replacement="",x=temp,ignore.case=TRUE)
-    venting.shapefile$Description[toupper(venting.shapefile$Name)=='METRO VANCOUVER']<-temp
+    venting.shapefile$Description[toupper(venting.shapefile$NAME)=='METRO VANCOUVER']<-temp
 
     #write temporarilty into a KML file
     print(paste('Writing temporary kml file (unmodded) into:',path.temp))

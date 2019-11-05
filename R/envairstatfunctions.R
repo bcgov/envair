@@ -20,7 +20,7 @@ GET_STATISTICS_PARAMETER<-function(data.year,parameter,instrument.ignore=!(tolow
   # parameter<-'pm25'
   # instrument.ignore = !(parameter %in% c('pm25','pm10'))
   # data.source<-NULL
-  # data.temp<-GET_VALID_DATA_PARAMETER('pm25',2018,2018)
+  # data.temp<-GET_PARAMETER_DATA('pm25',2018,2018)
   # # data.source<-GET_DATA_FTP_LARGE('h2s')
   # #
 
@@ -31,7 +31,7 @@ GET_STATISTICS_PARAMETER<-function(data.year,parameter,instrument.ignore=!(tolow
 
   if (is.null(data.source))
   {
-    data.input<-GET_VALID_DATA_PARAMETER(data.parameter=parameter,year.start=data.year,year.end=data.year)%>%
+    data.input<-GET_PARAMETER_DATA(data.parameter=parameter,year.start=data.year,year.end=data.year)%>%
       dplyr::ungroup()%>%
       dplyr::mutate(IGNORE=instrument.ignore)%>%  #this is the only way if else works
       dplyr::mutate(INSTRUMENT=ifelse(IGNORE,paste(toupper(parameter),'Analyser'),INSTRUMENT))%>%
@@ -49,7 +49,7 @@ GET_STATISTICS_PARAMETER<-function(data.year,parameter,instrument.ignore=!(tolow
 
     if (nrow(data.input)<100)
     {
-      data.input<-GET_VALID_DATA_PARAMETER(data.parameter=parameter,year.start = data.year)%>%
+      data.input<-GET_PARAMETER_DATA(data.parameter=parameter,year.start = data.year)%>%
         dplyr::mutate(IGNORE=instrument.ignore)%>%   #this is the only way if else works
         dplyr::mutate(INSTRUMENT=ifelse(IGNORE,
                                         paste(toupper(parameter),'Analyser'),
@@ -145,7 +145,7 @@ GET_STATISTICS_PARAMETER<-function(data.year,parameter,instrument.ignore=!(tolow
 
       if (is.null(data.source))
       {
-        data.input.previous<-GET_VALID_DATA_PARAMETER(parameter,data.year-1)%>%
+        data.input.previous<-GET_PARAMETER_DATA(parameter,data.year-1)%>%
           dplyr::mutate(IGNORE=instrument.ignore)%>%   #this is the only way if else works
           dplyr::mutate(INSTRUMENT=ifelse(IGNORE,
                                           paste(toupper(parameter),'Analyser'),
@@ -167,7 +167,7 @@ GET_STATISTICS_PARAMETER<-function(data.year,parameter,instrument.ignore=!(tolow
 
         if (nrow(data.input.previous)< 100)
         {
-          data.input.previous<-GET_VALID_DATA_PARAMETER(data.parameter=parameter,data.year-1)%>%
+          data.input.previous<-GET_PARAMETER_DATA(data.parameter=parameter,data.year-1)%>%
             dplyr::mutate(IGNORE=instrument.ignore)%>%   #this is the only way if else works
             dplyr::mutate(INSTRUMENT=ifelse(IGNORE,
                                             paste(toupper(parameter),'Analyser'),
@@ -374,7 +374,8 @@ GET_STATISTICS_PARAMETER<-function(data.year,parameter,instrument.ignore=!(tolow
       #   dplyr::mutate(INSTRUMENT=ifelse(instrument.ignore,paste(toupper(parameter),'Analyser'),as.character(INSTRUMENT)))
       if (is.null(data.source))
       {
-        data.input.previous<-GET_VALID_DATA_PARAMETER(parameter,data.year-1)%>%dplyr::mutate(IGNORE=instrument.ignore)%>%   #this is the only way if else works
+        data.input.previous<-GET_PARAMETER_DATA(parameter,data.year-1)%>%
+          dplyr::mutate(IGNORE=instrument.ignore)%>%   #this is the only way if else works
           dplyr::mutate(INSTRUMENT=ifelse(IGNORE,
                                           paste(toupper(parameter),'Analyser'),
                                           as.character(INSTRUMENT)))%>%
@@ -393,7 +394,7 @@ GET_STATISTICS_PARAMETER<-function(data.year,parameter,instrument.ignore=!(tolow
 
         if (nrow(data.input)< 100)
         {
-          data.input.previous<-GET_VALID_DATA_PARAMETER(data.parameter=parameter,data.year-1)%>%
+          data.input.previous<-GET_PARAMETER_DATA(data.parameter=parameter,data.year-1)%>%
             dplyr::mutate(IGNORE=instrument.ignore)%>%   #this is the only way if else works
             dplyr::mutate(INSTRUMENT=ifelse(IGNORE,
                                             paste(toupper(parameter),'Analyser'),
@@ -646,11 +647,11 @@ GET_VALID_COUNT<-function(data.hourly,day.threshold=0.75,precision=1,Q2Q3only=FA
                   DATE_MONTH=month.abb[month(as.character(DATE_DAY))],
                   QUARTER=as.integer((month(as.character(DATE_DAY))-1)/3)+1)%>%
     dplyr::group_by(DATE_START,DATE_END,DATE_YEAR,QUARTER,DATE_MONTH,DATE_DAY,TOTAL_HOURS)%>%
-    summarise()%>%
+    dplyr::summarise()%>%
     dplyr::group_by(DATE_YEAR)%>%
     dplyr::mutate(TOTAL_DAYS=n())%>%
     dplyr::group_by(DATE_START,DATE_END,DATE_YEAR,QUARTER,DATE_MONTH,TOTAL_HOURS,TOTAL_DAYS)%>%
-    summarise(DAYS_in_MONTH=n())%>%
+    dplyr::summarise(DAYS_in_MONTH=n())%>%
     dplyr::group_by(DATE_YEAR,QUARTER)%>%
     dplyr::mutate(DAYS_in_QUARTER=sum(DAYS_in_MONTH))%>%
     dplyr::ungroup()
@@ -673,7 +674,7 @@ GET_VALID_COUNT<-function(data.hourly,day.threshold=0.75,precision=1,Q2Q3only=FA
     dplyr::mutate(VALID_HOURS_PER_DAY=n(),ROUNDED_VALUE_DAY=mean(ROUNDED_VALUE,na.rm=TRUE))%>%
     dplyr::filter(VALID_HOURS_PER_DAY>=day.threshold*24)%>%
     dplyr::group_by(STATION_NAME,INSTRUMENT,DATE_YEAR,DATE_DAY,PARAMETER,EMS_ID,VALID_HOURS,TOTAL_HOURS,ANNUAL_AVG_1HR,ROUNDED_VALUE_DAY) %>%
-    summarise()%>%
+    dplyr::summarise()%>%
     dplyr::ungroup()%>%
     dplyr::group_by(STATION_NAME,INSTRUMENT,DATE_YEAR,PARAMETER,EMS_ID,VALID_HOURS,TOTAL_HOURS,ANNUAL_AVG_1HR) %>%
     dplyr::mutate(VALID_DAYS=n(),TOTAL_DAYS=data.totals$TOTAL_DAYS[1],ANNUAL_DAILY_AVG=round2(mean(ROUNDED_VALUE_DAY),precision))%>%
@@ -682,7 +683,7 @@ GET_VALID_COUNT<-function(data.hourly,day.threshold=0.75,precision=1,Q2Q3only=FA
     dplyr::group_by(STATION_NAME,INSTRUMENT,DATE_YEAR,PARAMETER,EMS_ID,
                     VALID_HOURS,TOTAL_HOURS,ANNUAL_AVG_1HR,
                     VALID_DAYS,TOTAL_DAYS,ANNUAL_DAILY_AVG,MONTH,QUARTER) %>%
-    summarise(VALID_in_MONTH=n())%>%
+    dplyr::summarise(VALID_in_MONTH=n())%>%
     dplyr::ungroup()%>%
     dplyr::group_by(STATION_NAME,INSTRUMENT,DATE_YEAR,PARAMETER,EMS_ID,
                     VALID_HOURS,TOTAL_HOURS,ANNUAL_AVG_1HR,
@@ -801,7 +802,7 @@ GET_PIVOT_TABLE<-function(data.input,columnname.category,columnname.value,column
     print(paste('Pivoting the table for:',columnname.category,'Scanning:',i))
     temp<-data.input%>%
       dplyr::filter(TEMP_CATEGORY_COLUMN==i)%>%
-      mutate(TEMP_VALUE_COLUMN_RESULT=TEMP_VALUE_COLUMN)%>%
+      dplyr::mutate(TEMP_VALUE_COLUMN_RESULT=TEMP_VALUE_COLUMN)%>%
       RENAME_COLUMN('TEMP_VALUE_COLUMN_RESULT',i)%>%
       RENAME_COLUMN(c('TEMP_CATEGORY_COLUMN','TEMP_VALUE_COLUMN'))
     if (nrow(temp)>0)
@@ -888,59 +889,7 @@ print('getting percentiles NAPS method')
   return(data.result)
 }
 
-GET_ROLLING_MEAN<-function(data.input,data.input.previous=NULL,data.averaginghour=8,column.date='DATE_PST',column.name='ROUNDED_VALUE',threshold=0.75,precision=1)
-  #gets the rolling mean
-  #should include previous year's value here
 
-
-
-{
-  #---debug initialization----
-  # data.input<-GET_DATA_FTP(2018,'o3')
-  #  data.input.previous<-GET_DATA_FTP(2017,'o3')
-  # data.averaginghour=8
-  # column.date='DATE_PST'
-  # column.name='ROUNDED_VALUE'
-  # precision=1
-  # threshold=0.75
-  #-----------------------------
-  print('getting rolling mean')
-  temp<-data.input%>%
-    dplyr::summarise(DATE_START=as.POSIXct(min(as.character(DATE_PST),tz='utc')),
-                     DATE_END=as.POSIXct(max(as.character(DATE_PST)),tz='utc'))
-
-  data.output<-data.input%>%
-    plyr::rbind.fill(data.input.previous)%>% #combine with the previous year's date, if available
-    #dplyr::filter(STATION_NAME=='Prince George Plaza 400')%>%   #for debugging purposes
-    GET_DATEPADDED_DATA()%>%#pad missing dates, to be sure
-    RENAME_COLUMN(column.name,'TEMP_COLUMN_VALUE')%>%
-    RENAME_COLUMN(column.date,'TEMP_DATE_PST')%>%
-    dplyr::select(STATION_NAME,EMS_ID,INSTRUMENT,TEMP_DATE_PST,TEMP_COLUMN_VALUE)%>%
-    dplyr::mutate(TEMP_VALID_COUNTER=ifelse(is.na(TEMP_COLUMN_VALUE),0,1))%>% #just adding a counter
-    dplyr::mutate(TEMP_COLUMN_VALUE2=ifelse(is.na(TEMP_COLUMN_VALUE),0,as.numeric(TEMP_COLUMN_VALUE)))%>%
-    dplyr::mutate(TEMP_COLUMN_VALUE2=ifelse(is.na(TEMP_COLUMN_VALUE2),0,as.numeric(TEMP_COLUMN_VALUE2)))%>%  #secondary check
-    dplyr::arrange(STATION_NAME,EMS_ID,INSTRUMENT,TEMP_DATE_PST)%>%   #makes sure it is sorted
-    dplyr::group_by(STATION_NAME,EMS_ID,INSTRUMENT)%>%
-    dplyr::mutate(TEMP_ROLL=cumsum(TEMP_VALID_COUNTER),TEMP_ROLL_VALUE=cumsum(TEMP_COLUMN_VALUE2))%>%
-    dplyr::mutate(TEMP_PREV_ROLL=dplyr::lag(TEMP_ROLL,n=data.averaginghour),
-                  TEMP_PREV_VALUE=dplyr::lag(TEMP_ROLL_VALUE,n=data.averaginghour))%>%
-    dplyr::mutate(TEMP_ROLL_AVE=round2((TEMP_ROLL_VALUE-TEMP_PREV_VALUE)/(TEMP_ROLL-TEMP_PREV_ROLL),precision),
-                  TEMP_VALID_COUNT=(TEMP_ROLL-TEMP_PREV_ROLL))%>%
-    dplyr::mutate(TEMP_ROLL_AVE=ifelse(TEMP_VALID_COUNT>=as.character(threshold*data.averaginghour),as.character(TEMP_ROLL_AVE),''))%>%#removes average that does not have enough number of samples
-
-
-    RENAME_COLUMN('TEMP_ROLL_AVE',paste(column.name,'_',data.averaginghour,'HR',sep=''))%>% #rename to match the original column name
-    RENAME_COLUMN('TEMP_COLUMN_VALUE',column.name)%>%  #naming the column back
-    RENAME_COLUMN(c('TEMP_VALID_COUNTER','TEMP_ROLL','TEMP_ROLL_VALUE','TEMP_PREV_ROLL',
-                    'TEMP_PREV_VALUE','TEMP_VALID_COUNT','TEMP_COLUMN_VALUE2'))%>% #remove the temporary and unused column
-    dplyr::ungroup()%>%
-    dplyr::mutate(TEMP_DATE_PST2=as.POSIXct(as.character(TEMP_DATE_PST),tz='utc'))%>%
-    dplyr::filter(TEMP_DATE_PST2>=as.POSIXct(as.character(temp$DATE_START[1]),tz='utc'))%>%   #show only the needed dates
-    dplyr::filter(TEMP_DATE_PST2<=as.POSIXct(as.character(temp$DATE_END[1]),tz='utc'))%>%
-    RENAME_COLUMN('TEMP_DATE_PST2')%>% #remove temporary date column
-    RENAME_COLUMN('TEMP_DATE_PST',column.date)
-  return(data.output)
-}
 GET_DAILY_MEAN<-function(data.input,column.date='DATE_PST',column.name='ROUNDED_VALUE',precision=1,data.threshold=0.75)
   #get the daily mean of the hourly values
   #column.name define what will be averaged
@@ -959,7 +908,7 @@ GET_DAILY_MEAN<-function(data.input,column.date='DATE_PST',column.name='ROUNDED_
     dplyr::filter(!TEMP_VALUE_COLUMN=='')%>%
     dplyr::filter(TEMP_VALUE_COLUMN>-999)%>%
     dplyr::group_by(STATION_NAME,EMS_ID,INSTRUMENT,DATE_DAY)%>%
-    summarise(VALID_COUNT=n(),TEMP_MEAN_COLUMN=round2(mean(TEMP_VALUE_COLUMN),precision))%>%
+    dplyr::summarise(VALID_COUNT=n(),TEMP_MEAN_COLUMN=round2(mean(TEMP_VALUE_COLUMN),precision))%>%
     dplyr::ungroup()%>%
     dplyr::filter(VALID_COUNT>=data.threshold*24)%>%
     RENAME_COLUMN('TEMP_MEAN_COLUMN',paste(column.name,'_DAILY_MEAN',sep=''))
@@ -992,123 +941,13 @@ print('Getting exceedance counts')
     dplyr::filter(TEMP_VALUE_COLUMN>-999)%>%
     dplyr::filter(as.numeric(TEMP_VALUE_COLUMN)>data.exceedancethreshold)%>%
     dplyr::group_by(STATION_NAME,EMS_ID,INSTRUMENT)%>%
-    summarise(EXCEEDANCE=n())%>%
+    dplyr::summarise(EXCEEDANCE=n())%>%
     merge(data.complete,all.y=TRUE)%>%
     dplyr::mutate(EXCEEDANCE=ifelse(!is.na(EXCEEDANCE),EXCEEDANCE,0))
 
   return(data.count)
 }
-GET_DATEPADDED_DATA<-function(data.unpadded,column.datefield='DATE_PST',column.static=c('STATION_NAME','EMS_ID','INSTRUMENT'))
 
-{
-  #This will pad the data with missing dates
-  #column.static is a vector of strings that describes the column names whose value will be retained throughout the padded entries
-  #it will serve as the reference key to create the padded dates
-
-  #----debug purposes------------
-  #these are function inputs
-  # data.unpadded<-data
-  # column.static<- c('STATION_NAME','EMS_ID','AQHI_AREA')
-  # column.datefield<-'DATE_PST'
-  #column.static=c('STATION_NAME','EMS_ID','INSTRUMENT')
-  #data.unpadded<-data
-  #-------------------------
-
-
-
-  #convert all fields that are not part of date or static fields
-  column.allnames<-colnames(data.unpadded)
-  print('Converting data to string')
-  for (temp in column.allnames[!column.allnames %in% c(column.static,column.datefield)])
-  {
-    data.unpadded<-data.unpadded%>%
-      RENAME_COLUMN(temp,'TEMP_COLUMN_NAME')%>%
-      mutate(TEMP_COLUMN_NAME=as.character(TEMP_COLUMN_NAME)) %>%
-      RENAME_COLUMN('TEMP_COLUMN_NAME',temp)
-  }
-  #-------------------------------------------------------------
-
-  data.unpadded<-data.unpadded%>%
-    RENAME_COLUMN(column.datefield,'TEMP_DATE_FIELD_00')%>%   #temporarily rename the column
-    mutate(TEMP_DATE_FIELD=as.POSIXct(TEMP_DATE_FIELD_00,tz='utc'))%>%
-    mutate(TEMP_DATE_FIELD_00=as.character(format(TEMP_DATE_FIELD,'%Y-%m-%d %H:%M')))%>%   #this is to ensure format of date is standard
-    RENAME_COLUMN('TEMP_DATE_FIELD_00',column.datefield)%>%
-    mutate(REF_KEY='KEY')  #rename the column back
-
-
-  #create a key column based on multiple columns defined in column.key
-  #column key is just concatenation of other columns
-  for (column.temp in column.static)
-  {
-    print(paste('Creating a key from:',column.temp,'column'))
-    data.unpadded<-data.unpadded%>%
-      RENAME_COLUMN(column.temp,'TEMP_REF_COLUMN')%>%
-      mutate(REF_KEY=paste(REF_KEY,TEMP_REF_COLUMN,sep='-'))%>%
-      RENAME_COLUMN('TEMP_REF_COLUMN',column.temp)  #rename back
-  }
-
-
-  #identify the start date and end dates
-  data.date<-data.unpadded%>%
-    group_by(REF_KEY)%>%
-    summarise(DATE_START=min(TEMP_DATE_FIELD,na.rm=TRUE),
-              DATE_END=max(TEMP_DATE_FIELD,na.rm = TRUE))
-
-
-  for (key in unique(data.unpadded$REF_KEY))
-  {
-    print(paste('Padding dates for the following:',key))
-    temp.data<-data.unpadded%>%
-      dplyr::filter(REF_KEY==key)
-
-    temp.date<-data.date%>%
-      dplyr::filter(REF_KEY==key)
-    temp.filler<-data.frame(TEMP_DATE_FIELD=seq.POSIXt(from=temp.date$DATE_START,to=temp.date$DATE_END[1],by='hour'))%>%
-      mutate(TEMP_DATE_FIELD_00=as.character(format(TEMP_DATE_FIELD,'%Y-%m-%d %H:%M')))%>%   #insert the original column
-      RENAME_COLUMN('TEMP_DATE_FIELD_00',column.datefield)
-
-    #insert columns with static values
-    #add the reference key as a static field
-    column.static<-unique(c(column.static,'REF_KEY')) #this will make sure the value gets carried over
-    for (column.temp in column.static)
-    {
-      temp.data<-temp.data%>% #grab the static values for specific columns
-        RENAME_COLUMN(column.temp,'TEMP_COLUMN')
-
-      temp.filler<-temp.filler%>%
-        mutate(TEMP_COLUMN=temp.data$TEMP_COLUMN[1])%>%
-        RENAME_COLUMN('TEMP_COLUMN',column.temp)
-
-      temp.data<-temp.data%>%
-        RENAME_COLUMN('TEMP_COLUMN')   #remove this column once processed
-    }
-    #insert other columns, leave these blank
-    column.allnames<-colnames(data.unpadded)
-    column.allnames<-column.allnames[!column.allnames %in% c(column.static,column.datefield,'REF_KEY','TEMP_DATE_FIELD')]
-
-    for (column.temp in column.allnames)
-    {
-      if (!column.temp %in% colnames(temp.filler))
-      {
-        #this adds columns that do not exist in temp.filler
-        print(paste('Insert a column with blank value:',column.temp))
-        temp.filler<-temp.filler%>%
-          mutate(TEMP_COLUMN='')%>%
-          RENAME_COLUMN('TEMP_COLUMN',column.temp)
-      }
-    }
-
-
-
-    temp.filler<-temp.filler %>%
-      dplyr::filter(!TEMP_DATE_FIELD %in% temp.data$TEMP_DATE_FIELD)
-    data.unpadded<-rbind(data.unpadded,temp.filler)
-
-  }
-
-  data.result<-RENAME_COLUMN(data.unpadded,c('REF_KEY','TEMP_DATE_FIELD'))  #deletes these two columns
-  return(data.result)
-}
 
 
 GET_DAILY_MAX<-function(data.input,column.name='ROUNDED_VALUE',column.date='DATE_PST',
@@ -1157,3 +996,250 @@ GET_DAILY_MAX<-function(data.input,column.name='ROUNDED_VALUE',column.date='DATE
 
 }
 
+#' Pad missing dates function
+#'
+#' This function identifies and inserts missing dats
+#' @param data.unpadded is dataframe of data
+#' @param column.datefield is a string defining the date and time
+#' @param column.static is a vector listing the column names that data is grouped by
+#' @param timebase is either 60 or 1
+#' @param keep_REF_ is internal option to keep a reference or index column
+GET_DATEPADDED_DATA<-function(data.unpadded,column.datefield='DATE_PST',
+                              column.static=c('STATION_NAME','STATION_NAME_FULL','SERIAL','EMS_ID','INSTRUMENT'),
+                              timebase=60,keep_REF_=FALSE)
+
+{
+  #This will pad the data with missing dates
+  #column.static is a vector of strings that describes the column names whose value will be retained throughout the padded entries
+  #it will serve as the reference key to create the padded dates
+
+  #----debug purposes------------
+  # #these are function inputs
+  # data.unpadded<-station.data
+  # # column.static<- c('STATION_NAME','EMS_ID','AQHI_AREA')
+  # column.datefield<-'DATE_PST'
+  # column.static=c('STATION_NAME','STATION_NAME_FULL','SERIAL','EMS_ID','INSTRUMENT')
+  #data.unpadded<-data
+  #-------------------------
+
+
+
+  #convert all fields that are not part of date or static fields
+  column.allnames<-colnames(data.unpadded)
+  column.static<-column.static[column.static %in% column.allnames]
+  print('Converting data to string')
+  for (temp in column.allnames[!column.allnames %in% c(column.static,column.datefield)])
+  {
+    data.unpadded<-data.unpadded%>%
+      RENAME_COLUMN(temp,'TEMP_COLUMN_')%>%
+      dplyr::mutate(TEMP_COLUMN_NAME=as.character(TEMP_COLUMN_)) %>%
+      RENAME_COLUMN('TEMP_COLUMN_',temp)
+  }
+  #-------------------------------------------------------------
+
+  data.unpadded<-data.unpadded%>%
+    RENAME_COLUMN(column.datefield,'TEMP_DATE_FIELD_00')%>%   #temporarily rename the column
+    dplyr::mutate(TEMP_DATE_FIELD=as.POSIXct(TEMP_DATE_FIELD_00,tz='utc'))%>%
+    dplyr::mutate(TEMP_DATE_FIELD_00=as.character(format(TEMP_DATE_FIELD,'%Y-%m-%d %H:%M')))%>%   #this is to ensure format of date is standard
+    RENAME_COLUMN('TEMP_DATE_FIELD_00',column.datefield)%>%
+    dplyr::mutate(REF_KEY='KEY')  #rename the column back
+
+
+  #create a key column based on multiple columns defined in column.key
+  #column key is just concatenation of other columns
+  for (column.temp in column.static)
+  {
+    print(paste('Creating a key from:',column.temp,'column'))
+    data.unpadded<-data.unpadded%>%
+      RENAME_COLUMN(column.temp,'TEMP_REF_')%>%
+      dplyr::mutate(REF_KEY=paste(REF_KEY,TEMP_REF_,sep='-'))%>%
+      RENAME_COLUMN('TEMP_REF_',column.temp)  #rename back
+  }
+
+
+  #identify the start date and end dates
+  data.date<-data.unpadded%>%
+    dplyr::group_by(REF_KEY)%>%
+    dplyr::summarise(DATE_START=min(TEMP_DATE_FIELD,na.rm=TRUE),
+                     DATE_END=max(TEMP_DATE_FIELD,na.rm = TRUE))
+
+
+  for (key in unique(data.unpadded$REF_KEY))
+  {
+    print(paste('Padding dates for the following:',key))
+    temp.data<-data.unpadded%>%
+      dplyr::filter(REF_KEY==key)
+
+    temp.date<-data.date%>%
+      dplyr::filter(REF_KEY==key)
+    if (as.numeric(timebase)==1)
+    {
+      temp.filler<-data.frame(TEMP_DATE_FIELD=seq.POSIXt(from=temp.date$DATE_START,to=temp.date$DATE_END[1],by='min'))%>%
+        dplyr::mutate(TEMP_DATE_FIELD_00=as.character(format(TEMP_DATE_FIELD,'%Y-%m-%d %H:%M')))%>%   #insert the original column
+        RENAME_COLUMN('TEMP_DATE_FIELD_00',column.datefield)
+    } else
+    {
+      temp.filler<-data.frame(TEMP_DATE_FIELD=seq.POSIXt(from=temp.date$DATE_START,to=temp.date$DATE_END[1],by='hour'))%>%
+        dplyr::mutate(TEMP_DATE_FIELD_00=as.character(format(TEMP_DATE_FIELD,'%Y-%m-%d %H:%M')))%>%   #insert the original column
+        RENAME_COLUMN('TEMP_DATE_FIELD_00',column.datefield)
+    }
+
+    #insert columns with static values
+    #add the reference key as a static field
+    column.static<-unique(c(column.static,'REF_KEY')) #this will make sure the value gets carried over
+    for (column.temp in column.static)
+    {
+      temp.data<-temp.data%>% #grab the static values for specific columns
+        RENAME_COLUMN(column.temp,'TEMP_COLUMN_')
+
+      temp.filler<-temp.filler%>%
+        dplyr::mutate(TEMP_COLUMN_=temp.data$TEMP_COLUMN_[1])%>%
+        RENAME_COLUMN('TEMP_COLUMN_',column.temp)
+
+      temp.data<-temp.data%>%
+        RENAME_COLUMN('TEMP_COLUMN_')   #remove this column once processed
+    }
+    #insert other columns, leave these blank
+    column.allnames<-colnames(data.unpadded)
+    column.allnames<-column.allnames[!column.allnames %in% c(column.static,column.datefield,'REF_KEY','TEMP_DATE_FIELD')]
+
+    for (column.temp in column.allnames)
+    {
+      if (!column.temp %in% colnames(temp.filler))
+      {
+        #this adds columns that do not exist in temp.filler
+        print(paste('Insert a column with blank value:',column.temp))
+        temp.filler<-temp.filler%>%
+          dplyr::mutate(TEMP_COLUMN_='')%>%
+          RENAME_COLUMN('TEMP_COLUMN_',column.temp)
+      }
+    }
+
+
+
+    temp.filler<-temp.filler %>%
+      dplyr::filter(!TEMP_DATE_FIELD %in% temp.data$TEMP_DATE_FIELD)
+    data.unpadded<-rbind(data.unpadded,temp.filler)
+    print(paste('Inserted',nrow(temp.filler),'missing dates'))
+  }
+
+  if (keep_REF_)
+  {
+    data.result<-RENAME_COLUMN(data.unpadded,c('TEMP_COLUMN_NAME','TEMP_DATE_FIELD'))
+
+  } else
+  {
+  data.result<-RENAME_COLUMN(data.unpadded,c('REF_KEY','TEMP_COLUMN_NAME','TEMP_DATE_FIELD'))  #deletes these two columns
+
+  }
+  return(data.result)
+}
+
+#' Get Rolling Mean function
+#'
+#' This function creates a rolling mean based on specified hours
+#'
+#' @param data.input is dataframe containing data
+#' @param data.input.previous is dataframe of earlier data, added to have complete rolling mean
+#' @param data.averaginghour is the rolling mean time
+#' @param column.value is vector that will be averaged
+#' @param column.date is string defining the date time column
+#' @param column.static is vector sting containing all columns where rolling average is calculated
+#' @param threshold is the data capture requirement in fraction. If the valid sample
+#' for average is less, it will not have a rolling mean value
+#' @param precision is the number of decimal places for the result
+GET_ROLLING_MEAN<-function(data.input,data.input.previous=NULL,
+                           data.averaginghour=8,column.date='DATE_PST',
+                           column.value='ROUNDED_VALUE',
+                           column.static=c('STATION_NAME','STATION_NAME_FULL','SERIAL','EMS_ID','INSTRUMENT'),
+                           threshold=0.75,precision=1)
+  #gets the rolling mean
+  #should include previous year's value here
+
+
+
+{
+  # debug
+  # data.input<-station.data
+  # # #
+  # # data.input.previous<-NULL
+  # data.averaginghour=3
+  # column.date='DATE_PST'
+  # # column.static=c('STATION_NAME','STATION_NAME_FULL','SERIAL','EMS_ID','INSTRUMENT')
+  # # column.value=c('NO2_ROUNDED','O3_ROUNDED','pm25_rounded')
+  # threshold=0.75
+  # precision=1
+  # data.input.previous<-GET_DATA_FTP(2017,'o3')
+  # data.averaginghour=8
+  # column.date='DATE_PST'
+  # column.name='ROUNDED_VALUE'
+  # precision=1
+  # threshold=0.75
+  # end debug
+
+
+  print('getting rolling mean')
+
+  #prepare column.value convert to readable format
+  column.value<-colnames(data.input)[toupper(colnames(data.input)) %in% toupper(column.value)]
+if (length(column.value)>0)
+{
+  data.output<-data.input%>%
+    plyr::rbind.fill(data.input.previous)%>% #combine with the previous year's date, if available
+    #dplyr::filter(STATION_NAME=='Prince George Plaza 400')%>%   #for debugging purposes
+    GET_DATEPADDED_DATA(column.datefield = column.date,
+                        column.static = column.static,keep_REF_ = TRUE)%>%#pad missing dates, to be sure
+    RENAME_COLUMN(column.date,'TEMP_DATE_PST')
+
+  for (column.name in column.value)
+  {
+    print(paste('Processing data column:',column.name))
+    data.output<-data.output%>%
+      RENAME_COLUMN(column.name,'TEMP_COLUMN_VALUE')%>%
+      dplyr::mutate(TEMP_COLUMN_VALUE=as.numeric(TEMP_COLUMN_VALUE))%>%
+      dplyr::mutate(TEMP_VALID_COUNTER=ifelse(is.na(TEMP_COLUMN_VALUE),0,1))%>% #just adding a counter
+      dplyr::mutate(TEMP_COLUMN_VALUE2=ifelse(is.na(TEMP_COLUMN_VALUE),0,as.numeric(TEMP_COLUMN_VALUE)))%>%
+      dplyr::mutate(TEMP_COLUMN_VALUE2=ifelse(is.na(TEMP_COLUMN_VALUE2),0,as.numeric(TEMP_COLUMN_VALUE2)))%>%  #secondary check
+      dplyr::arrange(REF_KEY,TEMP_DATE_PST)%>%   #makes sure it is sorted
+      dplyr::group_by(REF_KEY)%>%
+      #introduces rolling sums, value just accumulates, and calculations from this
+
+      dplyr::mutate(TEMP_ROLL=cumsum(TEMP_VALID_COUNTER),TEMP_ROLL_VALUE=cumsum(TEMP_COLUMN_VALUE2))%>%
+      dplyr::mutate(TEMP_PREV_ROLL=dplyr::lag(TEMP_ROLL,n=data.averaginghour),
+                    TEMP_PREV_VALUE=dplyr::lag(TEMP_ROLL_VALUE,n=data.averaginghour))%>%
+      #make sure there are no NA in rolling sums
+      dplyr::mutate(TEMP_ROLL_VALUE=ifelse(is.na(TEMP_ROLL_VALUE),0,TEMP_ROLL_VALUE),
+                    TEMP_PREV_VALUE=ifelse(is.na(TEMP_PREV_VALUE),0,TEMP_PREV_VALUE),
+                    TEMP_ROLL=ifelse(is.na(TEMP_ROLL),0,TEMP_ROLL),
+                    TEMP_PREV_ROLL=ifelse(is.na(TEMP_PREV_ROLL),0,TEMP_PREV_ROLL))%>%
+      dplyr::mutate(TEMP_ROLL_AVE=round2((TEMP_ROLL_VALUE-TEMP_PREV_VALUE)/(TEMP_ROLL-TEMP_PREV_ROLL),precision),
+                    TEMP_VALID_COUNT=(TEMP_ROLL-TEMP_PREV_ROLL))%>%
+
+      dplyr::mutate(TEMP_ROLL_AVE=ifelse(TEMP_VALID_COUNT>=
+                                           as.integer(threshold*data.averaginghour),
+                                         as.character(TEMP_ROLL_AVE),''))%>%
+      #removes average that does not have enough number of samples
+      RENAME_COLUMN('TEMP_ROLL_AVE',paste(column.name,'_',data.averaginghour,'HR',sep=''))%>% #rename to match the original column name
+      RENAME_COLUMN('TEMP_COLUMN_VALUE',column.name)%>%  #naming the column back
+      RENAME_COLUMN(c('TEMP_VALID_COUNTER','TEMP_ROLL','TEMP_ROLL_VALUE','TEMP_PREV_ROLL',
+                      'TEMP_PREV_VALUE','TEMP_VALID_COUNT','TEMP_COLUMN_VALUE2'))%>% #remove the temporary and unused column
+      dplyr::ungroup()
+
+    #reorder the dataframe columns, to insert the rolling average right after
+    data.colnames<-colnames(data.output)
+    data.colnames.value<-match(column.name,data.colnames)
+    data.colnames.left<-c(data.colnames[1:data.colnames.value],
+                          paste(column.name,'_',data.averaginghour,'HR',sep=''))
+    data.output<-COLUMN_REORDER(data.output,data.colnames.left)
+  }
+  data.output<-data.output%>%
+    dplyr::mutate(TEMP_DATE_PST2=as.POSIXct(as.character(TEMP_DATE_PST),tz='utc'))%>%
+    dplyr::filter(TEMP_DATE_PST2>=as.POSIXct(as.character(min(data.input$DATE_PST)),tz='utc'))%>%   #show only the needed dates
+    dplyr::filter(TEMP_DATE_PST2<=as.POSIXct(as.character(max(data.input$DATE_PST)),tz='utc'))%>%
+    RENAME_COLUMN('TEMP_DATE_PST2')%>% #remove temporary date column
+    RENAME_COLUMN('TEMP_DATE_PST',column.date)%>%
+    RENAME_COLUMN(c('REF_KEY','TEMP_COLUMN_NAME','TEMP_DATE_FIELD'))
+  return(data.output)
+} else
+{return(data.input)}
+}
