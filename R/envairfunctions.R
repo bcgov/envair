@@ -1229,18 +1229,6 @@ GET_URL_FOLDERS<-function(source.url='http://dd.weatheroffice.ec.gc.ca/bulletins
     #dplyr::filter(!is.null(TYPE))%>%
   }
 
-  result<-result%>%
-    dplyr::filter(grepl('alt="\\[',LINES))%>%
-    dplyr::mutate(LINES=as.character(LINES))%>%
-    tidyr::separate(col='LINES',into=c("LINE1","LINE2","LINE3","TYPE",
-                                       "LINE5","FOLDER","LINE7"),sep='"',remove=FALSE)%>%
-    tidyr::separate(col="LINE7",into=c("","DATE"),sep="  +")
-
-  list.columns<-colnames(result)
-  result<-result%>%
-    RENAME_COLUMN(list.columns[!list.columns %in% c('TYPE','FOLDER','DATE')])%>%
-    dplyr::filter(grepl('\\[',TYPE))
-  #dplyr::filter(!is.null(TYPE))%>%
 
   return(result)
 }
