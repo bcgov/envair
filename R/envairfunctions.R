@@ -204,6 +204,8 @@ RENAME_COLUMN<-function(data.station,colname.orig,colname.new=NULL,quiet=TRUE)
 
 {
 
+
+
   if (is.null(colname.new)==TRUE)
   {
     #delete the column
@@ -462,6 +464,7 @@ include <- function (theList, toMatch){
                           theList, value=TRUE))
   return(matches)
 }
+
 readKML <- function(file,keep_name_description=FALSE,layer,...) {
   # Set keep_name_description = TRUE to keep "Name" and "Description" columns
   #   in the resulting SpatialPolygonsDataFrame. Only works when there is
@@ -526,6 +529,7 @@ readKML <- function(file,keep_name_description=FALSE,layer,...) {
   }
   sp_obj
 }
+
 
 #' Rounds the numbers based on DAS numeric format
 round3<-function(x,num_format=5.2)
@@ -935,6 +939,117 @@ GET_RECENT_STATION_DATA<-function(STATION='ALL',timebase=60)
   return(data.output)
 }
 
+
+#' Get Rolling Mean function
+#'
+#' This function creates a rolling mean based on specified hours
+#'
+#' @param data.input is dataframe containing data
+#' @param data.input.previous is dataframe of earlier data, added to have complete rolling mean
+#' @param data.averaginghour is the rolling mean time
+#' @param column.value is vector that will be averaged
+#' @param column.date is string defining the date time column
+#' @param column.static is vector sting containing all columns where rolling average is calculated
+#' @param threshold is the data capture requirement in fraction. If the valid sample
+#' for average is less, it will not have a rolling mean value
+#' @param precision is the number of decimal places for the result
+GET_ROLLING_MEAN<-function(data.input,data.input.previous=NULL,
+                           data.averaginghour=8,column.date='DATE_PST',
+                           column.value='ROUNDED_VALUE',
+                           column.static=c('STATION_NAME','STATION_NAME_FULL','SERIAL','EMS_ID','INSTRUMENT'),
+                           threshold=0.75,precision=1)
+  #gets the rolling mean
+  #should include previous year's value here
+
+
+
+{
+  # debug
+  # data.input<-station.data
+  # # #
+  # # data.input.previous<-NULL
+  # data.averaginghour=3
+  # column.date='DATE_PST'
+  # # column.static=c('STATION_NAME','STATION_NAME_FULL','SERIAL','EMS_ID','INSTRUMENT')
+  # # column.value=c('NO2_ROUNDED','O3_ROUNDED','pm25_rounded')
+  # threshold=0.75
+  # precision=1
+  # data.input.previous<-GET_DATA_FTP(2017,'o3')
+  # data.averaginghour=8
+  # column.date='DATE_PST'
+  # column.name='ROUNDED_VALUE'
+  # precision=1
+  # threshold=0.75
+  # end debug
+
+
+  print('getting rolling mean')
+
+  #prepare column.value convert to readable format
+  column.value<-colnames(data.input)[toupper(colnames(data.input)) %in% toupper(column.value)]
+  if (length(column.value)>0)
+  {
+    data.output<-data.input%>%
+      plyr::rbind.fill(data.input.previous)%>% #combine with the previous year's date, if available
+      #dplyr::filter(STATION_NAME=='Prince George Plaza 400')%>%   #for debugging purposes
+      GET_DATEPADDED_DATA(column.datefield = column.date,
+                          column.static = column.static,keep_REF_ = TRUE)%>%#pad missing dates, to be sure
+      RENAME_COLUMN(column.date,'TEMP_DATE_PST')
+
+    for (column.name in column.value)
+    {
+      print(paste('Processing data column:',column.name))
+      data.output<-data.output%>%
+        RENAME_COLUMN(column.name,'TEMP_COLUMN_VALUE')%>%
+        dplyr::mutate(TEMP_COLUMN_VALUE=as.numeric(TEMP_COLUMN_VALUE))%>%
+        dplyr::mutate(TEMP_VALID_COUNTER=ifelse(is.na(TEMP_COLUMN_VALUE),0,1))%>% #just adding a counter
+        dplyr::mutate(TEMP_COLUMN_VALUE2=ifelse(is.na(TEMP_COLUMN_VALUE),0,as.numeric(TEMP_COLUMN_VALUE)))%>%
+        dplyr::mutate(TEMP_COLUMN_VALUE2=ifelse(is.na(TEMP_COLUMN_VALUE2),0,as.numeric(TEMP_COLUMN_VALUE2)))%>%  #secondary check
+        dplyr::arrange(REF_KEY,TEMP_DATE_PST)%>%   #makes sure it is sorted
+        dplyr::group_by(REF_KEY)%>%
+        #introduces rolling sums, value just accumulates, and calculations from this
+
+        dplyr::mutate(TEMP_ROLL=cumsum(TEMP_VALID_COUNTER),TEMP_ROLL_VALUE=cumsum(TEMP_COLUMN_VALUE2))%>%
+        dplyr::mutate(TEMP_PREV_ROLL=dplyr::lag(TEMP_ROLL,n=data.averaginghour),
+                      TEMP_PREV_VALUE=dplyr::lag(TEMP_ROLL_VALUE,n=data.averaginghour))%>%
+        #make sure there are no NA in rolling sums
+        dplyr::mutate(TEMP_ROLL_VALUE=ifelse(is.na(TEMP_ROLL_VALUE),0,TEMP_ROLL_VALUE),
+                      TEMP_PREV_VALUE=ifelse(is.na(TEMP_PREV_VALUE),0,TEMP_PREV_VALUE),
+                      TEMP_ROLL=ifelse(is.na(TEMP_ROLL),0,TEMP_ROLL),
+                      TEMP_PREV_ROLL=ifelse(is.na(TEMP_PREV_ROLL),0,TEMP_PREV_ROLL))%>%
+        dplyr::mutate(TEMP_ROLL_AVE=round2((TEMP_ROLL_VALUE-TEMP_PREV_VALUE)/(TEMP_ROLL-TEMP_PREV_ROLL),precision),
+                      TEMP_VALID_COUNT=(TEMP_ROLL-TEMP_PREV_ROLL))%>%
+
+        dplyr::mutate(TEMP_ROLL_AVE=ifelse(TEMP_VALID_COUNT>=
+                                             as.integer(threshold*data.averaginghour),
+                                           as.character(TEMP_ROLL_AVE),''))%>%
+        #removes average that does not have enough number of samples
+        RENAME_COLUMN('TEMP_ROLL_AVE',paste(column.name,'_',data.averaginghour,'HR',sep=''))%>% #rename to match the original column name
+        RENAME_COLUMN('TEMP_COLUMN_VALUE',column.name)%>%  #naming the column back
+        RENAME_COLUMN(c('TEMP_VALID_COUNTER','TEMP_ROLL','TEMP_ROLL_VALUE','TEMP_PREV_ROLL',
+                        'TEMP_PREV_VALUE','TEMP_VALID_COUNT','TEMP_COLUMN_VALUE2'))%>% #remove the temporary and unused column
+        dplyr::ungroup()
+
+      #reorder the dataframe columns, to insert the rolling average right after
+      data.colnames<-colnames(data.output)
+      data.colnames.value<-match(column.name,data.colnames)
+      data.colnames.left<-c(data.colnames[1:data.colnames.value],
+                            paste(column.name,'_',data.averaginghour,'HR',sep=''))
+      data.output<-COLUMN_REORDER(data.output,data.colnames.left)
+    }
+    data.output<-data.output%>%
+      dplyr::mutate(TEMP_DATE_PST2=as.POSIXct(as.character(TEMP_DATE_PST),tz='utc'))%>%
+      dplyr::filter(TEMP_DATE_PST2>=as.POSIXct(as.character(min(data.input$DATE_PST)),tz='utc'))%>%   #show only the needed dates
+      dplyr::filter(TEMP_DATE_PST2<=as.POSIXct(as.character(max(data.input$DATE_PST)),tz='utc'))%>%
+      RENAME_COLUMN('TEMP_DATE_PST2')%>% #remove temporary date column
+      RENAME_COLUMN('TEMP_DATE_PST',column.date)%>%
+      RENAME_COLUMN(c('REF_KEY','TEMP_COLUMN_NAME','TEMP_DATE_FIELD'))
+    return(data.output)
+  } else
+  {return(data.input)}
+}
+
+
 #' Pad missing dates function
 #'
 #' This function identifies and inserts missing dats
@@ -954,15 +1069,10 @@ GET_DATEPADDED_DATA<-function(data.unpadded,column.datefield='DATE_PST',
 
   #----debug purposes------------
   # #these are function inputs
-  if (0)
-  {
-    data.unpadded<-data.result
-    column.static<- c('STATION_NAME','STATION_NAME_FULL','SERIAL','EMS_ID','INSTRUMENT')
-    column.datefield<-'DATE_PST'
-    column.static=c('STATION_NAME','STATION_NAME_FULL','SERIAL','EMS_ID','INSTRUMENT')
-    keep_REF_=FALSE
-    timebase=60
-  }
+  # data.unpadded<-station.data
+  # # column.static<- c('STATION_NAME','EMS_ID','AQHI_AREA')
+  # column.datefield<-'DATE_PST'
+  # column.static=c('STATION_NAME','STATION_NAME_FULL','SERIAL','EMS_ID','INSTRUMENT')
   #data.unpadded<-data
   #-------------------------
 
@@ -972,10 +1082,14 @@ GET_DATEPADDED_DATA<-function(data.unpadded,column.datefield='DATE_PST',
   column.allnames<-colnames(data.unpadded)
   column.static<-column.static[column.static %in% column.allnames]
   print('Converting data to string')
-  data.unpadded <- data.frame(lapply(data.unpadded,as.character),stringsAsFactors = FALSE)
-
+  for (temp in column.allnames[!column.allnames %in% c(column.static,column.datefield)])
+  {
+    data.unpadded<-data.unpadded%>%
+      RENAME_COLUMN(temp,'TEMP_COLUMN_')%>%
+      dplyr::mutate(TEMP_COLUMN_NAME=as.character(TEMP_COLUMN_)) %>%
+      RENAME_COLUMN('TEMP_COLUMN_',temp)
+  }
   #-------------------------------------------------------------
-
 
   data.unpadded<-data.unpadded%>%
     RENAME_COLUMN(column.datefield,'TEMP_DATE_FIELD_00')%>%   #temporarily rename the column
@@ -1073,5 +1187,184 @@ GET_DATEPADDED_DATA<-function(data.unpadded,column.datefield='DATE_PST',
 
   }
   return(data.result)
+}
+
+
+#' Get Folders in URL
+#'
+#' This function retrieves the list of folders that are in the specified URL
+#' @param source.url is the URL containing the data folders, default is ECCC datamart
+GET_URL_FOLDERS<-function(source.url='http://dd.weatheroffice.ec.gc.ca/bulletins/alphanumeric/' )
+{
+  if (0)
+  {
+    source.url='https://dd.weatheroffice.ec.gc.ca/bulletins/alphanumeric/20191018/FL/CWVR/'
+  }
+  #retrieves list of files from the URL
+  RUN_PACKAGE(c('dplyr','tidyr','httr','curl'))
+
+  #note: Do not use the RCurl version of reading https, there is an SSL bug
+
+  result <- NULL
+  #we'll try http and https
+  temp_<-curl(gsub('https://','http://',source.url))
+  try(result<-data.frame(LINES=unlist(strsplit(readLines(temp_),split='/n'))))
+  temp_<-curl(gsub('http://','https://',source.url))
+  try(result<-data.frame(LINES=unlist(strsplit(readLines(temp_),split='/n'))))
+
+  if (!is.null(result))
+  {
+    result<-result%>%
+      dplyr::filter(grepl('alt="\\[',LINES))%>%
+      dplyr::mutate(LINES=as.character(LINES))%>%
+      tidyr::separate(col='LINES',into=c("LINE1","LINE2","LINE3","TYPE",
+                                         "LINE5","FOLDER","LINE7"),sep='"',remove=FALSE)%>%
+      tidyr::separate(col="LINE7",into=c("","DATE"),sep="  +")
+
+    list.columns<-colnames(result)
+    result<-result%>%
+      RENAME_COLUMN(list.columns[!list.columns %in% c('TYPE','FOLDER','DATE')])%>%
+      dplyr::filter(grepl('\\[',TYPE))
+    #dplyr::filter(!is.null(TYPE))%>%
+  }
+  return(result)
+}
+
+#' Save dataframe to a file in a specified location
+#'
+#' This function saves the dataframe into a file
+#' @param data_to_save is the dataframe to save into a file
+#' @param filename is string defining the name of the file
+#' @param path.target is string defining the path where the file will be saved
+#' @param path.temp default NULL, is where the file is temporarily saved. if null, file is saved in working directory
+SAVE_TO_FILE<-function(data_to_save,filename,path.target,path.temp=NULL)
+{
+
+  #updated: 2019-04-10
+  #PURPOSE: Saves the dataframe into a file
+  #creates a temporary file first, copy file into target
+  #   directory using a pseudoname, then renames to replace existing file
+  #debug initialization
+  # data_to_save<-GET_STATION_DETAILS_DAS()
+  # filename<-'stations.csv'
+  # path.target<-'C:/R_Library/abind/'
+  # path.temp<-NULL
+  #end of debug initialization
+
+  #NOTE: The md5 function is not accurate, it seems to change with the file
+
+  #fix path.target, remove the last / if it's there
+  RUN_PACKAGE(c('data.table','RCurl'))
+  if (substr(path.target,nchar(path.target),nchar(path.target))=='/')
+  {
+    path.target<-substr(path.target,1,nchar(path.target)-1)
+  }
+
+  function1_ok<-FALSE
+  function2_ok<-FALSE
+  RUN_PACKAGE(c('dplyr'))
+  if (is.null(path.temp))
+  {
+    path.temp<-paste(getwd(),'/filetemp_',sep='')
+    dir.create(path.temp,showWarnings = FALSE)
+  }
+
+  if (!is.null(data_to_save) && nrow(data_to_save)>0)
+  {
+
+    filename.final<-paste(path.target,filename,sep='/')
+    filename.final.pseudo<-paste(path.target,'/',filename,'_',sep='')
+
+
+    #save file into temporary folder, get the md5 hash sum of file
+    #note that for md5 to work, the filename must be the same as final
+    #so in temporary folder, the filename is the same as final name, and then renamed to temp
+    #for copying into the target folder
+    # file.md5.content<-NULL
+    # filename.md5.value<-NULL
+    #try(write.table(data_to_save,file=filename.temp.full,row.names=FALSE,sep=','),silent=TRUE)
+    if (grepl('ftp://',path.target))
+    {
+      print(paste('Saving to FTP',path.target))
+
+
+      filename.final<-paste(path.target,filename,sep='/')
+
+      key<-ENVAIR_CONNECTION_CHECK()
+      key.ftpuser<-as.character(key$VALUE[key$ITEM=='FTP_USER'])
+      key.ftppwd<-as.character(key$VALUE[key$ITEM=='FTP_PASSWORD'])
+      data.table::fwrite(data_to_save,
+                         file=paste(path.temp,'/',filename,sep=''),
+                         dateTimeAs = 'write.csv')
+      # print(paste('from:',paste(path.temp,'/',filename,sep=''),
+      #             'to:',filename.final))
+      try(RCurl::ftpUpload(paste(path.temp,'/',filename,sep=''),
+                           filename.final,
+                           userpwd=paste(safer::decrypt_string(key.ftpuser,key=Sys.info()['nodename']),
+                                         safer::decrypt_string(key.ftppwd,key=Sys.info()['nodename'])
+                                         ,sep=':'
+                           )
+      )
+      )
+      unlink(path.temp,recursive = TRUE) #delete the temporary file
+    } else
+    {
+      filename.temp<-paste(filename,'_',sep='')
+      filename.temp.full<-paste(path.temp,'/',filename.temp,sep='')
+      filename.final<-paste(path.target,filename,sep='/')
+      filename.final.pseudo<-paste(path.target,'/',filename,'_',sep='')
+      try(data.table::fwrite(data_to_save,file=filename.final.pseudo,dateTimeAs = 'write.csv'))
+      try(function2_ok<-file.rename(from=filename.final.pseudo,to=filename.final),silent=TRUE)
+    }
+    # try(filename.md5.value<-paste(as.character(openssl::md5(filename.temp.full))),silent=TRUE)
+    #try(file.rename(from=paste(path.temp,'/',filename,sep=''),
+    #               to=filename.temp.full),silent=TRUE)
+
+
+    # file.md5.temp<-paste('*',filename,sep='')
+
+    #read the content of existing md5 file, if it exist
+    #trasnfer the file from temporary to target, then rename to final name
+    # file.md5<-paste(path.target,'MD5',sep='/')
+    # try(file.md5.content<-read.table(file.md5),silent=TRUE)
+    # if (!is.null(file.md5.content) && colnames(file.md5.content) %in% c('V1','V2'))
+    # {
+    #   file.md5.content<-file.md5.content%>%
+    #     dplyr::mutate(V1=as.character(V1),V2=as.character(V2))
+    # }
+    #check if md5 is the same as previously save
+    #no need to save if md5 is the same
+    # if (!is.null(file.md5.content) || (!filename.md5.value %in% file.md5.content$V2))
+    # {
+    #try(function1_ok<-file.copy(filename.temp.full,path.target,recursive=FALSE),silent=TRUE)
+
+
+    #   if (is.null(file.md5.content) || (!filename.md5 %in% file.md5.content$V2))
+    #   {
+    #     #this means that there is no existing md5, or md5 file not available
+    #     #or there is no entry about that new file on md5 details
+    #     #so create a new content for md5
+    #     file.md5.content<-file.md5.content%>%
+    #       rbind(data.frame(V1=filename.md5.value,
+    #                        V2=as.character(filename.md5)))
+    #   } else
+    #   {
+    #     #this means yp update the md5 on the existing md5 file
+    #     file.md5.content[file.md5.content$V2==filename.md5,]$V1<-paste(as.character(filename.md5.value))
+    #   }
+    #   if (!is.null(file.md5.content))
+    #   {
+    #     try( write.table(file.md5.content,file.md5,row.names=FALSE,
+    #                      col.names=FALSE,quote=FALSE))
+    #   }
+    #
+    # }
+
+
+
+  }
+
+
+  return(TRUE)
 }
 

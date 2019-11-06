@@ -1,3 +1,5 @@
+# DEPRACATED!
+
 #this R script retrieves data from ECCC
 
 #' GET_FILE_CSV
