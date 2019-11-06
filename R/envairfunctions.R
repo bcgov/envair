@@ -1,14 +1,206 @@
 
+#' GET_FILE_CSV
+#'
+#' This function retrieves csv file from ftp, save local copy. It only retrieves updated files
+#' @param list.files is a vector string containing filesnames with extension
+#' @param ftp.path is the ftp path where data will be saved
+#' @param path.local is the local directory where the file will be saved. Default is NULL where temp folder is in the workpath
+#'
+GET_FILE_CSV<-function(list.files,ftp.path,path.local=NULL,clean=TRUE)
+{
+  #debug
+  if (0)
+  {
+    #list.files<-c('E270963.csv','E289309.csv','E223756.csv','e2225.csv','E22322')
+    # ftp.path<-'ftp.env.gov.bc.ca/pub/outgoing/AIR_TEST/Hourly_Raw_Air_Data/Station/'
+    # path.local<-NULL
+    list.files="co.csv"
+    ftp.path="ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/AnnualSummary/2017/"
+    path.local="A:/Air/Operations ORCS/Technology/Software Codes ScriptsExecutables/R_SCRIPTS/03_BCGovR/envair/R/temp_valid/2017"
+    "A:/Air/Operations ORCS/Technology/Software Codes ScriptsExecutables/R_SCRIPTS/03_BCGovR/envair/R/temp_valid"
+    list.files<-data.filedetails$FILENAME
+  }
+  #end debug
+
+  #make sure ftp.path has a "/" at the end
+  if (!substr(ftp.path,nchar(ftp.path),nchar(ftp.path))=='/')
+  {
+    ftp.path=paste(ftp.path,'/',sep='')
+  }
+
+  files.result<-NULL
+  #prepare the file name, only .csv files allowed, if not file extension, add .csv
+  list.files.csv<-list.files[grepl('.csv',list.files,ignore.case=TRUE)]  #has .csv
+  list.files.csv<-sub('.csv',"",list.files.csv)
+  list.files.nocsv<-list.files[!grepl('\\.',list.files,ignore.case=TRUE)]  #no period
+  list.files<-c(list.files.csv,list.files.nocsv)
+  list.files<-paste(toupper(list.files),'.csv',sep='')
+  #specifiy the location where temp files will be saved
+  if (is.null(path.local))
+  {
+    path.local<-paste(getwd(),'/temp',sep='')
+  }
+
+  #delete temp folder if clean==TRUE
+  if (clean)
+  {
+    print(paste('Deleting temp path:',path.local))
+    #try(unlink(path.local,recursive=TRUE))
+    file.remove(file.path(path.local,
+                          list.files(path.local)[grepl('.csv',list.files(path.local))]))
+    file.remove(file.path(path.local,
+                          list.files(path.local)[grepl('.csv_',list.files(path.local))]))
+  }
+
+  #attempt 3 times to make sure directory is created
+  try(dir.create(path.local,showWarnings = FALSE))
+  try(dir.create(path.local,showWarnings = FALSE))
+  try(dir.create(path.local,showWarnings = FALSE))
+  list.write<-NULL #this is vector that contains list of files to write at end of function
+  RUN_PACKAGE(c('curl','stringr','dplyr','tibble'))
+
+  print(paste('Retrieving details of ftp:',ftp.path))
+  #get details of files in FTP
+  data.filedetails<-
+    data.frame(FILEALL=unlist(strsplit(x=
+                                         getURL(url=ftp.path,verbose=FALSE,
+                                                ftp.use.epsv=TRUE
+                                         ),
+                                       split='\r\n')))%>%
+    tidyr::separate(FILEALL,c('DATE','TIME','INDEX','FILENAME'),sep=' +',extra='drop')%>%
+    dplyr::mutate(URL=paste(ftp.path,FILENAME,sep=''))%>%
+    dplyr::filter(toupper(FILENAME) %in% toupper(list.files))%>%
+    dplyr::mutate(CREATION_TIME=paste(DATE,TIME))%>%
+    dplyr::mutate(CREATION_TIME=as.POSIXct(strptime(CREATION_TIME,"%m-%d-%y %I:%M%p"),tz='utc'))%>%
+    dplyr::mutate(DATE=format(strptime(DATE,"%m-%d-%y"),'%Y-%m-%d'))%>%
+    dplyr::mutate(TIME=format(strptime(TIME,"%I:%M%p"),'%H:%M'))
+
+  data.filedetails.local<-list.files(path.local)
+  data.filedetails.local<-data.filedetails.local[toupper(data.filedetails.local) %in% toupper(list.files)]
+
+  if (length(data.filedetails.local)==0)
+  {
+    print(paste('There were no files in temporary folder:',path.local))
+    #download all the listed files
+    list.write<-c(list.write,data.filedetails$FILENAME)
+  } else
+  {
+    #have to evaluate files first before downloading, see if download is necessary
+    temp<-NULL
+    print(paste('Retrieving local File details from:',nrow(data.filedetails.local),'files'))
+    for (data.file in data.filedetails.local)
+    {
+      temp<-rbind(temp,data.frame(FILENAME=data.file,file.info(paste(path.local,data.file,sep='/'))))
+    }
+    data.filedetails.local<-temp%>%
+      dplyr::select(FILENAME,ctime,mtime)%>%
+      tibble::rownames_to_column("FULL_PATH")%>%
+      dplyr::mutate(CREATION_TIME=as.POSIXct(as.character(ctime),tz='utc'))
+
+    for (file_ in list.files)
+    {
+      #check if file is already saved
+      temp.local<-data.filedetails.local%>%
+        dplyr::filter(toupper(FILENAME)==toupper(file_))
+      temp.ftp<-data.filedetails%>%
+        dplyr::filter(toupper(FILENAME)==toupper(file_))
+
+      if (nrow(temp.local)==0)
+      {
+        #this means there is no local copy of file,so inlcude the file
+        list.write<-c(list.write,file_)
+      } else
+      {
+        #add in write list if the file in ftp is newer version
+        if (temp.ftp[1,]$CREATION_TIME>temp.local[1,]$CREATION_TIME)
+        {
+          list.write<-c(list.write,file_)
+        }
+
+      }
+    }
+
+  }
+
+
+  #this will wrte the file listed in list.write
+  list.write<-unique(list.write)
+  list.write<-list.write[toupper(list.write) %in% toupper(data.filedetails$FILENAME)]
+  if (!is.null(list.write) && length(list.write)>0)
+  {
+    print(paste('Copying:',length(list.write),'files...'))
+    for (file_ in list.write)
+    {
+
+      file.temp<-data.filedetails%>%
+        dplyr::filter(toupper(FILENAME)==toupper(file_))
+
+      destfile.temp<-paste(path.local,'/',file_,'___',sep='')
+      destfile<-paste(path.local,'/',file_,sep='')
+      #download temporary file, read, then delete it
+      download.file(file.temp$URL[1],verbose=TRUE,
+                    destfile=destfile.temp)
+      if (file.rename(from=destfile.temp,destfile))
+      {
+        files.result<-files.result%>%
+          rbind(file.temp%>%
+                  dplyr::mutate(FULL_PATH=destfile))
+      }
+
+
+    }
+
+  }
+  print(colnames(files.result))
+  if (!is.null(files.result))
+  {
+    files.result<-files.result%>%
+      dplyr::mutate(CREATION_TIME=paste(DATE,TIME))%>%
+      RENAME_COLUMN(c('DATE','TIME','INDEX','URL'))
+
+    if (!length(data.filedetails.local)==0)
+    {
+
+      files.result<-files.result%>%
+        plyr::rbind.fill(data.filedetails.local%>%
+                           RENAME_COLUMN(c('ctime','mtime'))%>%
+                           dplyr::filter(!as.character(FILENAME) %in% as.character(files.result$FILENAME))
+        )
+    }
+  } else
+  {
+    files.result<-data.filedetails.local%>%
+      RENAME_COLUMN(c('ctime','mtime'))
+  }
+  # files.result<-files.result%>%
+  #   RENAME_COLUMN('URL','FULL_PATH')%>%
+  #   dplyr::mutate(CREATION_TIME=paste(DATE,TIME))%>%
+  #                   RENAME_COLUMN(c('DATE','TIME','INDEX','FILENAME'))#%>%
+  # plyr::rbind.fill(data.filedetails.local%>%
+  #                    RENAME_COLUMN(c('ctime','mtime'))
+
+  if (length(files.result)==0)
+  {
+    return(NULL)
+  } else
+  {
+    return(unique(files.result))
+  }
+  # )
+
+}
+
 #' RENAME_COLUMN function
 #'
 #' This function renames or deletes the column of a dataframe based on its name
+#' this was created to prevent any error when the column name does not exist
+#' It is, at the same time, able to delete column
 #' @param data.station dataframe input
 #' @param colname.orig string vector containing the column to be deleted or renamed
 #' @param colname.new string vector containing the new name for the column. if NULL, it deletes the specified column
 #' @keywords rename dataframe
 #' RENAME_COLUMN()
-#' @export
-RENAME_COLUMN<-function(data.station,colname.orig,colname.new=NULL)
+RENAME_COLUMN<-function(data.station,colname.orig,colname.new=NULL,quiet=TRUE)
 
 {
 
@@ -19,7 +211,7 @@ RENAME_COLUMN<-function(data.station,colname.orig,colname.new=NULL)
     result<-data.station
     for (columns in colname.orig)
     {
-      print(paste("Deleting column",columns))
+      if (!quiet){print(paste("Deleting column",columns))}
       data.column.number<-which(colnames(result)==as.character(columns)) #column number
       result[data.column.number]<-NULL
 
@@ -32,7 +224,7 @@ RENAME_COLUMN<-function(data.station,colname.orig,colname.new=NULL)
 
     for (columns in colname.orig)
     {
-      print(paste("Renaming column",columns))
+      if (!quiet){print(paste("Renaming column",columns,"to",colname.new[counter]))}
       data.column.number<-which(colnames(result)==as.character(columns)) #column number
 
 
@@ -50,9 +242,10 @@ RENAME_COLUMN<-function(data.station,colname.orig,colname.new=NULL)
 #' @param x the as.numeric input
 #' @param n the number of decimal places for resulting output
 #' round2()
-#' @export
-round2 = function(x,n)
+#'
+round2 = function(x,n=0)
 {
+  x=as.numeric(x)
   posneg = sign(x)
   z = abs(x)*10^n
   z = z + 0.5
@@ -67,7 +260,7 @@ round2 = function(x,n)
 #' This function retrieves latest station details or deteails during specific year from the ftp feed
 #' @param data.year the year where station details are retrieved from. Defaults to current year
 #' GET_STATION_DETAILS_FTP()
-#' @export
+#'
 GET_STATION_DETAILS_FTP<-function(data.year=as.character(format(Sys.Date(),'%Y')))
 {
   #2019-05-13
@@ -76,7 +269,7 @@ GET_STATION_DETAILS_FTP<-function(data.year=as.character(format(Sys.Date(),'%Y')
   #contains CGNDB information
 
   #temp files are saved here
-  RUN_PACKAGE(c('dplyr','RCurl'))
+  RUN_PACKAGE(c('dplyr','RCurl','readr'))
   dir.temp<-paste(getwd(),'/TEMP',sep="")
   file.temp<-paste(dir.temp,'/stationdetails.csv',sep="")
   dir.create(dir.temp,showWarnings = FALSE)
@@ -99,12 +292,12 @@ GET_STATION_DETAILS_FTP<-function(data.year=as.character(format(Sys.Date(),'%Y')
   }
 
   print('Retrieving station details from FTP...')
-  dir.temp<-paste(getwd(),'/TEMP',sep="")
-  file.temp<-paste(dir.temp,'/stationdetails.csv',sep="")
+#  dir.temp<-paste(getwd(),'/TEMP',sep="")
+ # file.temp<-paste(dir.temp,'/stationdetails.csv',sep="")
   #temp<-RCurl::getURL(ftp.station,ftp.use.epsv=FALSE,header=TRUE)
 
-  download.file(ftp.station,destfile=file.temp,quiet=FALSE)
-  station.details<-read.csv(file.temp)%>%
+  # download.file(ftp.station,destfile=file.temp,quiet=FALSE)
+  station.details<-readr::read_csv(ftp.station)%>%
     dplyr::mutate(STATUS=ifelse(STATUS==1,'ACTIVE','INACTIVE'))
 
   #fix if there are no NOTES column
@@ -178,96 +371,13 @@ GET_STATION_DETAILS_FTP<-function(data.year=as.character(format(Sys.Date(),'%Y')
   }
 
   station.details <- data.frame(lapply(station.details, as.character), stringsAsFactors=FALSE)
-  file.remove(file.temp)   #delete the temporary file
+  # file.remove(file.temp)   #delete the temporary file
   return(station.details)
 
 }
 
 
-#' GET RECENT STATION DATA FUNCTION
-#'
-#' This function retrieves the recent 1 month of data from the ftp feed
-#' @param STATION vector string of the air quality monitoring station, note this excludes
 
-#' the underscore naming system, e.g., Prince George Plaza 400 NOT Prince George Plaza 400 Met_60
-#' GET_RECENT_DATA_STATION_FTP()
-#' @export
-GET_RECENT_DATA_STATION_FTP<-function(STATION='ALL')
-
-{
-  #debug option
-  # STATION<-'smithers muheim memorial'
-
-  RUN_PACKAGE(c('dplyr','RCurl'))
-  #identify the latest validation cycle data
-  file.save<-paste(getwd(),'temp',sep='/')
-  dir.create(file.save,showWarnings = FALSE)
-  data.ftpsource<-'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/Station/'
-  station.details.all<-GET_STATION_DETAILS_FTP()
-  station.list<-station.details.all%>%
-    dplyr::select(STATION_NAME)%>%
-    unique()
-  if (!STATION=='ALL')
-  {
-    station.list<-station.list%>%
-      dplyr::filter(tolower(STATION_NAME)==tolower(STATION))
-  }
-
-  data.output<-NULL
-
-
-  for (STATION in station.list$STATION_NAME)
-  {
-    print(paste('Retriving data from:',STATION))
-    station.details<-station.details.all%>%
-      dplyr::filter(tolower(STATION_NAME)==tolower(STATION))%>%
-      dplyr::mutate(FILENAME=paste(EMS_ID,'.csv',sep=''))%>%
-      dplyr::select(FILENAME)%>%
-      unique()
-
-    if (nrow(station.details)>1)
-    {
-      print ('There are more than one EMS ID for this station')
-    }
-    station.details<-station.details[1] #only acquires the first entry
-    data.filedetails<-data.frame(FILEALL=unlist(strsplit(x=
-                                                           getURL(data.ftpsource,verbose=FALSE,
-                                                                  ftp.use.epsv=TRUE
-                                                           ),
-                                                         split='\r\n')))%>%
-      tidyr::separate(FILEALL,c('DATE','TIME','INDEX','FILENAME'),sep=' +',extra='drop')%>%
-      dplyr::filter(!grepl('AQHI-',FILENAME))%>%
-      dplyr::filter(as.Date(Sys.Date()) - as.Date(DATE,tryFormats='%m-%d-%y')< 10)%>%
-      dplyr::mutate(URL=paste(data.ftpsource,FILENAME,sep=''))%>%
-      dplyr::filter(FILENAME %in% station.details$FILENAME)
-
-    for (i  in 1:nrow(data.filedetails))
-    {
-      file.temp<-data.filedetails[i,]
-
-      destfile<-paste(file.save,file.temp$FILENAME,sep='/')
-      #download temporary file, read, then delete it
-      if (nrow(file.temp)>0 && !is.na(file.temp$URL))
-      {
-        download.file(file.temp$URL,verbose=FALSE,
-                      destfile=destfile)
-
-        data.output.temp<-read.table(destfile,sep=',',header=TRUE,comment.char='')
-        file.remove(destfile)
-        if (!is.null(data.output))
-        {
-          data.output<-merge(data.output,data.output.temp,all=TRUE)
-        } else
-        {data.output<-data.output.temp}
-
-      }
-    }
-
-  }
-
-  data.output <- data.frame(lapply(data.output, as.character), stringsAsFactors=FALSE)
-  return(data.output)
-}
 
 
 #' Install and Load specific libraries that are useful for the envair package
@@ -276,7 +386,6 @@ GET_RECENT_DATA_STATION_FTP<-function(STATION='ALL')
 #' @param packages vector string listing the packages
 #' @param lib.pack path of library, defaults to current lib paths
 #' RUN_PACKAGE()
-#' @export
 RUN_PACKAGE<-function(packages=c('dplyr','ggplot2','reshape',
                                  'lazyeval','zoo','DataCombine','data.table',
                                  'fasttime','readr','RCurl','tidyr','lubridate'),
@@ -323,153 +432,13 @@ RUN_PACKAGE<-function(packages=c('dplyr','ggplot2','reshape',
 }
 
 
-
-#' GET VALID PARAMETER DATA FUNCTION
-#'
-#' This function retrieves parameter data from the open data portal by saving in temporary folder.
-#' The temporary folder is in  the working directory ~/TEMP
-#' file is only downloaded if MD5 checksum of file is different than specified in FTP
-#' @param data.parameter the air quality parameter. can be PM25, PM10, SO2, TRS, H2S, etc.
-#' @param year.start the beginning of query, year only
-#' @param year.end the end of query, year only. Latest valid year if unspecified
-#' GET_VALID_DATA_PARAMETER()
-#' @export
-GET_VALID_DATA_PARAMETER<-function(data.parameter,
-                                   year.start,
-                                   year.end=NULL)
-
-{
-  #debug
-  # data.parameter<-'co'
-  # year.start<-2019
-  # year.end=NULL
-
-  #end debug lines
-
-  #load packages
-  RUN_PACKAGE(c('dplyr','RCurl'))  #,'feather'
-  if (is.null(year.end))
-  {
-    year.end<-year.start
-  }
-
-  #primary data location
-  data.source<-'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/AnnualSummary/'
-  data.unvalidated_source<-'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/Year_to_Date/'
-
-  #this is where temporary files will be saved
-  path.data.temp<-paste(getwd(),'/temp/',sep='')
-  dir.create(path.data.temp,showWarnings = FALSE)
-  #identify the latest validation cycle data
-  temp<-as.character(unlist(strsplit(getURL(data.source,dirlistonly=TRUE),split='\r\n')))
-  temp<-temp[nchar(temp)==4] #get only 4-digit folders
-  validation.lastvalidationcycle<-max(as.numeric(temp))
-
-
-  #file.data.temp<-paste(path.data.temp,data.parameter,'.feather',sep='')
-  #file.remove(file.data.temp)
-
-  data.result<-NULL
-  #scan one year at a time, create a combined feather file
-  for (data.year in year.start:year.end)
-  {
-
-    #get the file source
-
-    if (data.year<=validation.lastvalidationcycle)
-    {
-      data.url<-paste(data.source,data.year,"/",data.parameter,".csv",sep="")
-    } else
-    {
-      data.url<-paste(data.unvalidated_source,data.parameter,".csv",sep="")
-    }
-    print(paste('Retrieving data from:',data.url))
-
-    #get address to retrieve and write the md5
-    md5.file.source<-gsub('.csv','.md5',paste(data.url),ignore.case=TRUE)
-    if (RCurl::url.exists(md5.file.source) & file.exists(paste(path.data.temp,data.parameter,'_',data.year,'.csv',sep='')))
-    {
-      md5.source<-readLines(md5.file.source)
-      md5.target<-as.character(tools::md5sum(paste(path.data.temp,data.parameter,'_',data.year,'.csv',sep='')))
-      if (!identical(md5.source,md5.target))
-      {
-        #this means file has to be downloaded
-        print(paste('Downloading into',path.data.temp,'...'))
-        file.remove(paste(path.data.temp,data.parameter,'_',data.year,'.csv',sep=''))
-        download.file(url=data.url,
-                      destfile=paste(path.data.temp,
-                                     data.parameter,'_',data.year,'.csv',sep=''),
-                      quiet = FALSE)
-
-      }
-    } else
-    {
-      md5.source<-NULL
-
-      print(paste('Downloading into',path.data.temp,'...'))
-      download.file(url=data.url,
-                    destfile=paste(path.data.temp,
-                                   data.parameter,'_',data.year,'.csv',sep=''),
-                    quiet = FALSE)
-      md5.target<-as.character(tools::md5sum(paste(path.data.temp,data.parameter,'_',data.year,'.csv',sep='')))
-
-    }
-    #get target md5 value, whether downloaded recently or not
-    #check if new md5 has to be updated in source
-    md5.target<-as.character(tools::md5sum(paste(path.data.temp,data.parameter,'_',data.year,'.csv',sep='')))
-    if (!identical(md5.source,md5.target))
-    {
-      #save new md5 only if user has access rights
-      md5.file.source<-gsub('ftp://ftp.env.gov.bc.ca/','//ftpenv.nrs.bcgov/ftpenv/',
-                            md5.file.source,ignore.case=TRUE)
-      try(writeLines(md5.target,md5.file.source),silent=TRUE)
-    }
-
-    data.temp<-read.table(paste(path.data.temp,data.parameter,'_',data.year,'.csv',sep=''),
-                          header=TRUE,sep=',')%>%
-      dplyr::mutate(VALIDATION_STATUS=ifelse(data.year<= validation.lastvalidationcycle,
-                                             'VALID','UNVERIFIED'))
-    #pad mising data
-    temp.date.start<-min(as.POSIXct(data.temp$DATE_PST,tz='utc'))
-    temp.date.end<-max(as.POSIXct(data.temp$DATE_PST,tz='utc'))
-
-    date.padding<-data.temp%>%
-      RENAME_COLUMN(c('DATE_PST','DATE','TIME','RAW_VALUE','ROUNDED_VALUE','UNIT'))%>%
-      unique()%>%
-      merge(
-        data.frame(DATE_PST=seq(from=temp.date.start,to=temp.date.end,by='hours'))
-      )
-    data.temp<-data.temp%>%
-      dplyr::mutate(DATE_PST=as.POSIXct(DATE_PST,tz='utc'))%>%
-      merge(date.padding,all.y=TRUE)%>%
-      dplyr::mutate(DATE_TEMP=as.POSIXct(DATE_PST,tz='utc')-3600)%>%
-      dplyr::mutate(DATE=as.character(DATE_TEMP,format='%Y-%m-%d'))%>%
-      dplyr::mutate(TIME=as.character(DATE_PST,format='%H:00'))%>%
-      dplyr::mutate(TIME=ifelse(TIME=='00:00','24:00',TIME))%>%
-      RENAME_COLUMN('DATE_TEMP')  #remove temporary column
-    #dplyr::select(DATE_PST,DATE_TEMP,DATE,TIME)
-
-    data.result<-data.result%>%
-      plyr::rbind.fill(data.temp)%>%
-      dplyr::arrange(STATION_NAME,DATE_PST)%>%
-      COLUMN_REORDER(columns=c('DATE_PST','DATE','TIME'))
-
-    data.result <- data.frame(lapply(data.result, as.character), stringsAsFactors=FALSE)
-    #file.remove(paste(path.data.temp,data.parameter,'_',data.year,'.csv',sep=''))
-
-  }
-
-
-  return(data.result)
-}
-
 #' REORDER COLUMNS
 #'
 #' This function reorders the columns of a dataframe based on the order it is specified in columns
 #' @param data.input the input data frame
 #' @param columns the vector of strings listing the column names in desired order. Columns not listed are added at the end
 #' COLUMN_REORDER()
-#' @export
+#'
 COLUMN_REORDER<-function(data.input,columns=c(''))
 {
   #reorders column based on the defined vlaue in columns
@@ -556,5 +525,553 @@ readKML <- function(file,keep_name_description=FALSE,layer,...) {
     try(sp_obj@data <- cbind(sp_obj@data,data),silent=TRUE)
   }
   sp_obj
+}
+
+#' Rounds the numbers based on DAS numeric format
+round3<-function(x,num_format=5.2)
+{
+  #debug
+  #x<-c(1.23236556,4,'43qw4',435.57622)
+  #end debug
+
+  num_format=as.character(format(as.numeric(num_format),nsmall=1))
+  x<-as.numeric(x)
+
+
+  y<-NULL
+  for (i in x)
+  {
+
+    if (!is.na(i))
+    {
+      y<-c(y,round2(i,n=as.numeric(unlist(strsplit(num_format,'\\.'))[2])))
+    } else
+    {
+      y<-c(y,-999)
+    }
+  }
+
+  return(y)
+}
+
+#' GET FTP DETAILS
+#'
+#' grabs the file and directory details of an ftp
+#' @param path.ftp the ftp path
+GET_FTP_DETAILS<-function(path.ftp)
+{
+  data.filedetails<-
+    data.frame(FILEALL=unlist(strsplit(x=
+                                         getURL(url=path.ftp,verbose=FALSE,
+                                                ftp.use.epsv=TRUE
+                                         ),
+                                       split='\r\n')))%>%
+    tidyr::separate(FILEALL,c('DATE','TIME','INDEX','FILENAME'),sep=' +',extra='drop')%>%
+    dplyr::mutate(URL=paste(path.ftp,FILENAME,sep=''))%>%
+    dplyr::mutate(CREATION_TIME=paste(DATE,TIME))%>%
+    dplyr::mutate(CREATION_TIME=as.POSIXct(strptime(CREATION_TIME,"%m-%d-%y %I:%M%p"),tz='utc'))%>%
+    dplyr::mutate(DATE=format(strptime(DATE,"%m-%d-%y"),'%Y-%m-%d'))%>%
+    dplyr::mutate(TIME=format(strptime(TIME,"%I:%M%p"),'%H:%M'))
+}
+
+
+
+
+#' GET PARAMETER DATA FUNCTION
+#'
+#' This function retrieves parameter data from the FTP open data portal
+#' Data includes verified and unverified data
+#' @param data.parameter the air quality parameter. can be PM25, PM10, SO2, TRS, H2S, etc.
+#' @param year.start the beginning of query, year only
+#' @param year.end the end of query, year only. the same year if unspecified
+#' GET_VALID_DATA_PARAMETER()
+#'
+GET_PARAMETER_DATA<-function(data.parameter,
+                             year.start,
+                             year.end=NULL)
+
+{
+  #debug
+  # data.parameter<-'co'
+  # year.start<-2017
+  # year.end=NULL
+
+  #end debug lines
+
+  #load packages
+  RUN_PACKAGE(c('dplyr','RCurl'))  #,'feather'
+  if (is.null(year.end))
+  {
+    year.end<-year.start
+  }
+
+  #primary data location
+  data.source<-'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/AnnualSummary/'
+  data.unvalidated_source<-'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/Year_to_Date/'
+
+
+  #identify the latest validation cycle data
+  temp<-as.character(unlist(strsplit(getURL(data.source,dirlistonly=TRUE),split='\r\n')))
+  temp<-temp[nchar(temp)==4] #get only 4-digit folders
+  validation.lastvalidationcycle<-max(as.numeric(temp))
+
+
+  #file.data.temp<-paste(path.data.temp,data.parameter,'.feather',sep='')
+  #file.remove(file.data.temp)
+
+  data.result<-NULL
+  #scan one year at a time, create a combined feather file
+  for (data.year in year.start:year.end)
+  {
+
+    #get the file source
+
+    if (data.year<=validation.lastvalidationcycle)
+    {
+      data.path<-paste(data.source,data.year,'/',sep='')
+      path.data.temp<-paste(getwd(),'/temp_valid/',data.year,sep='')
+      dir.create(path.data.temp,showWarnings = FALSE)
+    } else
+    {
+      data.path<-data.unvalidated_source
+      path.data.temp<-paste(getwd(),'/temp_valid_recent',sep='')
+      dir.create(path.data.temp,showWarnings = FALSE)
+    }
+    print(paste('Retrieving data from:',data.path))
+
+    list.data<-GET_FILE_CSV(list.files=paste(data.parameter,"csv",sep='.'),
+                            ftp.path =data.path,path.local =path.data.temp )
+    data.temp<-NULL
+    if (length(list.data)>0)
+    {
+      #this means there is a resulting file
+      for (i in 1:nrow(list.data))
+      {
+        temp<-list.data[i,]
+        data.temp<-data.temp%>%
+          rbind(read.table(temp$FULL_PATH,
+                           header=TRUE,sep=',')%>%
+                  dplyr::mutate(VALIDATION_STATUS=ifelse(data.year<= validation.lastvalidationcycle,
+                                                         'VALID','UNVERIFIED')))
+      }
+
+
+      #pad mising data
+      temp.date.start<-min(as.POSIXct(data.temp$DATE_PST,tz='utc'))
+      temp.date.end<-max(as.POSIXct(data.temp$DATE_PST,tz='utc'))
+
+      date.padding<-data.temp%>%
+        RENAME_COLUMN(c('DATE_PST','DATE','TIME','RAW_VALUE','ROUNDED_VALUE','UNIT'))%>%
+        unique()%>%
+        merge(
+          data.frame(DATE_PST=seq(from=temp.date.start,to=temp.date.end,by='hours'))
+        )
+      data.temp<-data.temp%>%
+        dplyr::mutate(DATE_PST=as.POSIXct(DATE_PST,tz='utc'))%>%
+        merge(date.padding,all.y=TRUE)%>%
+        dplyr::mutate(DATE_TEMP=as.POSIXct(DATE_PST,tz='utc')-3600)%>%
+        dplyr::mutate(DATE=as.character(DATE_TEMP,format='%Y-%m-%d'))%>%
+        dplyr::mutate(TIME=as.character(DATE_PST,format='%H:00'))%>%
+        dplyr::mutate(TIME=ifelse(TIME=='00:00','24:00',TIME))%>%
+        RENAME_COLUMN('DATE_TEMP')  #remove temporary column
+      #dplyr::select(DATE_PST,DATE_TEMP,DATE,TIME)
+
+      data.result<-data.result%>%
+        plyr::rbind.fill(data.temp)%>%
+        dplyr::arrange(STATION_NAME,DATE_PST)%>%
+        COLUMN_REORDER(columns=c('DATE_PST','DATE','TIME'))
+    }
+
+  }
+  if (length(data.result>0))
+  {
+    data.result <- data.frame(lapply(data.result, as.character), stringsAsFactors=FALSE)
+  } else
+  {
+    data.result<-NULL
+  }
+  #file.remove(paste(path.data.temp,data.parameter,'_',data.year,'.csv',sep=''))
+
+  return(data.result)
+}
+
+
+#' GET MINUTE DATA by PARAMETER/STATION FUNCTION
+#'
+#' This function retrieves the minute data for a specific parameter. Contains only the recent 1-2 months
+#
+#' @param data.request parameter or station name for the data that will be retrieved.
+#' Function automatically identify if you entered station name or parameter
+#'
+GET_RECENT_MINUTE_DATA<-function(data.request)
+
+{
+  #debug
+  if (0)
+  {
+    data.request<-c('prince george plaza 400','kAmloops Federal Building')
+    data.request<-c('pm25','so2','test')
+  }
+
+  #end debug lines
+
+  #load packages
+  RUN_PACKAGE(c('dplyr','RCurl','readr'))
+
+  #primary data location
+  data.station.details<-GET_STATION_DETAILS_FTP()
+  data.source<-'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Minute_Raw_Air_Data/Parameter/'
+  data.source.details<-GET_FTP_DETAILS(data.source)%>%
+    dplyr::mutate(PARAMETER=gsub('.csv','',FILENAME,ignore.case=TRUE))
+
+  #determine if paramer or station
+  if (any(toupper(data.request) %in% toupper(data.source.details$PARAMETER)))
+  {
+
+    print('Locating parameter minute data...')
+    data.source.details<-data.source.details%>%
+      dplyr::filter(toupper(PARAMETER) %in% toupper(data.request))
+    #path.data.temp<-paste(getwd(),'/temp_minute_parameter/',sep='')
+  }  else
+  {
+
+    print('Locating station minute data...')
+    data.source<-'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Minute_Raw_Air_Data/Station/'
+    data.source.details<-GET_FTP_DETAILS(data.source)%>%
+      dplyr::mutate(EMS_ID=gsub('.csv','',FILENAME))%>%
+      merge(
+        data.station.details%>%
+          dplyr::select(STATION_NAME,EMS_ID)
+      )%>%
+      dplyr::filter(toupper(STATION_NAME) %in% toupper(data.request))%>%
+      unique()
+    #path.data.temp<-paste(getwd(),'/temp_minute_station/',sep='')
+  }
+  #this is where temporary files will be saved
+
+  #save data
+
+
+  data.result<-NULL
+  #scan one file at a time
+  for (filename in data.source.details$URL)
+  {
+    print(paste('Reading the content of file:',filename))
+    data.result<-data.result%>%
+      plyr::rbind.fill(readr::read_csv(filename))
+  }
+
+  data.result<-data.result%>%
+    COLUMN_REORDER(c('DATE_PST','DATE','TIME','STATION_NAME','STATION_NAME_FULL'))
+  return(data.result)
+}
+
+
+#' GET RECENT HOURLY DATA by PARAMETER/STATION FUNCTION
+#'
+#' This function retrieves the hourly  data for a specific parameter. Contains only the recent 1-2 months
+#
+#' @param data.request vector of either parameters or station names for the data that will be retrieved.
+#' Function automatically identify if you entered station name or parameter
+#'
+GET_RECENT_HOURLY_DATA<-function(data.request)
+
+{
+  #debug
+  if (0)
+  {
+    data.request<-c('prince george plaza 400','kAmloops Federal Building')
+    data.request<-c('pm25','so2','test')
+  }
+  #end debug lines
+
+  #load packages
+  RUN_PACKAGE(c('dplyr','RCurl','readr'))  #,'feather'
+
+
+  #primary data location
+  data.station.details<-GET_STATION_DETAILS_FTP()
+  data.source.air<-'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/Air_Quality/'
+  data.source.met<-'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/Meteorological/'
+  data.source.details<-GET_FTP_DETAILS(data.source.air)%>%
+    dplyr::mutate(FTP=data.source.air)%>%
+    rbind(GET_FTP_DETAILS(data.source.met)%>%
+            dplyr::mutate(FTP=data.source.met)
+    )%>%
+    dplyr::mutate(PARAMETER=gsub('.csv','',FILENAME,ignore.case=TRUE))
+
+  #special consideration for h2s, trs request because file might be combined
+  if (any(toupper(data.request) %in% c('H2S','TRS')))
+  {
+    if (any(toupper(data.source.details$PARAMETER) %in% 'H2STRS'))
+    {
+      data.request<-'H2STRS'
+    }
+  }
+  #determine if paramer or station
+  if (any(toupper(data.request) %in% toupper(data.source.details$PARAMETER)))
+  {
+
+    print('Locating parameter Hour data...')
+    data.source.details<-data.source.details%>%
+      dplyr::filter(toupper(PARAMETER) %in% toupper(data.request))
+    # path.data.temp<-paste(getwd(),'/temp_hour_parameter/',sep='')
+  }  else
+  {
+
+    print('Locating station Hour data...')
+    data.source<-'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/Station/'
+    data.source.details<-GET_FTP_DETAILS(data.source)%>%
+      dplyr::mutate(EMS_ID=gsub('.csv','',FILENAME))%>%
+      merge(
+        data.station.details%>%
+          dplyr::select(STATION_NAME,EMS_ID)
+      )%>%
+      dplyr::filter(toupper(STATION_NAME) %in% toupper(data.request))%>%
+      dplyr::mutate(FTP=data.source)%>%
+      unique()
+    #path.data.temp<-paste(getwd(),'/temp_hour_station/',sep='')
+  }
+
+  # list.files<-NULL
+  # for (data.source in unique(data.source.details$FTP))
+  # {
+  #   list.files<-list.files%>%
+  #     rbind(GET_FILE_CSV(data.source.details$FILENAME[data.source.details$FTP==data.source],
+  #                        path.local = path.data.temp,data.source)
+  #     )
+  # }
+  data.result<-NULL
+  #scan one file at a time
+  for (filename in data.source.details$URL)
+  {
+    print(paste('Reading the content of file:',filename))
+    data.result<-data.result%>%
+      plyr::rbind.fill(readr::read_csv(filename))
+  }
+  data.result<-data.result%>%
+    COLUMN_REORDER(c('DATE_PST','DATE','TIME','STATION_NAME','STATION_NAME_FULL','STATION'))%>%
+    RENAME_COLUMN('STATION','STATION_NAME')
+  return(data.result)
+}
+
+
+#' GET RECENT STATION DATA FUNCTION
+#'
+#' This function retrieves the recent 1 month  of data from the ftp feed
+#' @param STATION vector string of the air quality monitoring station, note this excludes
+#' @param timebase default to 60, is either 1 or 60. If 1, function is same as GET_MINUTE_DATA_FTP
+#' the underscore naming system, e.g., Prince George Plaza 400 NOT Prince George Plaza 400 Met_60
+#' GET_RECENT_DATA_STATION_FTP()
+#'
+GET_RECENT_STATION_DATA<-function(STATION='ALL',timebase=60)
+
+{
+
+
+  if (0)
+  {
+    STATION<-c('Prince George Plaza 400','Vanderhoof Courthouse')
+    timebase=1
+  }
+  RUN_PACKAGE(c('dplyr','RCurl','readr','plyr'))
+
+
+  if (timebase==1)
+  {
+    data.ftpsource<-'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Minute_Raw_Air_Data/Station/'
+  } else
+  {
+    data.ftpsource<-'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/Station/'
+  }
+
+  station.details.all<-GET_STATION_DETAILS_FTP()
+  if (all(!(STATION=='ALL')))
+  {
+    station.list<-station.details.all%>%
+      dplyr::select(STATION_NAME)%>%
+      dplyr::filter(tolower(STATION_NAME) %in% tolower(STATION))%>%
+      unique()
+  } else
+  {
+    station.list<-station.details.all%>%
+      dplyr::select(STATION_NAME)%>%
+      unique()
+  }
+
+
+  station.details<-station.details.all%>%
+    dplyr::filter(toupper(STATION_NAME) %in% toupper(station.list$STATION_NAME))%>%
+    dplyr::mutate(FILENAME=paste(EMS_ID,'.csv',sep=''))%>%
+    dplyr::select(FILENAME)%>%
+    unique()
+
+  #retrieve data from ftp
+  files_<-data.frame(FILENAME=as.character(unlist(strsplit(getURL(
+    data.ftpsource, dirlistonly=TRUE),split='\r\n'))),
+    ATTRIBUTES=as.character(unlist(strsplit(getURL(
+      data.ftpsource, dirlistonly=FALSE),split='\r\n')))
+  )%>%
+    dplyr::mutate(FULL_PATH=paste(data.ftpsource,FILENAME,sep=''))%>%
+    separate(ATTRIBUTES,into=c('DATE','EXTRA_ATTRIB'),sep='  ',extra='merge')%>%
+    dplyr::mutate(DATE=as.POSIXct(DATE,format='%m-%d-%y'))%>%
+    dplyr::mutate(AGE=as.Date(Sys.Date())-as.Date(DATE))
+
+  list.files<-files_$FULL_PATH[toupper(files_$FILENAME) %in% toupper(station.details$FILENAME)]
+
+
+
+  data.output<-NULL
+  for (file_ in list.files)
+  {
+
+    print(paste('Retrieving data from:',file_))
+    data.output <- data.output%>%
+      plyr::rbind.fill(readr::read_csv(file_))
+
+  }
+  data.output <- data.output%>%
+    COLUMN_REORDER(c('STATION','DATE_PST','DATE','DATE_LOCAL','LATITUDE','LONGITUDE'))
+  return(data.output)
+}
+
+#' Pad missing dates function
+#'
+#' This function identifies and inserts missing dats
+#' @param data.unpadded is dataframe of data
+#' @param column.datefield is a string defining the date and time
+#' @param column.static is a vector listing the column names that data is grouped by
+#' @param timebase is either 60 or 1
+#' @param keep_REF_ is internal option to keep a reference or index column
+GET_DATEPADDED_DATA<-function(data.unpadded,column.datefield='DATE_PST',
+                              column.static=c('STATION_NAME','STATION_NAME_FULL','SERIAL','EMS_ID','INSTRUMENT'),
+                              timebase=60,keep_REF_=FALSE)
+
+{
+  #This will pad the data with missing dates
+  #column.static is a vector of strings that describes the column names whose value will be retained throughout the padded entries
+  #it will serve as the reference key to create the padded dates
+
+  #----debug purposes------------
+  # #these are function inputs
+  if (0)
+  {
+    data.unpadded<-data.result
+    column.static<- c('STATION_NAME','STATION_NAME_FULL','SERIAL','EMS_ID','INSTRUMENT')
+    column.datefield<-'DATE_PST'
+    column.static=c('STATION_NAME','STATION_NAME_FULL','SERIAL','EMS_ID','INSTRUMENT')
+    keep_REF_=FALSE
+    timebase=60
+  }
+  #data.unpadded<-data
+  #-------------------------
+
+
+
+  #convert all fields that are not part of date or static fields
+  column.allnames<-colnames(data.unpadded)
+  column.static<-column.static[column.static %in% column.allnames]
+  print('Converting data to string')
+  data.unpadded <- data.frame(lapply(data.unpadded,as.character),stringsAsFactors = FALSE)
+
+  #-------------------------------------------------------------
+
+
+  data.unpadded<-data.unpadded%>%
+    RENAME_COLUMN(column.datefield,'TEMP_DATE_FIELD_00')%>%   #temporarily rename the column
+    dplyr::mutate(TEMP_DATE_FIELD=as.POSIXct(TEMP_DATE_FIELD_00,tz='utc'))%>%
+    dplyr::mutate(TEMP_DATE_FIELD_00=as.character(format(TEMP_DATE_FIELD,'%Y-%m-%d %H:%M')))%>%   #this is to ensure format of date is standard
+    RENAME_COLUMN('TEMP_DATE_FIELD_00',column.datefield)%>%
+    dplyr::mutate(REF_KEY='KEY')  #rename the column back
+
+
+  #create a key column based on multiple columns defined in column.key
+  #column key is just concatenation of other columns
+  for (column.temp in column.static)
+  {
+    print(paste('Creating a key from:',column.temp,'column'))
+    data.unpadded<-data.unpadded%>%
+      RENAME_COLUMN(column.temp,'TEMP_REF_')%>%
+      dplyr::mutate(REF_KEY=paste(REF_KEY,TEMP_REF_,sep='-'))%>%
+      RENAME_COLUMN('TEMP_REF_',column.temp)  #rename back
+  }
+
+
+  #identify the start date and end dates
+  data.date<-data.unpadded%>%
+    dplyr::group_by(REF_KEY)%>%
+    dplyr::summarise(DATE_START=min(TEMP_DATE_FIELD,na.rm=TRUE),
+                     DATE_END=max(TEMP_DATE_FIELD,na.rm = TRUE))
+
+
+  for (key in unique(data.unpadded$REF_KEY))
+  {
+    print(paste('Padding dates for the following:',key))
+    temp.data<-data.unpadded%>%
+      dplyr::filter(REF_KEY==key)
+
+    temp.date<-data.date%>%
+      dplyr::filter(REF_KEY==key)
+    if (as.numeric(timebase)==1)
+    {
+      temp.filler<-data.frame(TEMP_DATE_FIELD=seq.POSIXt(from=temp.date$DATE_START,to=temp.date$DATE_END[1],by='min'))%>%
+        dplyr::mutate(TEMP_DATE_FIELD_00=as.character(format(TEMP_DATE_FIELD,'%Y-%m-%d %H:%M')))%>%   #insert the original column
+        RENAME_COLUMN('TEMP_DATE_FIELD_00',column.datefield)
+    } else
+    {
+      temp.filler<-data.frame(TEMP_DATE_FIELD=seq.POSIXt(from=temp.date$DATE_START,to=temp.date$DATE_END[1],by='hour'))%>%
+        dplyr::mutate(TEMP_DATE_FIELD_00=as.character(format(TEMP_DATE_FIELD,'%Y-%m-%d %H:%M')))%>%   #insert the original column
+        RENAME_COLUMN('TEMP_DATE_FIELD_00',column.datefield)
+    }
+
+    #insert columns with static values
+    #add the reference key as a static field
+    column.static<-unique(c(column.static,'REF_KEY')) #this will make sure the value gets carried over
+    for (column.temp in column.static)
+    {
+      temp.data<-temp.data%>% #grab the static values for specific columns
+        RENAME_COLUMN(column.temp,'TEMP_COLUMN_')
+
+      temp.filler<-temp.filler%>%
+        dplyr::mutate(TEMP_COLUMN_=temp.data$TEMP_COLUMN_[1])%>%
+        RENAME_COLUMN('TEMP_COLUMN_',column.temp)
+
+      temp.data<-temp.data%>%
+        RENAME_COLUMN('TEMP_COLUMN_')   #remove this column once processed
+    }
+    #insert other columns, leave these blank
+    column.allnames<-colnames(data.unpadded)
+    column.allnames<-column.allnames[!column.allnames %in% c(column.static,column.datefield,'REF_KEY','TEMP_DATE_FIELD')]
+
+    for (column.temp in column.allnames)
+    {
+      if (!column.temp %in% colnames(temp.filler))
+      {
+        #this adds columns that do not exist in temp.filler
+        print(paste('Insert a column with blank value:',column.temp))
+        temp.filler<-temp.filler%>%
+          dplyr::mutate(TEMP_COLUMN_='')%>%
+          RENAME_COLUMN('TEMP_COLUMN_',column.temp)
+      }
+    }
+
+
+
+    temp.filler<-temp.filler %>%
+      dplyr::filter(!TEMP_DATE_FIELD %in% temp.data$TEMP_DATE_FIELD)
+    data.unpadded<-rbind(data.unpadded,temp.filler)
+    print(paste('Inserted',nrow(temp.filler),'missing dates'))
+  }
+
+  if (keep_REF_)
+  {
+    data.result<-RENAME_COLUMN(data.unpadded,c('TEMP_COLUMN_NAME','TEMP_DATE_FIELD'))
+
+  } else
+  {
+    data.result<-RENAME_COLUMN(data.unpadded,c('REF_KEY','TEMP_COLUMN_NAME','TEMP_DATE_FIELD'))  #deletes these two columns
+
+  }
+  return(data.result)
 }
 

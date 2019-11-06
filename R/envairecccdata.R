@@ -6,7 +6,7 @@
 #' @param list.files is a vector string containing filesnames with extension
 #' @param ftp.path is the ftp path where data will be saved
 #' @param path.local is the local directory where the file will be saved. Default is NULL where temp folder is in the workpath
-#' @export
+#'
 GET_FILE_CSV<-function(list.files,ftp.path,path.local=NULL,clean=TRUE)
 {
   #debug
@@ -195,8 +195,8 @@ GET_FILE_CSV<-function(list.files,ftp.path,path.local=NULL,clean=TRUE)
 #'
 #' This function retrieves latest forecast from ECCC models
 #' @param parameter is a vector string of AQHI, PM25, NO2, O3, PM10. It will include all forecase if NULL
-#' @export
-GET_ECCC_FORECAST_deprecated<-function(parameter=NULL)
+#'
+importECCC_forecast<-function(parameter=NULL)
 {
   #debug
 if (0)
@@ -323,7 +323,7 @@ if (0)
 #'
 #' This function retrieves CGNDB details
 #' @param list.cities is a string vector of cities
-#' @export
+#'
 GET_CGNDB<-function(list.cities)
 {
 

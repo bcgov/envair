@@ -1,7 +1,7 @@
 Type: Package
 Package: envair
 Title: BC ENV Air Quality Monitoring Data Access
-Version: 0.0.0.9000
+Version: 0.0.2.000
 Authors@R: person("Jerome", "Robles", email = "jerome.robles@gov.bc.ca", role = c("aut", "cre"))
 Description: Retrieve air quality monitoring data from the BC Ministry of Environnment and Climate Change Public FTP
 Depends: R (>= 3.5.1)
