@@ -1194,7 +1194,6 @@ GET_DATEPADDED_DATA<-function(data.unpadded,column.datefield='DATE_PST',
 #'
 #' This function retrieves the list of folders that are in the specified URL
 #' @param source.url is the URL containing the data folders, default is ECCC datamart
-#' @export
 GET_URL_FOLDERS<-function(source.url='http://dd.weatheroffice.ec.gc.ca/bulletins/alphanumeric/' )
 {
   if (0)
@@ -1224,7 +1223,7 @@ GET_URL_FOLDERS<-function(source.url='http://dd.weatheroffice.ec.gc.ca/bulletins
       dplyr::mutate(LINES=as.character(LINES))%>%
       tidyr::separate(col='LINES',into=c("LINE1","LINE2","LINE3","TYPE",
                                          "LINE5","FOLDER","LINE7"),sep='"',remove=FALSE)%>%
-      tidyr::separate(col="LINE7",into=c("","DATE"),sep="  +")
+      tidyr::separate(col="LINE7",into=c("LINE8","DATE"),sep="  +")
 
     list.columns<-colnames(result)
     result<-result%>%
