@@ -1194,6 +1194,7 @@ GET_DATEPADDED_DATA<-function(data.unpadded,column.datefield='DATE_PST',
 #'
 #' This function retrieves the list of folders that are in the specified URL
 #' @param source.url is the URL containing the data folders, default is ECCC datamart
+#' @export
 GET_URL_FOLDERS<-function(source.url='http://dd.weatheroffice.ec.gc.ca/bulletins/alphanumeric/' )
 {
   if (0)
@@ -1209,14 +1210,15 @@ GET_URL_FOLDERS<-function(source.url='http://dd.weatheroffice.ec.gc.ca/bulletins
   result <- NULL
   #we'll try http and https
   temp_<-curl(gsub('https://','http://',source.url))
-  try(result<-data.frame(LINES=unlist(strsplit(readLines(temp_),split='/n'))))
+  try(result<-unlist(strsplit(readLines(temp_),split='/n')))
   temp_<-curl(gsub('http://','https://',source.url))
-  try(result<-data.frame(LINES=unlist(strsplit(readLines(temp_),split='/n'))))
+  try(result<-unlist(strsplit(readLines(temp_),split='/n')))
 
-  result <- result%>%
-    dplyr::mutate(LINES = as.character(LINES))
+
   if (!is.null(result))
   {
+    result<-data.frame(LINES = result)
+
     result<-result%>%
       dplyr::filter(grepl('alt="\\[',LINES))%>%
       dplyr::mutate(LINES=as.character(LINES))%>%
