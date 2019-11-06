@@ -5,8 +5,6 @@
 \title{List BC Air Quality Monitoring Stations}
 \usage{
 listBC_stations(year = NULL)
-
-listBC_stations(year = NULL)
 }
 \arguments{
 \item{year}{the year where station details are retrieved from. Defaults to current year if undefined
@@ -18,8 +16,6 @@ This is not a vector}
 }
 \description{
 listBC_stations
-This function retrieves latest station details or deteails during specific year from the ftp feed
-
 This function retrieves latest station details or deteails during specific year from the ftp feed
 }
 \examples{

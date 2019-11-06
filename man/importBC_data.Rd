@@ -2,13 +2,8 @@
 % Please edit documentation in R/create_station_data.R, R/importbc_data.R
 \name{importBC_data}
 \alias{importBC_data}
-\title{Function copied from importbc_data.R
-copied 2019-10-16 version
-Function for retrieving ENV air quality data from all stations and specific year}
+\title{Function for retrieving ENV air quality data from all stations and specific year}
 \usage{
-importBC_data(parameter_or_station, years = NULL,
-  use_openairformat = TRUE)
-
 importBC_data(parameter_or_station, years = NULL,
   use_openairformat = TRUE)
 }
