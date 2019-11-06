@@ -1213,6 +1213,8 @@ GET_URL_FOLDERS<-function(source.url='http://dd.weatheroffice.ec.gc.ca/bulletins
   temp_<-curl(gsub('http://','https://',source.url))
   try(result<-data.frame(LINES=unlist(strsplit(readLines(temp_),split='/n'))))
 
+  result <- result%>%
+    dplyr::mutate(LINES = as.character(LINES))
   if (!is.null(result))
   {
     result<-result%>%
