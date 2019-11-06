@@ -1205,13 +1205,17 @@ GET_URL_FOLDERS<-function(source.url='http://dd.weatheroffice.ec.gc.ca/bulletins
 
   #note: Do not use the RCurl version of reading https, there is an SSL bug
 
+<<<<<<< HEAD
   result <- NULL
+=======
+>>>>>>> 5ccb653e385d0342664cb5d9bf30e70eb72582ad
   #we'll try http and https
   temp_<-curl(gsub('https://','http://',source.url))
   try(result<-data.frame(LINES=unlist(strsplit(readLines(temp_),split='/n'))))
   temp_<-curl(gsub('http://','https://',source.url))
   try(result<-data.frame(LINES=unlist(strsplit(readLines(temp_),split='/n'))))
 
+<<<<<<< HEAD
   if (!is.null(result))
   {
     result<-result%>%
@@ -1227,6 +1231,20 @@ GET_URL_FOLDERS<-function(source.url='http://dd.weatheroffice.ec.gc.ca/bulletins
       dplyr::filter(grepl('\\[',TYPE))
     #dplyr::filter(!is.null(TYPE))%>%
   }
+=======
+  result<-result%>%
+    dplyr::filter(grepl('alt="\\[',LINES))%>%
+    dplyr::mutate(LINES=as.character(LINES))%>%
+    tidyr::separate(col='LINES',into=c("LINE1","LINE2","LINE3","TYPE",
+                                       "LINE5","FOLDER","LINE7"),sep='"',remove=FALSE)%>%
+    tidyr::separate(col="LINE7",into=c("","DATE"),sep="  +")
+
+  list.columns<-colnames(result)
+  result<-result%>%
+    RENAME_COLUMN(list.columns[!list.columns %in% c('TYPE','FOLDER','DATE')])%>%
+    dplyr::filter(grepl('\\[',TYPE))
+  #dplyr::filter(!is.null(TYPE))%>%
+>>>>>>> 5ccb653e385d0342664cb5d9bf30e70eb72582ad
   return(result)
 }
 
