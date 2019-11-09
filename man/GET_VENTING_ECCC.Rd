@@ -7,7 +7,7 @@
 GET_VENTING_ECCC(date.start = NULL)
 }
 \arguments{
-\item{date.start}{string year in YYYY-mm-dd
+\item{date.start}{string in YYYY-mm-dd
 if left undefined, it uses the current date}
 }
 \description{

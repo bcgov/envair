@@ -1198,20 +1198,23 @@ GET_URL_FOLDERS<-function(source.url='http://dd.weatheroffice.ec.gc.ca/bulletins
 {
   if (0)
   {
-    source.url='https://dd.weatheroffice.ec.gc.ca/bulletins/alphanumeric/20191018/FL/CWVR/'
+    source.url='https://dd.weatheroffice.ec.gc.ca/bulletins/alphanumeric/20191107/FL/CWVR'
+    source.url = 'https://dd.weatheroffice.ec.gc.ca/bulletins/alphanumeric/20191108/FL/CWVR/14/'
   }
   #retrieves list of files from the URL
   RUN_PACKAGE(c('dplyr','tidyr','httr','curl'))
 
-  #note: Do not use the RCurl version of reading https, there is an SSL bug
+  #note: Do not use the RCurl version of reading https, there is an SSL
 
 
   result <- NULL
   #we'll try http and https
-  temp_<-curl(gsub('https://','http://',source.url))
-  try(result<-unlist(strsplit(readLines(temp_),split='/n')))
-  temp_<-curl(gsub('http://','https://',source.url))
-  try(result<-unlist(strsplit(readLines(temp_),split='/n')))
+  source.url <- gsub('https://','http://',source.url)
+  temp_<-curl(source.url)
+  try(result<-unlist(strsplit(readLines(temp_),split='/n')),silent = TRUE)
+  source.url <- gsub('http://','https://',source.url)
+  temp_<-curl(source.url)
+  try(result<-unlist(strsplit(readLines(temp_),split='/n')),silent = TRUE)
 
 
   if (!is.null(result))
@@ -1232,7 +1235,7 @@ GET_URL_FOLDERS<-function(source.url='http://dd.weatheroffice.ec.gc.ca/bulletins
     #dplyr::filter(!is.null(TYPE))%>%
   }
 
-
+#print(paste('File retrieval complete:',source.url))
   return(result)
 }
 

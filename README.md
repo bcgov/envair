@@ -43,8 +43,11 @@ library(envair)
       - if parameter is specified, output displays data from all air
         quality monitoring stations that reported this data.
 
-  - `listBC_stations()` List details of all air quality monitoring
+  - `listBC_stations()` Lists details of all air quality monitoring
     stations (active or inactive)
+
+  - `list_parameters()` Lists the parameters that can be imported by
+    `importBC_data()`
 
   - `importECCC_forecast()` Retrieves AQHI, PM2.5, PM10, O3, and NO2
     forecasts from the ECCC datamart
@@ -52,7 +55,7 @@ library(envair)
   - `GET_VENTING_ECCC()` Retrieve the venting index FLCN39 from
     Environment and Climate Change Canada datamart
 
-  - `GET_VENTING_OBSCR()` Creates a kml or shape file based on the 2019
+  - `ventingBC_kml()` Creates a kml or shape file based on the 2019
     OBSCR rules. This incorporates venting index and sensitivity zones.
 
 # Usage and Examples
@@ -79,13 +82,21 @@ pollutionRose(PG_data,pollutant='pm25')
 
 ![](importBC_data.png)<!-- -->
 
-##### Importing without column name modification
+##### Other features for station data retrieval
 
-> To import without renaming column names, specify *use\_openairformat =
-> FALSE*.
+  - To import without renaming column names, specify *use\_openairformat
+    = FALSE*.
+  - Station name is not case sensitive, and works on partial text match
+  - Multiple stations can be specified *c(‘Prince George’,‘Kamloops’)*
+  - For non-continuous multiple years, use
+*c(2010,2011:2014)*
+
+<!-- end list -->
 
 ``` r
-PG_data <- importBC_data('Prince George Plaza 400',2010:2012,use_openairformat = FALSE)
+importBC_data('Prince George Plaza 400',2010:2012,use_openairformat = FALSE)
+importBC_data('Kamloops',2015)
+importBC_data(c('Prince George','Kamloops'),c(2010,2011:2014)
 ```
 
 ##### Retrieve parameter data
@@ -105,11 +116,11 @@ pm25_3year <- importBC_data('PM25',2010:2012)
 > produces a dataframe that lists all air quality monitoring station
 > details. if year is specified, it retrieves the station details from
 > that year. Note that this entry may not be accurate since system has
-> not been in place to generate these station
-details.
+> not been in place to generate these station details.
 
 ``` r
-stations <- listBC_stations()
+listBC_stations()
+listBC_stations(2016)
 ```
 
 | SERIAL\_CODE | EMS\_ID | STATION\_NAME                    | STATION\_NAME\_FULL              | LOCATION            | CITY       | CATEGORY                        | STATION\_ENVIRONMENT | STATION\_OWNER | DATE\_ESTABLISHED    | NOTES                       | LATITUDE | LONGITUDE  | HEIGHT.m. | STATUS   | CGNDB |
@@ -125,3 +136,51 @@ stations <- listBC_stations()
 
 > produce a vector string of available parameters that can be retrieved
 > with *importBC\_data()*
+
+#### `GET_VENTING_ECCC()`
+
+-----
+
+> produces a dataframe containing the recent venting index. Optional
+> entry of date string retrieves venting from a particular date.
+> Archived data is dependent on ECCC’s data availability
+
+``` r
+GET_VENTING_ECCC()
+GET_VENTING_ECCC('2019-11-08')
+```
+
+| VENTING\_INDEX\_ABBREV | DATE\_ISSUED | CURRENT\_VI | CURRENT\_VI\_DESC | CURRENT\_WSPD | CURRENT\_MIX\_HEIGHT | TODAY\_VI | TODAY\_VI\_DESC | TODAY\_WSPD | TODAY\_MIX\_HEIGHT | TOMORROW\_VI | TOMORROW\_VI\_DESC | TOMORROW\_WSPD | TOMORROW\_MIX\_HEIGHT | NAME           | REGION           |      LAT |       LONG |
+| :--------------------- | :----------- | ----------: | :---------------- | ------------: | -------------------: | --------: | :-------------- | ----------: | -----------------: | -----------: | :----------------- | -------------: | --------------------: | :------------- | :--------------- | -------: | ---------: |
+| 100 MILE               | 2019-11-08   |          23 | POOR              |            20 |                 1072 |        21 | POOR            |          23 |               1040 |           23 | POOR               |             11 |                  1183 | 100 Mile House | CENTRAL INTERIOR | 51.63915 | \-121.2945 |
+| ATLIN                  | 2019-11-08   |          16 | POOR              |             3 |                 1169 |        36 | FAIR            |          23 |                966 |           34 | FAIR               |             16 |                  1050 | Atlin          | NORTHERN BC      | 59.57000 | \-133.7000 |
+| BELLA COOLA            | 2019-11-08   |           9 | POOR              |             5 |                   55 |        16 | POOR            |          14 |                134 |           22 | POOR               |              8 |                   345 | Bella Coola    | COAST            | 52.38000 | \-126.7500 |
+| BURNS LAKE             | 2019-11-08   |          20 | POOR              |            17 |                  833 |        26 | POOR            |          16 |                915 |           19 | POOR               |             19 |                   815 | Burns Lake     | CENTRAL INTERIOR | 54.23142 | \-125.7597 |
+
+#### `importECCC_forecast()`
+
+-----
+
+  - Retrieves forecasts and model data from ECCC
+  - parameters include AQHI, PM25, NO2, O3, PM10
+
+<!-- end list -->
+
+``` r
+importECCC_forecast('no2')
+```
+
+#### `ventingBC_kml()`
+
+-----
+
+  - creates a kml object based on the 2019 OBSCR rules
+  - directory to save kml file can be specified. File will be saved in
+    that directory as *Venting\_Index\_HD.kml*.
+
+<!-- end list -->
+
+``` r
+ventingBC_kml()
+ventingBC_kml('C:/temp/')
+```

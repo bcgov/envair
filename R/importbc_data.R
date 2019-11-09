@@ -16,7 +16,6 @@
 #' @param years the years that will be retrieved. For sequence, use 2009:2015. For non
 #' sequential years, use c(2010,2015,2018)
 #' If not declared, the current year will be used
-#'
 #'@param use_openairformat is boolean,if TRUE, output is compatible with openair
 #'
 #'@examples
@@ -237,7 +236,6 @@ importBC_data<-function(parameter_or_station,
 #'
 #' @param year the year where station details are retrieved from. Defaults to current year if undefined
 #' This is not a vector
-#'
 #' @examples
 #' listBC_stations()
 #' listBC_stations(2015)
@@ -260,7 +258,7 @@ listBC_stations<-function(year=NULL)
   if (is.null(year))
   {year<- as.numeric(format(Sys.Date(),'%Y'))}
 
-  RUN_PACKAGE(c('dplyr','RCurl','readr'))
+  RUN_PACKAGE(c('dplyr','RCurl','readr','tibble'))
 
   # dir.temp<-paste(getwd(),'/TEMP',sep="")
   # file.temp<-paste(dir.temp,'/stationdetails.csv',sep="")
@@ -360,7 +358,9 @@ listBC_stations<-function(year=NULL)
   }
 
   station.details <- data.frame(lapply(station.details, as.character), stringsAsFactors=FALSE)
+
   # file.remove(file.temp)   #delete the temporary file
+  station.details <- tibble::as.tibble(station.details)
   return(station.details)
 
 }

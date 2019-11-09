@@ -21,7 +21,6 @@
 #'              if 'csv' it creates the csv file that populates the http://www.env.gov.bc.ca/epd/bcairquality/aqo/csv/VentingIndex.csv
 #'
 #' ventingBC_bulletin()
-#' @export
 ventingBC_bulletin<-function(date.start=NULL,
                              savefile=NULL,
                              output='html')
@@ -348,7 +347,10 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE)
     return(venting.shapefile)
   } else
   {
-
+    #make sure path.output has '/' at the end of name
+    if (substr(path.output,nchar(path.output),nchar(path.output)) != '/')
+    {path.output <- paste(path.output,'/',sep='')}
+    print(paste('saving file to:',path.output))
     #configure the description field
     venting.shapefile$Description<-paste('<p><b>Sensitivity Zone:</b> ',venting.shapefile$SENSI,
                                          '<br/><b>Issued:</b>',format(as.Date(venting.shapefile$DATE_ISSUED),'%a %d %b %Y'),
@@ -532,7 +534,7 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE)
 #' Retrieves the venting index FLCN 39 from ECCC data mart
 #'
 #' This function connects to ECCC datamart and retrieves venting data
-#' @param date.start string year in YYYY-mm-dd
+#' @param date.start string in YYYY-mm-dd
 #'        if left undefined, it uses the current date
 #'
 #' @examples
@@ -542,13 +544,13 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE)
 GET_VENTING_ECCC<-function(date.start=NULL)
 {
   #debug
-  # date.start<-NULL
+  #date.start<-NULL
   #end debug
 
-  RUN_PACKAGE(c('dplyr','data.table','readr','RCurl'))
+  RUN_PACKAGE(c('dplyr','data.table','readr','RCurl','tibble'))
   #PURPOSE: Retrieves venting data from the specified URL
   #venting.metadata='ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/Air_Quality/VentingMetaData.csv'
-  venting.url='http://dd.weatheroffice.ec.gc.ca/bulletins/alphanumeric/'    #ECCC venting index data
+  venting.url='https://dd.weatheroffice.ec.gc.ca/bulletins/alphanumeric/'    #ECCC venting index data
   #venting.metadata='ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/Air_Quality/VentingMetaData.csv'
   venting.metadata='https://envistaweb.env.gov.bc.ca/aqo/files/VentingMetaData.csv'
   if (is.null(date.start))
@@ -593,10 +595,17 @@ GET_VENTING_ECCC<-function(date.start=NULL)
           print(paste('scanning content of',temp.download.url))
           temp<-GET_URL_FOLDERS(temp.download.url)%>%
             filter(grepl('FLCN39',FOLDER,ignore.case=TRUE))
+
+
           if (nrow(temp)>0)
           {
+            print(paste('processing content:',paste(temp.download.url,temp$FOLDER,sep='')))
+            temp.result <- NULL
+            temp.download.url <- gsub('http://','https://',temp.download.url)
+            try(temp.result <- unlist(readr::read_lines(paste(temp.download.url,temp$FOLDER,sep=''))),silent = TRUE)
+            temp.download.url <- gsub('https://','http://',temp.download.url)
+            try(temp.result <- unlist(readr::read_lines(paste(temp.download.url,temp$FOLDER,sep=''))),silent = TRUE)
 
-            temp.result<-unlist(readLines(paste(temp.download.url,temp$FOLDER,sep='')))
             if (length(temp.result)>0)
             {
               print (paste('found Venting file in',temp$FOLDER))
@@ -614,7 +623,7 @@ GET_VENTING_ECCC<-function(date.start=NULL)
 
 
   #get venting metadata,check if file exist first
-  venting.meta<-(read.table(venting.metadata,sep=',',header=TRUE))%>%
+  venting.meta<-read.table(venting.metadata,sep=',',header = TRUE)%>%
     RENAME_COLUMN('')
 
   #scan each line and retrieve date details
@@ -639,7 +648,7 @@ GET_VENTING_ECCC<-function(date.start=NULL)
   }
 
   venting.table.temp<-include(toMatch=toupper(venting.guidelines),theList=toupper(venting.content))
-  venting.table<-data.frame(DATE_ISSUED=venting.date,RAW=venting.table.temp)%>%
+  venting.table<-tibble::data_frame(DATE_ISSUED=venting.date,RAW=venting.table.temp)%>%
     tidyr::separate(col=RAW,into=c('VENTING_INDEX_ABBREV','X1'),sep='  +',extra='merge',fill="right")%>%
     tidyr::separate(col=X1,into=c('X2','CURRENT_WSPD','CURRENT_MIX_HEIGHT',
                                   'X5','TODAY_WSPD','TODAY_MIX_HEIGHT',
@@ -649,18 +658,153 @@ GET_VENTING_ECCC<-function(date.start=NULL)
     tidyr::separate(col=X2,into=c('CURRENT_VI','CURRENT_VI_DESC'),sep='/',extra='drop')%>%
     tidyr::separate(col=X5,into=c('TODAY_VI','TODAY_VI_DESC'),sep='/',extra='drop')%>%
     tidyr::separate(col=X8,into=c('TOMORROW_VI','TOMORROW_VI_DESC'),sep='/',extra='drop')
-  if (nrow(venting.table)>0){
+  if (nrow(venting.table)>0)
+    {
     venting.table<-venting.table%>%
       merge(venting.meta,all.x=TRUE)
     print(paste('OK.',nrow(venting.table),'rows'))
 
 
   }
+
+
+ if (nrow(venting.table)>0)
+ {
+   print('Success. Ignore warnings and errors')
+   venting.table <- tibble::as.tibble(venting.table)
+ }
   return(venting.table)
 
 
 }
 
+
+#' GET ECCC FORECAST function
+#'
+#' This function retrieves latest forecast from ECCC models
+#' @param parameter is a vector string of AQHI, PM25, NO2, O3, PM10. It will include all forecase if NULL
+#' @export
+importECCC_forecast<-function(parameter=NULL)
+{
+  #debug
+  if (0)
+  {
+    parameter<-'FORECASTSUMMARY'
+  }
+  #end debug
+
+  RUN_PACKAGE(c('dplyr','tidyr','XML'))
+  source.url<-'http://dd.weatheroffice.ec.gc.ca/air_quality/aqhi/pyr/forecast/model/csv/'
+  description.url<-'http://dd.weatheroffice.ec.gc.ca/air_quality/doc/AQHI_XML_File_List.xml' #contains details of AQHI sites
+  parameter<-tolower(parameter)
+  source.files<-GET_URL_FOLDERS(source.url)%>%
+    dplyr::filter(TYPE=='[TXT]')%>%
+    tidyr::separate(FOLDER,into=c('DATE','PARAMETER','REGION','MODEL'),sep='_',remove=FALSE)%>%
+    dplyr::mutate(PARAMETER=gsub('PM2.5','PM25',PARAMETER,ignore.case=TRUE))%>%
+    dplyr::mutate(MODEL=gsub('.csv','',MODEL,ignore.case=TRUE))%>%
+    dplyr::group_by(PARAMETER,MODEL)%>%
+    dplyr::mutate(DATE_MAX=max(DATE))%>%
+    dplyr::ungroup()%>%
+    dplyr::filter(DATE==DATE_MAX)
+
+  if (!length(parameter)==0)
+  {
+    source.files<-dplyr::filter(source.files,tolower(PARAMETER) %in% tolower(parameter))
+  }
+
+  result<-NULL
+  for (i in 1:nrow(source.files))
+  {
+    temp.file<-source.files[i,]
+    print(paste('Analysing the file:',temp.file$FOLDER))
+    temp<-read.table(file=paste(source.url,temp.file$FOLDER,sep=''),
+                     sep=',',header=TRUE)%>%
+      RENAME_COLUMN('stationId','NAPS_ID')%>%
+      RENAME_COLUMN('cgndb','CGNDB')
+    #add station and cgndb columns
+    if (!('NAPS_ID' %in% colnames(temp)))
+    {
+      temp<-mutate(temp,NAPS_ID='')
+    }
+    if (!('CGNDB' %in% colnames(temp)))
+    {
+      temp<-mutate(temp,CGNDB='')
+    }
+    #note that some entries have cgndb, others stationId (NAPSId)
+    temp.result<-NULL
+    #creating a flat table
+    for (column in colnames(temp)[!grepl('NAPS_ID',colnames(temp)) &
+                                  !grepl('CGNDB',colnames(temp))
+                                  ])
+    {
+      print(paste('Retrieving from',column))
+
+      temp.result.date<-temp%>%
+        RENAME_COLUMN(column,'FORECAST_VALUE')%>%
+        dplyr::mutate(DATE=gsub('X','',column,ignore.case=TRUE))%>%
+        dplyr::select(NAPS_ID,CGNDB,DATE,FORECAST_VALUE)
+      temp.result<-rbind(temp.result,temp.result.date)
+    }
+    temp.result<-temp.result%>%
+      dplyr::mutate(DATE_NEW=as.POSIXct(DATE,format='%Y%m%d%H',tz='utc'),
+                    PARAMETER=temp.file$PARAMETER,
+                    DATE_CREATED=as.POSIXct(temp.file$DATE_MAX,format='%Y%m%d%H',tz='utc'),
+                    MODEL=temp.file$MODEL)%>%
+      dplyr::mutate(DATE=DATE_NEW)%>%
+      dplyr::select(NAPS_ID,CGNDB,PARAMETER,DATE,DATE_CREATED,MODEL,FORECAST_VALUE)
+    result<-rbind(result,temp.result)
+  }
+
+  #get details of stations and AQHI sites
+  #note, temporarile retrieving station details from 2018
+
+  #future, to grab from xml data list
+  #aqhi.list<-XML::xmlParse(description.url)
+
+  #added min() to remove duplication station with same NAPS_ID
+  list.station<-GET_STATION_DETAILS_FTP(2018)%>%
+    dplyr::group_by(NAPS_ID)%>%
+    dplyr::mutate(TEMP=min(STATION_NAME_FULL))%>%
+    dplyr::ungroup()%>%
+    dplyr::filter(STATION_NAME_FULL==TEMP)%>%
+    dplyr::select(STATION_NAME,NAPS_ID,LAT,LONG)%>%
+    RENAME_COLUMN(c('LAT','LONG'),c('LATITUDE','LONGITUDE'))%>%
+    unique()
+
+  #the min(),max() used to remove duplicate station with same NAPS ID and station name
+  list.aqhi<-GET_STATION_DETAILS_FTP()%>%
+    dplyr::group_by(CGNDB,LATITUDE,LONGITUDE)%>%
+    dplyr::mutate(TEMP=max(DATE_ESTABLISHED),TEMP2=min(STATION_NAME_FULL))%>%
+    ungroup()%>%
+    dplyr::filter(DATE_ESTABLISHED==TEMP)%>%
+    dplyr::filter(STATION_NAME_FULL==TEMP2)%>%
+    dplyr::select(STATION_NAME,CGNDB,LATITUDE,LONGITUDE)%>%
+    dplyr::mutate(CGNDB=toupper(CGNDB))%>%
+    dplyr::filter(!CGNDB %in% c('N/A','NA',''))%>%
+    unique()
+
+  #non-aqhi forecasts
+  #summarise added to remove duplicate stations
+  result.nonaqhi<-result%>%
+    dplyr::filter(!PARAMETER=='AQHI')%>%
+    dplyr::mutate(CGNDB=as.character(CGNDB))%>%
+    merge(list.station,all.x=TRUE)%>%
+    dplyr::filter(!is.na(STATION_NAME))
+  #aqhi forecasts
+  result.aqhi<-result%>%
+    dplyr::filter(PARAMETER=='AQHI')%>%
+    dplyr::mutate(CGNDB=as.character(CGNDB))%>%
+    merge(list.aqhi,all.x=TRUE)%>%
+    dplyr::filter(!is.na(STATION_NAME))
+
+
+  #combine non-aqhi and aqhi forecasts
+  rbind(result.aqhi,result.nonaqhi)%>%
+    dplyr::arrange(PARAMETER,NAPS_ID,CGNDB,MODEL,DATE)%>%
+    dplyr::mutate(DATE_PST=as.POSIXct(as.character(DATE),tz='utc')-3600*8)%>% #UTC to PST conversion
+    dplyr::select(DATE_PST,STATION_NAME,NAPS_ID,CGNDB,PARAMETER,MODEL,LATITUDE,LONGITUDE,DATE_CREATED,FORECAST_VALUE)%>%
+    return()
+}
 
 
 

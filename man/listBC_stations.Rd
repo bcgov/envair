@@ -17,6 +17,8 @@ This is not a vector}
 \description{
 listBC_stations
 This function retrieves latest station details or deteails during specific year from the ftp feed
+
+This function retrieves latest station details or deteails during specific year from the ftp feed
 }
 \examples{
 listBC_stations()
