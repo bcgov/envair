@@ -107,6 +107,16 @@ ventingBC_bulletin<-function(date.start=NULL,
             {
               print (paste('found Venting file in',temp$FOLDER))
               venting.content<-temp.result
+              #scan date from path
+              venting.date_ <- unlist(strsplit(temp.download.url,split='/'))
+              for (j in 1:length(venting.date_))
+              {
+                if (IsDate(venting.date_[j]))
+                {
+                  venting.date <- as.character(as.Date(venting.date_[j],'%Y%m%d'),format='%Y-%m-%d')
+                }
+              }
+
             }
           }
         }
@@ -122,18 +132,18 @@ ventingBC_bulletin<-function(date.start=NULL,
   }
   #find the date from the ECCC file
   #result is in venting.date
-  for (i in 1:length(venting.content))
-
-  {
-    #print(paste('Parsing venting file:',i,'of',length(venting.content)))
-
-    temp<-venting.content[i]
-    #identify if there is date in this line
-    if (IsDate(temp))
-    {
-      venting.date<-as.character(as.Date(temp,'%d-%B-%Y'),format='%Y-%m-%d')
-    }
-  }
+  # for (i in 1:length(venting.content))
+  #
+  # {
+  #   #print(paste('Parsing venting file:',i,'of',length(venting.content)))
+  #
+  #   temp<-venting.content[i]
+  #   #identify if there is date in this line
+  #   if (IsDate(temp))
+  #   {
+  #     venting.date<-as.character(as.Date(temp,'%d-%B-%Y'),format='%Y-%m-%d')
+  #   }
+  # }
 
   #if output is html, it will save file directly into the defined path
   #if output is ftp, it will save in temporary folder, and then upload file into ftp
@@ -544,6 +554,10 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE)
 GET_VENTING_ECCC<-function(date.start=NULL)
 {
   #debug
+  if (0)
+  {
+    date.start<-NULL
+  }
   #date.start<-NULL
   #end debug
 
@@ -572,6 +586,7 @@ GET_VENTING_ECCC<-function(date.start=NULL)
       dplyr::mutate(URL=paste(venting.url,FOLDER,'FL/CWVR/',sep=''))
 
   }
+  venting.date<-NULL
 
   venting.content<-NULL #contains the ECCC web data for venting (FLCN39)
   for (i in 1:nrow(temp.list))
@@ -610,6 +625,15 @@ GET_VENTING_ECCC<-function(date.start=NULL)
             {
               print (paste('found Venting file in',temp$FOLDER))
               venting.content<-temp.result
+              #scan date from path
+              venting.date_ <- unlist(strsplit(temp.download.url,split='/'))
+              for (j in 1:length(venting.date_))
+              {
+                if (IsDate(venting.date_[j]))
+                {
+                  venting.date <- as.character(as.Date(venting.date_[j],'%Y%m%d'),format='%Y-%m-%d')
+                }
+              }
             }
           }
         }
@@ -627,25 +651,25 @@ GET_VENTING_ECCC<-function(date.start=NULL)
     RENAME_COLUMN('')
 
   #scan each line and retrieve date details
-  venting.date<-NULL
+  #venting.date<-NULL
 
-  for (i in 1:length(venting.content))
-    #find the date
-  {
-    #print(paste('Parsing venting file:',i,'of',length(venting.content)))
-    temp<-venting.content[i]
-    if (is.null(venting.date))
-    {
-      #identify if there is date in this line
-      if (IsDate(temp))
-      {
-
-        venting.date<-as.character(as.Date(temp,'%d-%B-%Y'),format='%Y-%m-%d')
-
-      }
-
-    }
-  }
+  # for (i in 1:length(venting.content))
+  #   #find the date
+  # {
+  #   #print(paste('Parsing venting file:',i,'of',length(venting.content)))
+  #   temp<-venting.content[i]
+  #   if (is.null(venting.date))
+  #   {
+  #     #identify if there is date in this line
+  #     if (IsDate(temp))
+  #     {
+  #
+  #       venting.date<-as.character(as.Date(temp,'%d-%B-%Y'),format='%Y-%m-%d')
+  #
+  #     }
+  #
+  #   }
+  # }
 
   venting.table.temp<-include(toMatch=toupper(venting.guidelines),theList=toupper(venting.content))
   venting.table<-tibble::data_frame(DATE_ISSUED=venting.date,RAW=venting.table.temp)%>%
@@ -803,6 +827,7 @@ importECCC_forecast<-function(parameter=NULL)
     dplyr::arrange(PARAMETER,NAPS_ID,CGNDB,MODEL,DATE)%>%
     dplyr::mutate(DATE_PST=as.POSIXct(as.character(DATE),tz='utc')-3600*8)%>% #UTC to PST conversion
     dplyr::select(DATE_PST,STATION_NAME,NAPS_ID,CGNDB,PARAMETER,MODEL,LATITUDE,LONGITUDE,DATE_CREATED,FORECAST_VALUE)%>%
+    as_tibble()%>%
     return()
 }
 

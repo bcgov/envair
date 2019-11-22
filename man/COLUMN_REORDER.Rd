@@ -31,8 +31,7 @@ COLUMN_REORDER()}
 
 \item{data.input}{the input data frame}
 
-\item{columns}{the vector of strings listing the column names in desired order. Columns not listed are added at the end
-COLUMN_REORDER()}
+\item{columns}{the vector of strings listing the column names in desired order. Columns not listed are added at the end}
 }
 \description{
 This function reorders the columns of a dataframe based on the order it is specified in columns

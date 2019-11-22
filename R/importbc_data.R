@@ -2,17 +2,16 @@
 #' Import Hourly BC Data from station or parameter
 #'
 #' This function retrieves station or parameter hourly data from the BC open data portal
-#' Data includes verified and unverified data
+#' Data includes verified and unverified data depending on whether Level 2 has been completed for that date
 #'
 #' @param parameter_or_station vector list of air quality parameters or station (automatic).
 #' use the function listBC_stations() to get a detailed list of BC Air Quality Monitoring stations
-#' if there is not sation match, it will use the search item as station keyword
+#' if there is no exact station match, it will use partial match
 #' so that user can just enter 'Prince George' and it will search for all stations
 #' with Prince  George in the station name (Prince George Plaza 400, Prince George Glenview)
-#'
 #' List of parameters can be obtained using list_parameters() command
 #' List of stations can be retrieved using listBC_stations() command
-#'
+#' Mutliple stations can be specified
 #' @param years the years that will be retrieved. For sequence, use 2009:2015. For non
 #' sequential years, use c(2010,2015,2018)
 #' If not declared, the current year will be used
@@ -21,6 +20,7 @@
 #'@examples
 #' importBC_data('Prince George Plaza 400')
 #' importBC_data('pm25',2015:2016,use_openairformat = FALSE)
+#' importBC_data(c('Prince George','Kamloops'),c(2010,2015))
 #'
 #' @export
 importBC_data<-function(parameter_or_station,
@@ -31,14 +31,14 @@ importBC_data<-function(parameter_or_station,
   if (0)
   {
     parameters<-c('no','no2')
-    years<-2015:2018
+    years<-2017:2018
     parameters=NULL
     stations=NULL
-    parameter_or_station<-c('Prince George Plaza 400','Smithers')
+    parameter_or_station<-c('Trail Columbia Gardens Airport')
   }
 
   #load packages
-  RUN_PACKAGE(c('dplyr','RCurl','plyr','readr'))  #,'feather'
+  RUN_PACKAGE(c('dplyr','RCurl','plyr','readr','lubridate','tidyr'))  #,'feather'
   if (is.null(years))
   {
     years=as.numeric(format(Sys.Date(),'%Y'))
@@ -112,9 +112,9 @@ importBC_data<-function(parameter_or_station,
     data.result<-data.result%>%
       RENAME_COLUMN(c('DATE','TIME'))%>%
       #GET_DATEPADDED_DATA()%>%
-      dplyr::mutate(date_=as.POSIXct(DATE_PST,tz='utc')-3600)%>%
+      dplyr::mutate(date_=as.POSIXct(DATE_PST,tz='Etc/GMT+8')-3600)%>%
       dplyr::mutate(DATE=as.character(format(date_,'%Y-%m-%d')),
-                    TIME=as.character(format(as.POSIXct(DATE_PST,tz='utc'),'%H:%M')))%>%
+                    TIME=as.character(format(as.POSIXct(DATE_PST,tz='Etc/GMT+8'),'%H:%M')))%>%
       dplyr::mutate(TIME=ifelse(TIME=='00:00','24:00',TIME))%>%
       COLUMN_REORDER(columns=c('DATE_PST','DATE','TIME'))%>%
       RENAME_COLUMN('date_')
@@ -162,6 +162,7 @@ importBC_data<-function(parameter_or_station,
           sourcefile_<-sourcefile_[length(sourcefile_)]
           if (sourcefile_ %in% temp_)
           {
+
             print(paste('Downloading data from:',source_))
             data.result<-data.result%>%
               plyr::rbind.fill(readr::read_csv(source_))
@@ -169,6 +170,92 @@ importBC_data<-function(parameter_or_station,
         }
       }
     }
+
+  }
+
+
+  if (!is.null(data.result))
+  {
+
+    #covert DATE_PST to POSIXct date
+    tz(data.result$DATE_PST) <- 'Etc/GMT+8'
+
+
+    #check if there are duplicate entries
+    #merge their
+    duplicate <- data.result%>%
+      dplyr::select(EMS_ID,STATION_NAME)%>%
+      unique()%>%
+      dplyr::group_by(STATION_NAME)%>%
+      dplyr::mutate(number =n(),newems = max(EMS_ID,na.rm = TRUE))%>%
+      dplyr::ungroup()%>%
+      RENAME_COLUMN('EMS_ID')%>% #delete
+      RENAME_COLUMN('newems','EMS_ID')%>% #rename with the latest
+      unique()
+
+
+    if (max(duplicate$number,na.rm = TRUE)>1)
+    {
+      #fix for duplicate station entries
+      print('Station has duplicate entries, might take longer than usual')
+
+      #list instrument and data columns
+      cols_ <- colnames(data.result)
+      cols_ <- cols_[!cols_ %in% c('STATION_NAME','DATE','TIME','EMS_ID','DATE_PST')]
+      cols_instrument_ <- cols_[grepl('instrument',cols_,ignore.case = TRUE)]
+      cols_ <- cols_[!cols_ %in% cols_instrument_]
+
+      #dates only to pad removed entries
+      df_dates <- data.result%>%
+        dplyr::select(DATE_PST,DATE,TIME,STATION_NAME)%>%
+        unique()
+
+
+      #process duplicate station data, remove EMS ID, assign with a common one
+      data.duplicate <- data.result%>%  #
+        dplyr::filter(STATION_NAME %in% duplicate$STATION_NAME)%>%
+        RENAME_COLUMN(cols_instrument_)%>%
+        tidyr::pivot_longer(cols = cols_,names_to = 'PARAMETER',values_to = 'VALUES')%>%
+        RENAME_COLUMN('EMS_ID')%>%
+        merge(duplicate%>%
+                dplyr::select(STATION_NAME,EMS_ID))%>%
+        dplyr::filter(!is.na(as.numeric(VALUES)))%>%
+        tidyr::pivot_wider(names_from = PARAMETER, values_from = VALUES)
+
+      #process instrument names, combine for all entries on each station, get only one value for each instrument
+      data.duplicate.instruments <- data.result%>%
+        dplyr::filter(STATION_NAME %in% duplicate$STATION_NAME)%>%
+        dplyr::select(STATION_NAME,cols_instrument_)%>%
+        unique()%>%
+        tidyr::pivot_longer(-STATION_NAME, names_to='parameter',values_to='instrument')%>%
+        unique()
+      #use counter to remove duplicates
+      data.duplicate.instruments <- data.duplicate.instruments%>%
+        dplyr::arrange(desc(instrument))%>%
+        dplyr::mutate(counter = 1:nrow(data.duplicate.instruments))%>%
+        dplyr::group_by(STATION_NAME,parameter)%>%
+        dplyr::mutate(use_counter = min(counter,na.rm = TRUE))%>%
+        dplyr::ungroup()%>%
+        dplyr::filter(counter == use_counter)%>%
+        dplyr::select(-counter,-use_counter)%>%
+        tidyr::pivot_wider(names_from = parameter, values_from = instrument)
+
+      #insert instrument details to duplicate data
+
+      data.duplicate <- data.duplicate%>%
+        merge(data.duplicate.instruments,all.x = TRUE)%>%
+        COLUMN_REORDER(c('DATE_PST','DATE','TIME','STATION_NAME','EMS_ID',
+                         sort(c(cols_,cols_instrument_))))%>%
+        merge(df_dates,all.y = TRUE)
+
+      #bind again with data.result
+      data.result <- data.result%>%
+        dplyr::filter(!STATION_NAME %in% duplicate$STATION_NAME)%>%
+        plyr::rbind.fill(data.duplicate)
+
+
+    }
+
 
   }
 
@@ -216,15 +303,18 @@ importBC_data<-function(parameter_or_station,
   {
     #recalculate DATE and TIME based on DATE_PST
     data.result<-data.result%>%
-      dplyr::mutate(date_=as.POSIXct(DATE_PST,tz='utc')-3600)%>%
+      dplyr::mutate(date_=as.POSIXct(DATE_PST,tz='Etc/GMT+8')-3600)%>%
       dplyr::mutate(DATE=as.character(format(date_,'%Y-%m-%d')),
-                    TIME=as.character(format(as.POSIXct(DATE_PST,tz='utc'),'%H:%M')))%>%
+                    TIME=as.character(format(as.POSIXct(DATE_PST,tz='Etc/GMT+8'),'%H:%M')))%>%
       dplyr::mutate(TIME=ifelse(TIME=='00:00','24:00',TIME))%>%
       COLUMN_REORDER(columns=c('DATE_PST','DATE','TIME'))%>%
       RENAME_COLUMN('date_')
 
 
   }
+
+
+print(paste('Done.',nrow(data.result),'rows'))
   return(data.result)
 }
 
@@ -236,6 +326,7 @@ importBC_data<-function(parameter_or_station,
 #'
 #' @param year the year where station details are retrieved from. Defaults to current year if undefined
 #' This is not a vector
+#'
 #' @examples
 #' listBC_stations()
 #' listBC_stations(2015)

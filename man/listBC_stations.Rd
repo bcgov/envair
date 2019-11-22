@@ -5,6 +5,8 @@
 \title{List BC Air Quality Monitoring Stations}
 \usage{
 listBC_stations(year = NULL)
+
+listBC_stations(year = NULL)
 }
 \arguments{
 \item{year}{the year where station details are retrieved from. Defaults to current year if undefined

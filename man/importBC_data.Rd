@@ -8,16 +8,19 @@ Function for retrieving ENV air quality data from all stations and specific year
 \usage{
 importBC_data(parameter_or_station, years = NULL,
   use_openairformat = TRUE)
+
+importBC_data(parameter_or_station, years = NULL,
+  use_openairformat = TRUE)
 }
 \arguments{
 \item{parameter_or_station}{vector list of air quality parameters or station (automatic).
 use the function listBC_stations() to get a detailed list of BC Air Quality Monitoring stations
-if there is not sation match, it will use the search item as station keyword
+if there is no exact station match, it will use partial match
 so that user can just enter 'Prince George' and it will search for all stations
 with Prince  George in the station name (Prince George Plaza 400, Prince George Glenview)
-
 List of parameters can be obtained using list_parameters() command
-List of stations can be retrieved using listBC_stations() command}
+List of stations can be retrieved using listBC_stations() command
+Mutliple stations can be specified}
 
 \item{years}{the years that will be retrieved. For sequence, use 2009:2015. For non
 sequential years, use c(2010,2015,2018)
@@ -41,10 +44,11 @@ This function retrieves parameter data from the FTP open data portal
 Data includes verified and unverified data
 
 This function retrieves station or parameter hourly data from the BC open data portal
-Data includes verified and unverified data
+Data includes verified and unverified data depending on whether Level 2 has been completed for that date
 }
 \examples{
 importBC_data('Prince George Plaza 400')
 importBC_data('pm25',2015:2016,use_openairformat = FALSE)
+importBC_data(c('Prince George','Kamloops'),c(2010,2015))
 
 }

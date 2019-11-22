@@ -5,7 +5,6 @@
 #' @param list.files is a vector string containing filesnames with extension
 #' @param ftp.path is the ftp path where data will be saved
 #' @param path.local is the local directory where the file will be saved. Default is NULL where temp folder is in the workpath
-#'
 GET_FILE_CSV<-function(list.files,ftp.path,path.local=NULL,clean=TRUE)
 {
   #debug
@@ -439,8 +438,6 @@ RUN_PACKAGE<-function(packages=c('dplyr','ggplot2','reshape',
 #' This function reorders the columns of a dataframe based on the order it is specified in columns
 #' @param data.input the input data frame
 #' @param columns the vector of strings listing the column names in desired order. Columns not listed are added at the end
-#' COLUMN_REORDER()
-#'
 COLUMN_REORDER<-function(data.input,columns=c(''))
 {
   #reorders column based on the defined vlaue in columns
@@ -454,7 +451,7 @@ COLUMN_REORDER<-function(data.input,columns=c(''))
 
 IsDate <- function(mydate) {
   tryCatch(!is.na(as.Date(mydate,tryFormats = c("%Y-%m-%d", "%Y/%m/%d","%d-%m-%Y","%m-%d-%Y",
-                                                "%d-%B-%Y","%d/%B/%Y","%A %B %d, %Y"))),
+                                                "%d-%B-%Y","%d/%B/%Y","%A %B %d, %Y","%Y%m%d"))),
            error = function(err) {FALSE})
 }
 #Returns all items in a list that ARE contained in toMatch
@@ -617,7 +614,7 @@ GET_PARAMETER_DATA<-function(data.parameter,
   #identify the latest validation cycle data
   temp<-as.character(unlist(strsplit(getURL(data.source,dirlistonly=TRUE),split='\r\n')))
   temp<-temp[nchar(temp)==4] #get only 4-digit folders
-  validation.lastvalidationcycle<-max(as.numeric(temp))
+  validation.lastvalidationcycle<-max(as.numeric(temp),na.rm = TRUE)
 
 
   #file.data.temp<-paste(path.data.temp,data.parameter,'.feather',sep='')
@@ -661,8 +658,8 @@ GET_PARAMETER_DATA<-function(data.parameter,
 
 
       #pad mising data
-      temp.date.start<-min(as.POSIXct(data.temp$DATE_PST,tz='utc'))
-      temp.date.end<-max(as.POSIXct(data.temp$DATE_PST,tz='utc'))
+      temp.date.start<-min(as.POSIXct(data.temp$DATE_PST,tz='utc'),na.rm = TRUE)
+      temp.date.end<-max(as.POSIXct(data.temp$DATE_PST,tz='utc'),na.rm = TRUE)
 
       date.padding<-data.temp%>%
         RENAME_COLUMN(c('DATE_PST','DATE','TIME','RAW_VALUE','ROUNDED_VALUE','UNIT'))%>%
@@ -1039,8 +1036,8 @@ GET_ROLLING_MEAN<-function(data.input,data.input.previous=NULL,
     }
     data.output<-data.output%>%
       dplyr::mutate(TEMP_DATE_PST2=as.POSIXct(as.character(TEMP_DATE_PST),tz='utc'))%>%
-      dplyr::filter(TEMP_DATE_PST2>=as.POSIXct(as.character(min(data.input$DATE_PST)),tz='utc'))%>%   #show only the needed dates
-      dplyr::filter(TEMP_DATE_PST2<=as.POSIXct(as.character(max(data.input$DATE_PST)),tz='utc'))%>%
+      dplyr::filter(TEMP_DATE_PST2>=as.POSIXct(as.character(min(data.input$DATE_PST,na.rm = TRUE)),tz='utc'))%>%   #show only the needed dates
+      dplyr::filter(TEMP_DATE_PST2<=as.POSIXct(as.character(max(data.input$DATE_PST,na.rm = TRUE)),tz='utc'))%>%
       RENAME_COLUMN('TEMP_DATE_PST2')%>% #remove temporary date column
       RENAME_COLUMN('TEMP_DATE_PST',column.date)%>%
       RENAME_COLUMN(c('REF_KEY','TEMP_COLUMN_NAME','TEMP_DATE_FIELD'))
