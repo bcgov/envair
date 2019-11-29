@@ -16,6 +16,8 @@
 #' sequential years, use c(2010,2015,2018)
 #' If not declared, the current year will be used
 #'@param use_openairformat is boolean,if TRUE, output is compatible with openair
+#'#'@param use_ws_vector default is FALSE, if TRUE and use_openairformat is TRUE, ws is the vector wind speed
+#'@param pad, default is FALSE. if true, it will pad missing dates. This requires greater memory
 #'
 #'@examples
 #' importBC_data('Prince George Plaza 400')
@@ -24,7 +26,8 @@
 #'
 #' @export
 importBC_data<-function(parameter_or_station,
-                        years=NULL,use_openairformat=TRUE)
+                        years=NULL,use_openairformat=TRUE,
+                        use_ws_vector = FALSE,pad = FALSE)
 
 {
   #debug
@@ -109,16 +112,6 @@ importBC_data<-function(parameter_or_station,
       #Pad dates, recalculate DATE and TIME
     }
 
-    data.result<-data.result%>%
-      RENAME_COLUMN(c('DATE','TIME'))%>%
-      #GET_DATEPADDED_DATA()%>%
-      dplyr::mutate(date_=as.POSIXct(DATE_PST,tz='Etc/GMT+8')-3600)%>%
-      dplyr::mutate(DATE=as.character(format(date_,'%Y-%m-%d')),
-                    TIME=as.character(format(as.POSIXct(DATE_PST,tz='Etc/GMT+8'),'%H:%M')))%>%
-      dplyr::mutate(TIME=ifelse(TIME=='00:00','24:00',TIME))%>%
-      COLUMN_REORDER(columns=c('DATE_PST','DATE','TIME'))%>%
-      RENAME_COLUMN('date_')
-
 
   } else
   {
@@ -174,116 +167,173 @@ importBC_data<-function(parameter_or_station,
   }
 
 
-  if (!is.null(data.result))
+  #stop if there are no result
+  if (is.null(data.result))
   {
+    return(NULL)
+  }
 
-    #covert DATE_PST to POSIXct date
-    tz(data.result$DATE_PST) <- 'Etc/GMT+8'
+  #remove DATE,TIME columns, just utilize the DATE_PST
+data.result <- data.result%>%
+  RENAME_COLUMN(c('DATE','TIME'))  #remove these columns
+  #covert DATE_PST to POSIXct date
+  tz(data.result$DATE_PST) <- 'Etc/GMT+8'
 
 
-    #check if there are duplicate entries
-    #merge their
-    duplicate <- data.result%>%
-      dplyr::select(EMS_ID,STATION_NAME)%>%
-      unique()%>%
-      dplyr::group_by(STATION_NAME)%>%
-      dplyr::mutate(number =n(),newems = max(EMS_ID,na.rm = TRUE))%>%
-      dplyr::ungroup()%>%
-      RENAME_COLUMN('EMS_ID')%>% #delete
-      RENAME_COLUMN('newems','EMS_ID')%>% #rename with the latest
+  #check if there are duplicate entries
+  #merge their
+  duplicate <- data.result%>%
+    dplyr::select(EMS_ID,STATION_NAME)%>%
+    unique()%>%
+    dplyr::group_by(STATION_NAME)%>%
+    dplyr::mutate(number =n(),newems = max(EMS_ID,na.rm = TRUE))%>%
+    dplyr::ungroup()%>%
+    RENAME_COLUMN('EMS_ID')%>% #delete
+    RENAME_COLUMN('newems','EMS_ID')%>% #rename with the latest
+    unique()
+
+  if (max(duplicate$number,na.rm = TRUE)>1)
+  {
+    #fix for duplicate station entries
+    print('Station has duplicate entries, might take longer than usual')
+
+    #list instrument and data columns
+    cols_ <- colnames(data.result)
+    cols_ <- cols_[!cols_ %in% c('STATION_NAME','DATE','TIME','EMS_ID','DATE_PST')]
+    cols_instrument_ <- cols_[grepl('instrument',cols_,ignore.case = TRUE)]
+    cols_ <- cols_[!cols_ %in% cols_instrument_]
+
+    #dates only to pad removed entries
+    df_dates <- data.result%>%
+      dplyr::select(DATE_PST,STATION_NAME)%>%
       unique()
 
 
-    if (max(duplicate$number,na.rm = TRUE)>1)
-    {
-      #fix for duplicate station entries
-      print('Station has duplicate entries, might take longer than usual')
+    #process duplicate station data, remove EMS ID, assign with a common one
+    data.duplicate <- data.result%>%  #
+      dplyr::filter(STATION_NAME %in% duplicate$STATION_NAME)%>%
+      RENAME_COLUMN(cols_instrument_)%>%
+      tidyr::pivot_longer(cols = cols_,names_to = 'PARAMETER',values_to = 'VALUES')%>%
+      RENAME_COLUMN('EMS_ID')%>%
+      merge(duplicate%>%
+              dplyr::select(STATION_NAME,EMS_ID))%>%
+      dplyr::filter(!is.na(as.numeric(VALUES)))%>%
+      tidyr::pivot_wider(names_from = PARAMETER, values_from = VALUES)
 
-      #list instrument and data columns
-      cols_ <- colnames(data.result)
-      cols_ <- cols_[!cols_ %in% c('STATION_NAME','DATE','TIME','EMS_ID','DATE_PST')]
-      cols_instrument_ <- cols_[grepl('instrument',cols_,ignore.case = TRUE)]
-      cols_ <- cols_[!cols_ %in% cols_instrument_]
+    #process instrument names, combine for all entries on each station, get only one value for each instrument
+    data.duplicate.instruments <- data.result%>%
+      dplyr::filter(STATION_NAME %in% duplicate$STATION_NAME)%>%
+      dplyr::select(STATION_NAME,cols_instrument_)%>%
+      unique()%>%
+      tidyr::pivot_longer(-STATION_NAME, names_to='parameter',values_to='instrument')%>%
+      unique()
+    #use counter to remove duplicates
+    data.duplicate.instruments <- data.duplicate.instruments%>%
+      dplyr::arrange(desc(instrument))%>%
+      dplyr::mutate(counter = 1:nrow(data.duplicate.instruments))%>%
+      dplyr::group_by(STATION_NAME,parameter)%>%
+      dplyr::mutate(use_counter = min(counter,na.rm = TRUE))%>%
+      dplyr::ungroup()%>%
+      dplyr::filter(counter == use_counter)%>%
+      dplyr::select(-counter,-use_counter)%>%
+      tidyr::pivot_wider(names_from = parameter, values_from = instrument)
 
-      #dates only to pad removed entries
-      df_dates <- data.result%>%
-        dplyr::select(DATE_PST,DATE,TIME,STATION_NAME)%>%
-        unique()
+    #insert instrument details to duplicate data
 
+    data.duplicate <- data.duplicate%>%
+      left_join(data.duplicate.instruments)%>%
+      COLUMN_REORDER(c('DATE_PST','DATE','TIME','STATION_NAME','EMS_ID',
+                       sort(c(cols_,cols_instrument_))))%>%
+      right_join(df_dates)
 
-      #process duplicate station data, remove EMS ID, assign with a common one
-      data.duplicate <- data.result%>%  #
-        dplyr::filter(STATION_NAME %in% duplicate$STATION_NAME)%>%
-        RENAME_COLUMN(cols_instrument_)%>%
-        tidyr::pivot_longer(cols = cols_,names_to = 'PARAMETER',values_to = 'VALUES')%>%
-        RENAME_COLUMN('EMS_ID')%>%
-        merge(duplicate%>%
-                dplyr::select(STATION_NAME,EMS_ID))%>%
-        dplyr::filter(!is.na(as.numeric(VALUES)))%>%
-        tidyr::pivot_wider(names_from = PARAMETER, values_from = VALUES)
-
-      #process instrument names, combine for all entries on each station, get only one value for each instrument
-      data.duplicate.instruments <- data.result%>%
-        dplyr::filter(STATION_NAME %in% duplicate$STATION_NAME)%>%
-        dplyr::select(STATION_NAME,cols_instrument_)%>%
-        unique()%>%
-        tidyr::pivot_longer(-STATION_NAME, names_to='parameter',values_to='instrument')%>%
-        unique()
-      #use counter to remove duplicates
-      data.duplicate.instruments <- data.duplicate.instruments%>%
-        dplyr::arrange(desc(instrument))%>%
-        dplyr::mutate(counter = 1:nrow(data.duplicate.instruments))%>%
-        dplyr::group_by(STATION_NAME,parameter)%>%
-        dplyr::mutate(use_counter = min(counter,na.rm = TRUE))%>%
-        dplyr::ungroup()%>%
-        dplyr::filter(counter == use_counter)%>%
-        dplyr::select(-counter,-use_counter)%>%
-        tidyr::pivot_wider(names_from = parameter, values_from = instrument)
-
-      #insert instrument details to duplicate data
-
-      data.duplicate <- data.duplicate%>%
-        merge(data.duplicate.instruments,all.x = TRUE)%>%
-        COLUMN_REORDER(c('DATE_PST','DATE','TIME','STATION_NAME','EMS_ID',
-                         sort(c(cols_,cols_instrument_))))%>%
-        merge(df_dates,all.y = TRUE)
-
-      #bind again with data.result
-      data.result <- data.result%>%
-        dplyr::filter(!STATION_NAME %in% duplicate$STATION_NAME)%>%
-        plyr::rbind.fill(data.duplicate)
-
-
-    }
+    #bind again with data.result
+    data.result <- data.result%>%
+      dplyr::filter(!STATION_NAME %in% duplicate$STATION_NAME)%>%
+      plyr::rbind.fill(data.duplicate)
 
 
   }
+
+
+if (pad)
+{
+  #pad data, add missing data entries as NA
+  #note that this does not group station name anymore
+  col_ <- colnames(data.result)
+  col_instrument <- col_[grepl('instrument',col_,ignore.case = TRUE)]
+
+  df_padding <- data.result%>%
+    select(STATION_NAME,EMS_ID)%>%
+    unique()%>%
+    group_by(STATION_NAME)%>%
+    merge(tidyr::tibble(DATE_PST= seq.POSIXt(from = as.POSIXct(min(data.result$DATE_PST)),
+                                      to = as.POSIXct(max(data.result$DATE_PST)),
+                                      by='hour')))
+
+  print(paste(nrow(df_padding) - nrow(data.result),'rows padded' ))
+
+  # print('Padding',as.character(nrow(df_padding) - nrow(data.result)),
+  #       'rows')
+  data.result <- data.result%>%
+    right_join(df_padding)
+}
+
+
 
   if (use_openairformat & !is.null(data.result))
   {
     #rename all columns, change them to lower case to match openair requirements
     column_<-colnames(data.result)
-    data.result<-data.result%>%
-      RENAME_COLUMN(column_,tolower(column_))%>%
-      RENAME_COLUMN(c('date','time'))%>%
-      RENAME_COLUMN('date_pst','date')%>%
-      RENAME_COLUMN(c('wspd_vect','wdir_vect'),
-                    c('ws','wd'))
-
-    #use wspd_scalar as ws if not available
-    #use wdir_uvec as wd if not available
-
-    column_<-colnames(data.result)
-    if (!('ws' %in% column_))
+    if (use_ws_vector)
     {
+      #ws is vector wind speed (not default)
       data.result<-data.result%>%
-        RENAME_COLUMN('wspd_sclr','ws')
-    }
-    if (!('wd' %in% column_))
+        RENAME_COLUMN(column_,tolower(column_))%>%
+        RENAME_COLUMN('date_pst','date')%>%
+        RENAME_COLUMN(c('wspd_vect','wdir_vect'),
+                      c('ws','wd'))
+
+      #use wspd_scalar as ws if not available
+      #use wdir_uvec as wd if not available
+
+      column_<-colnames(data.result)
+      if (!('ws' %in% column_))
+      {
+        data.result<-data.result%>%
+          RENAME_COLUMN('wspd_vect','ws')
+      }
+      if (!('wd' %in% column_))
+      {
+        data.result<-data.result%>%
+          RENAME_COLUMN('wdir_uvec','wd')
+      }
+
+    } else
     {
+      #ws is scalar wind speed #default
       data.result<-data.result%>%
-        RENAME_COLUMN('wdir_uvec','wd')
+        RENAME_COLUMN(column_,tolower(column_))%>%
+        RENAME_COLUMN(c('date','time'))%>%
+        RENAME_COLUMN('date_pst','date')%>%
+        RENAME_COLUMN(c('wspd_sclr','wdir_vect'),
+                      c('ws','wd'))
+
+      #use wspd_scalar as ws if not available
+      #use wdir_uvec as wd if not available
+
+      column_<-colnames(data.result)
+      if (!('ws' %in% column_))
+      {
+        data.result<-data.result%>%
+          RENAME_COLUMN('wspd_sclr','ws')
+      }
+      if (!('wd' %in% column_))
+      {
+        data.result<-data.result%>%
+          RENAME_COLUMN('wdir_uvec','wd')
+      }
     }
+
 
     #check again if there is now wind speed/direction, if not, just create ws, wd columns
     column_<-colnames(data.result)
@@ -301,20 +351,21 @@ importBC_data<-function(parameter_or_station,
 
   } else
   {
-    #recalculate DATE and TIME based on DATE_PST
-    data.result<-data.result%>%
+    #add DATE and TIME columns
+    data.result <- data.result%>%
+
+      #GET_DATEPADDED_DATA()%>%
       dplyr::mutate(date_=as.POSIXct(DATE_PST,tz='Etc/GMT+8')-3600)%>%
       dplyr::mutate(DATE=as.character(format(date_,'%Y-%m-%d')),
                     TIME=as.character(format(as.POSIXct(DATE_PST,tz='Etc/GMT+8'),'%H:%M')))%>%
       dplyr::mutate(TIME=ifelse(TIME=='00:00','24:00',TIME))%>%
       COLUMN_REORDER(columns=c('DATE_PST','DATE','TIME'))%>%
-      RENAME_COLUMN('date_')
-
+      dplyr::select(-`date_`)
 
   }
 
 
-print(paste('Done.',nrow(data.result),'rows'))
+  print(paste('Done.',nrow(data.result),'rows'))
   return(data.result)
 }
 

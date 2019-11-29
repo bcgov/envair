@@ -4,7 +4,7 @@
 #' @param data.year numeric year. includes unverified and validated year
 #' @param parameter string or vector containing the parameter that will be evaluated.
 #' @param instrument.ignore if specified, ignores the instrument technology and merges dataset during statistical calculations. Default is FALSE for particulate (PM25,PM10) instruments
-#' @data.source defines the source of data if manually downloaded, default of NULL means it grabs from the BC ENV's open data portal
+#' @param data.source defines the source of data if manually downloaded, default of NULL means it grabs from the BC ENV's open data portal
 #' @keywords statistics, annual data, valid data, unverified data
 #' GET_STATISTICS_PARAMETER()
 GET_STATISTICS_PARAMETER<-function(data.year,parameter,instrument.ignore=!(tolower(parameter) %in% c('pm25','pm10')),data.source=NULL)
@@ -598,9 +598,10 @@ GET_STATISTICS_PARAMETER<-function(data.year,parameter,instrument.ignore=!(tolow
 #' Counts the number of valid hours or days
 #'
 #' This function counts the number of valid hours
-#' @param data.hourly
-#' @param day.threshold
-#' @param precision
+#'
+#' @param data.hourly hourly data
+#' @param day.threshold threshold for data captire
+#' @param precision precision of output
 #' @param Q2Q3 only
 #' GET_VALID_COUNT()
 GET_VALID_COUNT<-function(data.hourly,day.threshold=0.75,precision=1,Q2Q3only=FALSE)

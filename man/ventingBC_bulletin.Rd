@@ -4,8 +4,7 @@
 \alias{ventingBC_bulletin}
 \title{generate the venting index bulletin for BC env}
 \usage{
-ventingBC_bulletin(date.start = NULL, savefile = NULL,
-  output = "html")
+ventingBC_bulletin(date.start = NULL, savefile = NULL, output = "html")
 }
 \arguments{
 \item{date.start}{is the date of the venting data. if NULL, it retrieves the latest available}
