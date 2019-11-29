@@ -199,7 +199,7 @@ GET_FILE_CSV<-function(list.files,ftp.path,path.local=NULL,clean=TRUE)
 #' @param colname.new string vector containing the new name for the column. if NULL, it deletes the specified column
 #' @keywords rename dataframe
 #' RENAME_COLUMN()
-RENAME_COLUMN<-function(data.station,colname.orig,colname.new=NULL,quiet=TRUE)
+RENAME_COLUMN_untidy<-function(data.station,colname.orig,colname.new=NULL,quiet=TRUE)
 
 {
 
@@ -529,7 +529,7 @@ readKML <- function(file,keep_name_description=FALSE,layer,...) {
 
 
 #' Rounds the numbers based on DAS numeric format
-round3<-function(x,num_format=5.2)
+round3_old<-function(x,num_format=5.2)
 {
   #debug
   #x<-c(1.23236556,4,'43qw4',435.57622)
@@ -1372,5 +1372,81 @@ SAVE_TO_FILE<-function(data_to_save,filename,path.target,path.temp=NULL)
 
 
   return(TRUE)
+}
+
+
+#TIDY Functions Beyond here-------
+
+
+#' RENAME_COLUMN function
+#'
+#' This function renames or deletes the column of a dataframe based on its name
+#' this was created to prevent any error when the column name does not exist
+#' It is, at the same time, able to delete column
+#' @param data.station dataframe input
+#' @param colname.orig string vector containing the column to be deleted or renamed
+#' @param colname.new string vector containing the new name for the column. if NULL, it deletes the specified column
+#' @keywords rename dataframe
+#' RENAME_COLUMN()
+RENAME_COLUMN<-function(data.station,colname.orig,colname.new=NULL,quiet=TRUE)
+
+{
+
+
+
+  if (is.null(colname.new)==TRUE)
+  {
+    #delete the column
+
+    result<-data.station
+    for (columns in colname.orig)
+    {
+      if (!quiet){print(paste("Deleting column",columns))}
+      data.column.number<-which(colnames(result)==as.character(columns)) #column number
+      result[data.column.number]<-NULL
+
+    }
+  } else
+  {
+    #rename the column
+    result<-data.station
+    counter<-1 #start a counter
+
+    for (columns in colname.orig)
+    {
+      if (!quiet){print(paste("Renaming column",columns,"to",colname.new[counter]))}
+      data.column.number<-which(colnames(result)==as.character(columns)) #column number
+
+
+      colnames(result)[data.column.number]<-colname.new[counter]
+      counter<-counter+1
+
+    }
+  }
+  return(result)
+}
+
+
+#' Rounds the numbers based on DAS numeric format
+round3<-function(x,num_format)
+{
+  #debug\
+  if (0)
+  {
+  x<-c(1.23236556,4,'43qw4',435.57622)
+  num_format <- c(5.2,5.1,5.4,5)
+  }
+  #end debug
+  #print(paste(length(x),'-',length(num_format)))
+  num_format=as.character(format(as.numeric(num_format),nsmall=1))
+
+  df_x <- tibble(num = as.numeric(x), format = as.character(num_format))%>%
+    tidyr::separate(col=`format`,into=c("whole","decimal"),sep='\\.')%>%
+    dplyr::mutate(decimal = ifelse(is.na(decimal),0,as.numeric(decimal)))%>%
+    dplyr::mutate(rounded = round2(num,decimal))%>%
+    dplyr::mutate(rounded = ifelse(is.na(rounded),-9999,rounded))
+
+
+  return(df_x$rounded)
 }
 

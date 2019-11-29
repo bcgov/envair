@@ -1,4 +1,17 @@
 
+  - [bcgov/envair: BC air quality data retrieval and analysis
+    tool](#bcgovenvair-bc-air-quality-data-retrieval-and-analysis-tool)
+  - [Overview](#overview)
+  - [Installation](#installation)
+  - [Functions](#functions)
+  - [Usage and Examples](#usage-and-examples)
+      - [`importBC_data()`](#importbc_data)
+      - [`listBC_stations()`](#listbc_stations)
+      - [`list_parameters()`](#list_parameters)
+      - [`GET_VENTING_ECCC()`](#get_venting_eccc)
+      - [`importECCC_forecast()`](#importeccc_forecast)
+      - [`ventingBC_kml()`](#ventingbc_kml)
+
 <!-- Edit the README.Rmd only!!! The README.md is generated automatically from README.Rmd. -->
 
 # bcgov/envair: BC air quality data retrieval and analysis tool
@@ -38,10 +51,14 @@ library(envair)
     
       - if station is specified, output includes all parameters from
         that station. Output is also a compatible input to the openair
-        package functions.
-    
+        package functions with *scalar wind speed* and *vector wind
+        direction* as default ws, wd openair feed
       - if parameter is specified, output displays data from all air
         quality monitoring stations that reported this data.
+      - set *pad = TRUE* to pad missing dates, set *use\_ws\_vector =
+        TRUE* to use vector wind speed instead of scalar, and set
+        *use\_openairformat = FALSE* to produce the original
+        *non-openair* output.
 
   - `listBC_stations()` Lists details of all air quality monitoring
     stations (active or inactive)
@@ -86,17 +103,21 @@ pollutionRose(PG_data,pollutant='pm25')
 
   - To import without renaming column names, specify *use\_openairformat
     = FALSE*.
+  - By default, *vector wind direction* and *scalar wind speeds* are
+    used
+  - To use vector wind speed, use *use\_ws\_vector = TRUE*
+  - To pad missing dates, set *pad = TRUE*
   - Station name is not case sensitive, and works on partial text match
   - Multiple stations can be specified *c(‘Prince George’,‘Kamloops’)*
-  - For non-continuous multiple years, use
-*c(2010,2011:2014)*
+  - For non-continuous multiple years, use *c(2010,2011:2014)*
 
 <!-- end list -->
 
 ``` r
 importBC_data('Prince George Plaza 400',2010:2012,use_openairformat = FALSE)
 importBC_data('Kamloops',2015)
-importBC_data(c('Prince George','Kamloops'),c(2010,2011:2014)
+importBC_data(c('Prince George','Kamloops'),c(2010,2011:2014))
+importBC_data('Trail',2015,pad = TRUE)              
 ```
 
 ##### Retrieve parameter data
