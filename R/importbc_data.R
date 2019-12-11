@@ -80,6 +80,7 @@ importBC_data<-function(parameter_or_station,
   {
     #user wanted to look for parameters, not stations
     # scan one parameter at a time
+    use_openairformat = FALSE #it will not be openair format
     for (parameter in parameters)
     {
       #scan one year at a time, create a dataframe combining all years
@@ -255,28 +256,28 @@ data.result <- data.result%>%
   }
 
 
-if (pad)
-{
-  #pad data, add missing data entries as NA
-  #note that this does not group station name anymore
-  col_ <- colnames(data.result)
-  col_instrument <- col_[grepl('instrument',col_,ignore.case = TRUE)]
+  if (pad)
+  {
+    #pad data, add missing data entries as NA
+    #note that this does not group station name anymore
+    col_ <- colnames(data.result)
+    col_instrument <- col_[grepl('instrument',col_,ignore.case = TRUE)]
 
-  df_padding <- data.result%>%
-    select(STATION_NAME,EMS_ID)%>%
-    unique()%>%
-    group_by(STATION_NAME)%>%
-    merge(tidyr::tibble(DATE_PST= seq.POSIXt(from = as.POSIXct(min(data.result$DATE_PST)),
-                                      to = as.POSIXct(max(data.result$DATE_PST)),
-                                      by='hour')))
+    df_padding <- data.result%>%
+      select(STATION_NAME,EMS_ID)%>%
+      unique()%>%
+      group_by(STATION_NAME)%>%
+      merge(tidyr::tibble(DATE_PST= seq.POSIXt(from = as.POSIXct(min(data.result$DATE_PST)),
+                                               to = as.POSIXct(max(data.result$DATE_PST)),
+                                               by='hour')))
 
-  print(paste(nrow(df_padding) - nrow(data.result),'rows padded' ))
+    print(paste(nrow(df_padding) - nrow(data.result),'rows padded' ))
 
-  # print('Padding',as.character(nrow(df_padding) - nrow(data.result)),
-  #       'rows')
-  data.result <- data.result%>%
-    right_join(df_padding)
-}
+    # print('Padding',as.character(nrow(df_padding) - nrow(data.result)),
+    #       'rows')
+    data.result <- data.result%>%
+      right_join(df_padding)
+  }
 
 
 
@@ -284,6 +285,11 @@ if (pad)
   {
     #rename all columns, change them to lower case to match openair requirements
     column_<-colnames(data.result)
+
+    #subtract one hour from time
+    data.result <- data.result%>%
+      dplyr::mutate(DATE_PST = as.POSIXct(as.character(DATE_PST),tz='etc/GMT+8')-3600)
+
     if (use_ws_vector)
     {
       #ws is vector wind speed (not default)
@@ -502,7 +508,7 @@ listBC_stations<-function(year=NULL)
   station.details <- data.frame(lapply(station.details, as.character), stringsAsFactors=FALSE)
 
   # file.remove(file.temp)   #delete the temporary file
-  station.details <- tibble::as.tibble(station.details)
+  station.details <- tibble::as_tibble(station.details)
   return(station.details)
 
 }

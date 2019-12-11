@@ -52,7 +52,8 @@ library(envair)
       - if station is specified, output includes all parameters from
         that station. Output is also a compatible input to the openair
         package functions with *scalar wind speed* and *vector wind
-        direction* as default ws, wd openair feed
+        direction* as default ws, wd openair feed. The date is also
+        shifted to the time-beginning format.
       - if parameter is specified, output displays data from all air
         quality monitoring stations that reported this data.
       - set *pad = TRUE* to pad missing dates, set *use\_ws\_vector =
@@ -86,7 +87,8 @@ library(envair)
 > By default, this function produces openair-compatible dataframe
 > output. This renames *WSPD\_VECT*,*WDIR\_VECT* into *ws* and *wd*,
 > changes pollutant names to lower case characters (e.g.,
-> *pm25*,*no2*,*so2*). To use, specify station name and year/s. For a
+> *pm25*,*no2*,*so2*), and shifts the date from time-ending to
+> time-beginning format. To use, specify station name and year/s. For a
 > list of stations, use *listBC\_stations()* function. If no year is
 > specified, function retrieves latest data, typically the unverfied
 > data from start of year to current date.
@@ -102,7 +104,7 @@ pollutionRose(PG_data,pollutant='pm25')
 ##### Other features for station data retrieval
 
   - To import without renaming column names, specify *use\_openairformat
-    = FALSE*.
+    = FALSE*. This also keeps date in time-ending format
   - By default, *vector wind direction* and *scalar wind speeds* are
     used
   - To use vector wind speed, use *use\_ws\_vector = TRUE*

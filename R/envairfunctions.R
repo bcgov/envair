@@ -1239,11 +1239,14 @@ GET_URL_FOLDERS<-function(source.url='http://dd.weatheroffice.ec.gc.ca/bulletins
 #' Save dataframe to a file in a specified location
 #'
 #' This function saves the dataframe into a file
-#' @param data_to_save is the dataframe to save into a file
+#' @param data_to_save is the dataframe to save into a file, or
+#'                     for file_only, it is the file to transfer
 #' @param filename is string defining the name of the file
 #' @param path.target is string defining the path where the file will be saved
 #' @param path.temp default NULL, is where the file is temporarily saved. if null, file is saved in working directory
-SAVE_TO_FILE<-function(data_to_save,filename,path.target,path.temp=NULL)
+#' @param file_only is true, it performs a file transfer to FTP
+SAVE_TO_FILE<-function(data_to_save,filename,path.target,
+                       path.temp=NULL,file_only = FALSE)
 {
 
   #updated: 2019-04-10
@@ -1260,6 +1263,16 @@ SAVE_TO_FILE<-function(data_to_save,filename,path.target,path.temp=NULL)
   #NOTE: The md5 function is not accurate, it seems to change with the file
 
   #fix path.target, remove the last / if it's there
+  if (0)
+  {
+    data_to_save <- 'rmd_calms.html'
+    filename <- 'Valemount_met.html'
+    path.target <- 'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/CaptureStatistics/'
+    path.temp=NULL
+    path.target <- 'C:/Temp/'
+    file_only = FALSE
+
+  }
   RUN_PACKAGE(c('data.table','RCurl'))
   if (substr(path.target,nchar(path.target),nchar(path.target))=='/')
   {
@@ -1275,101 +1288,97 @@ SAVE_TO_FILE<-function(data_to_save,filename,path.target,path.temp=NULL)
     dir.create(path.temp,showWarnings = FALSE)
   }
 
-  if (!is.null(data_to_save) && nrow(data_to_save)>0)
+  if (!file_only)
   {
-
-    filename.final<-paste(path.target,filename,sep='/')
-    filename.final.pseudo<-paste(path.target,'/',filename,'_',sep='')
-
-
-    #save file into temporary folder, get the md5 hash sum of file
-    #note that for md5 to work, the filename must be the same as final
-    #so in temporary folder, the filename is the same as final name, and then renamed to temp
-    #for copying into the target folder
-    # file.md5.content<-NULL
-    # filename.md5.value<-NULL
-    #try(write.table(data_to_save,file=filename.temp.full,row.names=FALSE,sep=','),silent=TRUE)
-    if (grepl('ftp://',path.target))
+    #data is saved into a file
+    if (!is.null(data_to_save) && nrow(data_to_save)>0)
     {
-      print(paste('Saving to FTP',path.target))
 
-
-      filename.final<-paste(path.target,filename,sep='/')
-
-      key<-ENVAIR_CONNECTION_CHECK()
-      key.ftpuser<-as.character(key$VALUE[key$ITEM=='FTP_USER'])
-      key.ftppwd<-as.character(key$VALUE[key$ITEM=='FTP_PASSWORD'])
-      data.table::fwrite(data_to_save,
-                         file=paste(path.temp,'/',filename,sep=''),
-                         dateTimeAs = 'write.csv')
-      # print(paste('from:',paste(path.temp,'/',filename,sep=''),
-      #             'to:',filename.final))
-      try(RCurl::ftpUpload(paste(path.temp,'/',filename,sep=''),
-                           filename.final,
-                           userpwd=paste(safer::decrypt_string(key.ftpuser,key=Sys.info()['nodename']),
-                                         safer::decrypt_string(key.ftppwd,key=Sys.info()['nodename'])
-                                         ,sep=':'
-                           )
-      )
-      )
-      unlink(path.temp,recursive = TRUE) #delete the temporary file
-    } else
-    {
-      filename.temp<-paste(filename,'_',sep='')
-      filename.temp.full<-paste(path.temp,'/',filename.temp,sep='')
       filename.final<-paste(path.target,filename,sep='/')
       filename.final.pseudo<-paste(path.target,'/',filename,'_',sep='')
-      try(data.table::fwrite(data_to_save,file=filename.final.pseudo,dateTimeAs = 'write.csv'))
-      try(function2_ok<-file.rename(from=filename.final.pseudo,to=filename.final),silent=TRUE)
+      #fix names in  case the paste resulted in '//'
+      filename.final <- gsub('//','/',filename.final)
+      filename.final <- gsub(':/','://',filename.final)
+
+      #save file into temporary folder, get the md5 hash sum of file
+      #note that for md5 to work, the filename must be the same as final
+      #so in temporary folder, the filename is the same as final name, and then renamed to temp
+      #for copying into the target folder
+      # file.md5.content<-NULL
+      # filename.md5.value<-NULL
+      #try(write.table(data_to_save,file=filename.temp.full,row.names=FALSE,sep=','),silent=TRUE)
+      if (grepl('ftp://',path.target,ignore.case = TRUE))
+      {
+        print(paste('Saving to FTP',path.target))
+
+
+        filename.final<-paste(path.target,filename,sep='/')
+
+        key<-ENVAIR_CONNECTION_CHECK()
+        key.ftpuser<-as.character(key$VALUE[key$ITEM=='FTP_USER'])
+        key.ftppwd<-as.character(key$VALUE[key$ITEM=='FTP_PASSWORD'])
+        data.table::fwrite(data_to_save,
+                           file=paste(path.temp,'/',filename,sep=''),
+                           dateTimeAs = 'write.csv')
+        # print(paste('from:',paste(path.temp,'/',filename,sep=''),
+        #             'to:',filename.final))
+        try(RCurl::ftpUpload(paste(path.temp,'/',filename,sep=''),
+                             filename.final,
+                             userpwd=paste(safer::decrypt_string(key.ftpuser,key=Sys.info()['nodename']),
+                                           safer::decrypt_string(key.ftppwd,key=Sys.info()['nodename'])
+                                           ,sep=':'
+                             )
+        )
+        )
+        unlink(path.temp,recursive = TRUE) #delete the temporary file
+      } else
+      {
+        filename.temp<-paste(filename,'_',sep='')
+        filename.temp.full<-paste(path.temp,'/',filename.temp,sep='')
+        filename.final<-paste(path.target,filename,sep='/')
+        filename.final.pseudo<-paste(path.target,'/',filename,'_',sep='')
+        try(data.table::fwrite(data_to_save,file=filename.final.pseudo,dateTimeAs = 'write.csv'))
+        try(function2_ok<-file.rename(from=filename.final.pseudo,to=filename.final),silent=TRUE)
+      }
     }
-    # try(filename.md5.value<-paste(as.character(openssl::md5(filename.temp.full))),silent=TRUE)
-    #try(file.rename(from=paste(path.temp,'/',filename,sep=''),
-    #               to=filename.temp.full),silent=TRUE)
+  } else
+  {
+    #file is copied into the ftp file
+    if (file.exists(data_to_save))
+    {
+      filename.final<-paste(path.target,filename,sep='/')
+      filename.final.pseudo<-paste(path.target,'/',filename,'_',sep='')
+      #fix names in  case the paste resulted in '//'
+      filename.final <- gsub('//','/',filename.final)
+      filename.final <- gsub(':/','://',filename.final)
 
+      if (grepl('ftp://',path.target, ignore.case = TRUE))
+      {
+        key<-ENVAIR_CONNECTION_CHECK()
+        key.ftpuser<-as.character(key$VALUE[key$ITEM=='FTP_USER'])
+        key.ftppwd<-as.character(key$VALUE[key$ITEM=='FTP_PASSWORD'])
+        print(paste('saving file to',filename.final))
+        #copy file into FTP
+        try(RCurl::ftpUpload(data_to_save,
+                             filename.final,
+                             userpwd=paste(safer::decrypt_string(key.ftpuser,key=Sys.info()['nodename']),
+                                           safer::decrypt_string(key.ftppwd,key=Sys.info()['nodename'])
+                                           ,sep=':'
+                                           )
+                              )
+        )
 
-    # file.md5.temp<-paste('*',filename,sep='')
+      } else
+      {
+        #simply copy the file
+        file.copy(from=data_to_save,
+                  to=filename.final,
+                  overwrite = TRUE,
+                  copy.date = TRUE)
+      }
 
-    #read the content of existing md5 file, if it exist
-    #trasnfer the file from temporary to target, then rename to final name
-    # file.md5<-paste(path.target,'MD5',sep='/')
-    # try(file.md5.content<-read.table(file.md5),silent=TRUE)
-    # if (!is.null(file.md5.content) && colnames(file.md5.content) %in% c('V1','V2'))
-    # {
-    #   file.md5.content<-file.md5.content%>%
-    #     dplyr::mutate(V1=as.character(V1),V2=as.character(V2))
-    # }
-    #check if md5 is the same as previously save
-    #no need to save if md5 is the same
-    # if (!is.null(file.md5.content) || (!filename.md5.value %in% file.md5.content$V2))
-    # {
-    #try(function1_ok<-file.copy(filename.temp.full,path.target,recursive=FALSE),silent=TRUE)
-
-
-    #   if (is.null(file.md5.content) || (!filename.md5 %in% file.md5.content$V2))
-    #   {
-    #     #this means that there is no existing md5, or md5 file not available
-    #     #or there is no entry about that new file on md5 details
-    #     #so create a new content for md5
-    #     file.md5.content<-file.md5.content%>%
-    #       rbind(data.frame(V1=filename.md5.value,
-    #                        V2=as.character(filename.md5)))
-    #   } else
-    #   {
-    #     #this means yp update the md5 on the existing md5 file
-    #     file.md5.content[file.md5.content$V2==filename.md5,]$V1<-paste(as.character(filename.md5.value))
-    #   }
-    #   if (!is.null(file.md5.content))
-    #   {
-    #     try( write.table(file.md5.content,file.md5,row.names=FALSE,
-    #                      col.names=FALSE,quote=FALSE))
-    #   }
-    #
-    # }
-
-
-
+    }
   }
-
 
   return(TRUE)
 }
@@ -1448,5 +1457,73 @@ round3<-function(x,num_format)
 
 
   return(df_x$rounded)
+}
+
+
+#' Get the compass needle value of an azimuth measurement
+#'
+#' The result is OVER or UNDER if it is not inside 0-360 deg value
+#' Note: must be efficient if this function revised to use Mod and div instead
+#' @param angle is a vector of numbers, corresponds to azimuth readings
+direction <- function(angle)
+{
+  if (0)
+  {
+    angle <- c(50,45,36,360,500,-155)
+  }
+
+  #all invalid angles are changed to OVER or UNDER Error
+  print(paste('Direction check',length(angle),'values'))
+  df_result <- tibble(`angle` = angle, result= 'WAITING',id = 1:length(angle))
+  df_result$result[df_result$angle>360] <- 'OVER'
+  df_result$result[df_result$angle<0] <- 'UNDER'
+
+
+  #function to convert value to DEG string
+  df_direction <- tribble(
+    ~Direction,~Angle,
+    'N',0,
+    'NE',45,
+    'E',90,
+    'SE',135,
+    'S',180,
+    'SW',225,
+    'W',270,
+    'NW',315
+  )
+  increment <- 360/nrow(df_direction) #increment per needle point
+  df_direction <- df_direction %>%
+    mutate(startangle = Angle - (increment/2),
+           endangle = Angle + (increment)/2) %>%
+    #adjust for  values exceeding 360 or under zero
+    mutate(startangle = ifelse(startangle <0,360 + startangle,startangle),
+           endangle = ifelse(endangle > 360, endangle -360,endangle)) %>%
+    select(-Angle)
+
+
+  #create input for data
+  df_data <- df_result%>%
+    dplyr::filter(result == 'WAITING') %>%
+    merge(df_direction) %>%
+    #check how far the angle is from the pre-determinet values
+    dplyr::mutate(startDev = angle - startangle,
+                  endDev = endangle - angle)%>%
+    #fix negatives, excess values
+    dplyr::mutate(startDev = ifelse(startDev <0, startDev+360, startDev),
+                  endDev= ifelse(endDev <0, endDev+360, endDev))%>%
+    #get the minumum startDev from each
+    dplyr::group_by(id)%>%
+    dplyr::mutate(minStartDev = min(startDev, na.rm = TRUE)) %>%
+    ungroup()%>%
+    dplyr::filter(startDev == minStartDev)%>%
+    dplyr::mutate(result=Direction) %>%
+    dplyr::select(angle,result,id)
+
+  #combine to result
+  df_result <- df_result %>%
+    dplyr::filter(result != 'WAITING')%>%
+    plyr::rbind.fill(df_data) %>%
+    dplyr::arrange(id)
+  return(df_result$result)
 }
 
