@@ -156,11 +156,7 @@ importBC_data<-function(parameter_or_station,
 
           sourcefile_<-unlist(strsplit(source_,split='/'))
           sourcefile_<-sourcefile_[length(sourcefile_)]
-<<<<<<< HEAD
 
-=======
-          if (is.null(temp_)) {temp_ <- sourcefile_}
->>>>>>> ffe4ee34ff831b0053289147c1998e1cda5f6f4b
           if (sourcefile_ %in% temp_)
           {
 
@@ -182,8 +178,8 @@ importBC_data<-function(parameter_or_station,
   }
 
   #remove DATE,TIME columns, just utilize the DATE_PST
-data.result <- data.result%>%
-  RENAME_COLUMN(c('DATE','TIME'))  #remove these columns
+  data.result <- data.result%>%
+    RENAME_COLUMN(c('DATE','TIME'))  #remove these columns
   #covert DATE_PST to POSIXct date
   tz(data.result$DATE_PST) <- 'Etc/GMT+8'
 
@@ -354,7 +350,7 @@ data.result <- data.result%>%
     if (!('ws' %in% column_))
     {
       data.result<-data.result%>%
-       dplyr::mutate(ws=NA)
+        dplyr::mutate(ws=NA)
     }
     if (!('wd' %in% column_))
     {
@@ -422,7 +418,7 @@ listBC_stations<-function(year=NULL)
 
   #identify the latest validation cycle
   temp_<-as.character(unlist(stri_split_lines(getURL("ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/AnnualSummary/",
-                                             dirlistonly=TRUE))))
+                                                     dirlistonly=TRUE))))
   temp_<-temp_[nchar(temp_)==4] #get only 4-digit folders
   valcycle<-max(as.numeric(temp_),na.rm = TRUE)
 
@@ -537,5 +533,5 @@ list_parameters <- function()
   temp_ <- temp_[!grepl('station',temp_,ignore.case=TRUE)]
   temp_ <- tolower(gsub('.csv','',temp_,ignore.case=TRUE))
   temp_ <- sort(temp_)
-return(temp_)
+  return(temp_)
 }
