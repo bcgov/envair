@@ -72,7 +72,7 @@ importBC_data<-function(parameter_or_station,
   #identify the latest validation cycle data
   temp_<-as.character(unlist(strsplit(getURL(data.source,dirlistonly=TRUE),split='\r\n')))
   temp_<-temp_[nchar(temp_)==4] #get only 4-digit folders
-  valcycle<-max(as.numeric(temp_))
+  valcycle<-max(as.numeric(temp_),na.rm = TRUE)
 
   data.result<-NULL
 
@@ -154,6 +154,7 @@ importBC_data<-function(parameter_or_station,
 
           sourcefile_<-unlist(strsplit(source_,split='/'))
           sourcefile_<-sourcefile_[length(sourcefile_)]
+          if (is.null(temp_)) {temp_ <- sourcefile_}
           if (sourcefile_ %in% temp_)
           {
 
@@ -267,8 +268,8 @@ data.result <- data.result%>%
       select(STATION_NAME,EMS_ID)%>%
       unique()%>%
       group_by(STATION_NAME)%>%
-      merge(tidyr::tibble(DATE_PST= seq.POSIXt(from = as.POSIXct(min(data.result$DATE_PST)),
-                                               to = as.POSIXct(max(data.result$DATE_PST)),
+      merge(tidyr::tibble(DATE_PST= seq.POSIXt(from = as.POSIXct(min(data.result$DATE_PST,na.rm = TRUE)),
+                                               to = as.POSIXct(max(data.result$DATE_PST,na.rm = TRUE)),
                                                by='hour')))
 
     print(paste(nrow(df_padding) - nrow(data.result),'rows padded' ))
@@ -416,7 +417,7 @@ listBC_stations<-function(year=NULL)
   temp_<-as.character(unlist(strsplit(getURL("ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/AnnualSummary/",
                                              dirlistonly=TRUE),split='\r\n')))
   temp_<-temp_[nchar(temp_)==4] #get only 4-digit folders
-  valcycle<-max(as.numeric(temp_))
+  valcycle<-max(as.numeric(temp_),na.rm = TRUE)
 
 
   if (year> valcycle)
