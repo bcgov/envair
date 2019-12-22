@@ -156,7 +156,11 @@ importBC_data<-function(parameter_or_station,
 
           sourcefile_<-unlist(strsplit(source_,split='/'))
           sourcefile_<-sourcefile_[length(sourcefile_)]
+<<<<<<< HEAD
 
+=======
+          if (is.null(temp_)) {temp_ <- sourcefile_}
+>>>>>>> ffe4ee34ff831b0053289147c1998e1cda5f6f4b
           if (sourcefile_ %in% temp_)
           {
 

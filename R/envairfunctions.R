@@ -1197,22 +1197,31 @@ GET_URL_FOLDERS<-function(source.url='http://dd.weatheroffice.ec.gc.ca/bulletins
   {
     source.url='https://dd.weatheroffice.ec.gc.ca/bulletins/alphanumeric/20191107/FL/CWVR'
     source.url = 'https://dd.weatheroffice.ec.gc.ca/bulletins/alphanumeric/20191108/FL/CWVR/14/'
+    source.url <- 'http://dd.weatheroffice.ec.gc.ca/air_quality/aqhi/pyr/observation/realtime/csv/'
   }
   #retrieves list of files from the URL
   RUN_PACKAGE(c('dplyr','tidyr','httr','curl'))
 
   #note: Do not use the RCurl version of reading https, there is an SSL
-
+  set_config( config( ssl_verifypeer = 0L ) )
 
   result <- NULL
-  #we'll try http and https
-  source.url <- gsub('https://','http://',source.url)
-  temp_<-curl(source.url)
-  try(result<-unlist(strsplit(readLines(temp_),split='/n')),silent = TRUE)
-  source.url <- gsub('http://','https://',source.url)
-  temp_<-curl(source.url)
-  try(result<-unlist(strsplit(readLines(temp_),split='/n')),silent = TRUE)
 
+  for (j in 1:20)
+  {
+    print(paste('Attempt',j,'in GETURLFolder for',source.url))
+    #we'll try http and https
+    source.url <- gsub('https://','http://',source.url)
+    temp_<-curl(source.url)
+    try(result<-unlist(strsplit(readLines(temp_),split='/n')),silent = TRUE)
+
+    source.url <- gsub('http://','https://',source.url)
+    temp_<-curl(source.url)
+    try(result<-unlist(strsplit(readLines(temp_),split='/n')),silent = TRUE)
+
+    if (!is.null(result)) {break}
+
+  }
 
   if (!is.null(result))
   {

@@ -31,15 +31,20 @@ ventingBC_bulletin<-function(date.start=NULL,
     date.start<-NULL
     savefile=NULL
     output='csv'
+    source('../../envair/R/envairfunctions.R')
   }
   # date.start<-NULL
   #end debug
-
+  RUN_PACKAGE('lubridate')
+  if (is.null(date.start)) {date.start <- as.character(now(),'%Y-%m-%d')}
   #These are pre-defined based on intended output locations if running on DAS server
   #results are based on whether it is saving into ftp or file
   default_html <- 'E:/WebSites/wwwroot/Web2016/aqo/files/bulletin/venting.html'
   default_text <- 'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/VentingBulletins/'
   default_csv <- 'E:/apps_data/open_data_portal/VentingIndex.csv'
+
+  source('envairfunctions.R')
+
   if (is.null(savefile))
   {
     savefile<-ifelse(tolower(output)=='html',default_html,
@@ -84,38 +89,60 @@ ventingBC_bulletin<-function(date.start=NULL,
     #                      )
     if (is.null(venting.content))
     {
-      temp.download<-GET_URL_FOLDERS(temp.list[i,]$URL)%>%
-        dplyr::mutate(URL=paste(temp.list[i,]$URL,FOLDER,sep=''))%>%
-        dplyr::arrange(desc(DATE))
-      for (temp.download.url in temp.download$URL)
-      {
-        if (is.null(venting.content))
-        {
-          #check the files in the url folder
-          print(paste('scanning content of',temp.download.url))
-          temp<-GET_URL_FOLDERS(temp.download.url)%>%
-            filter(grepl('FLCN39',FOLDER,ignore.case=TRUE))
-          if (nrow(temp)>0)
-          {
-            #we'll just try both http and https, whichever works
-            try(temp.result<-unlist(readLines(paste(gsub('https://','http://',temp.download.url,ignore.case=TRUE)
-                                                    ,temp$FOLDER,sep=''))))
-            try(temp.result<-unlist(readLines(paste(gsub('http://','https://',temp.download.url,ignore.case=TRUE)
-                                                    ,temp$FOLDER,sep=''))))
+      temp.download <- NULL
+      try(
+        temp.download<-GET_URL_FOLDERS(temp.list[i,]$URL)%>%
+          dplyr::mutate(URL=paste(temp.list[i,]$URL,FOLDER,sep=''))%>%
+          dplyr::arrange(desc(DATE)) %>%
+          dplyr::filter(grepl(date.start,URL))    #this will give error if nothing retrieved
+      )
 
-            if (length(temp.result)>0)
+
+      if (!is.null(temp.download))
+      {
+        print(temp.download)
+        for (temp.download.url in temp.download$URL)
+        {
+          if (is.null(venting.content))
+          {
+            #check the files in the url folder
+            print(paste('scanning content of',temp.download.url))
+            temp<-GET_URL_FOLDERS(temp.download.url)%>%
+              filter(grepl('FLCN39',FOLDER,ignore.case=TRUE))
+            if (nrow(temp)>0)
             {
-              print (paste('found Venting file in',temp$FOLDER))
-              venting.content<-temp.result
-              #scan date from path
-              venting.date_ <- unlist(strsplit(temp.download.url,split='/'))
-              for (j in 1:length(venting.date_))
+              temp.result <- NULL
+              for (j in 1:20)
               {
-                if (IsDate(venting.date_[j]))
+                print(paste('Attempt:',j,'on',temp.download.url))
+                #we'll just try both http and https, whichever works
+                try(temp.result<-unlist(readLines(paste(gsub('https://','http://',temp.download.url,ignore.case=TRUE)
+                                                        ,temp$FOLDER,sep=''))))
+                try(temp.result<-unlist(readLines(paste(gsub('http://','https://',temp.download.url,ignore.case=TRUE)
+                                                        ,temp$FOLDER,sep=''))))
+                if (!is.null(temp.result))
                 {
-                  venting.date <- as.character(as.Date(venting.date_[j],'%Y%m%d'),format='%Y-%m-%d')
+                  break
                 }
+
               }
+
+              if (length(temp.result)>0)
+              {
+                print (paste('found Venting file in',temp$FOLDER))
+                venting.content<-temp.result
+                #scan date from path
+                venting.date_ <- unlist(strsplit(temp.download.url,split='/'))
+                for (j in 1:length(venting.date_))
+                {
+                  if (IsDate(venting.date_[j]))
+                  {
+                    venting.date <- as.character(as.Date(venting.date_[j],'%Y%m%d'),format='%Y-%m-%d')
+                  }
+                }
+                if (!is.null(venting.content)){break} #exit point
+              }
+
 
             }
           }
@@ -124,103 +151,117 @@ ventingBC_bulletin<-function(date.start=NULL,
     }
   }
 
-  #create a string of the venting content
-  ventECCC_<-venting.content[1]
-  for (i in 2:length(venting.content))
+  if (venting.date == as.character(ymd(date.start),'%Y-%m-%d'))
   {
-    ventECCC_<-paste(ventECCC_,venting.content[i],sep='\n')
-  }
-  #find the date from the ECCC file
-  #result is in venting.date
-  # for (i in 1:length(venting.content))
-  #
-  # {
-  #   #print(paste('Parsing venting file:',i,'of',length(venting.content)))
-  #
-  #   temp<-venting.content[i]
-  #   #identify if there is date in this line
-  #   if (IsDate(temp))
-  #   {
-  #     venting.date<-as.character(as.Date(temp,'%d-%B-%Y'),format='%Y-%m-%d')
-  #   }
-  # }
 
-  #if output is html, it will save file directly into the defined path
-  #if output is ftp, it will save in temporary folder, and then upload file into ftp
-  if (tolower(output)=='ftp')
-  {
-    #save ventECCC_ into a temporary file
-    if (nchar(ventECCC_)>100)
+    print(paste('Found Venting of date',venting.date))
+    #create a string of the venting content
+    ventECCC_<-venting.content[1]
+    for (i in 2:length(venting.content))
     {
-      #create a text version, normally as archive in the ftp server
-      filename_<-data.frame(FILENAME=paste('EC_BBS_',
-                                           as.character(as.Date(venting.date),format='%y%m%d'),'_',
-                                           as.character(as.Date(venting.date),format='%a_%B_%d_%y'),'.txt',
-                                           sep=''))%>%
-        dplyr::mutate(TEMP_FILE=paste(tempdir(),FILENAME,sep='/'),
-                      FINAL_FILE=paste(savefile,as.character(as.Date(venting.date),format='%Y'),
-                                       '/',FILENAME,sep='')
-        )
+      ventECCC_<-paste(ventECCC_,venting.content[i],sep='\n')
+    }
+    #find the date from the ECCC file
+    #result is in venting.date
+    # for (i in 1:length(venting.content))
+    #
+    # {
+    #   #print(paste('Parsing venting file:',i,'of',length(venting.content)))
+    #
+    #   temp<-venting.content[i]
+    #   #identify if there is date in this line
+    #   if (IsDate(temp))
+    #   {
+    #     venting.date<-as.character(as.Date(temp,'%d-%B-%Y'),format='%Y-%m-%d')
+    #   }
+    # }
+
+    #if output is html, it will save file directly into the defined path
+    #if output is ftp, it will save in temporary folder, and then upload file into ftp
+    if (tolower(output)=='ftp')
+    {
+      #save ventECCC_ into a temporary file
+      if (nchar(ventECCC_)>100)
+      {
+        #create a text version, normally as archive in the ftp server
+        filename_<-data.frame(FILENAME=paste('EC_BBS_',
+                                             as.character(as.Date(venting.date),format='%y%m%d'),'_',
+                                             as.character(as.Date(venting.date),format='%a_%B_%d_%y'),'.txt',
+                                             sep=''))%>%
+          dplyr::mutate(TEMP_FILE=paste(tempdir(),FILENAME,sep='/'),
+                        FINAL_FILE=paste(savefile,as.character(as.Date(venting.date),format='%Y'),
+                                         '/',FILENAME,sep='')
+          )
 
 
-      unlink(tempdir(),recursive=TRUE)
-      dir.create(tempdir())
-      write(ventECCC_,filename_$TEMP_FILE[1])
+        unlink(tempdir(),recursive=TRUE)
+        dir.create(tempdir())
+        write(ventECCC_,filename_$TEMP_FILE[1])
 
-      print(paste('Saving to ',filename_$FINAL_FILE[1]))
-      key<-ENVAIR_CONNECTION_CHECK()
-      key.ftpuser<-as.character(key$VALUE[key$ITEM=='FTP_USER'])
-      key.ftppwd<-as.character(key$VALUE[key$ITEM=='FTP_PASSWORD'])
-      # print(paste('from:',paste(path.temp,'/',filename,sep=''),
-      #             'to:',filename.final))
-      try(RCurl::ftpUpload(filename_$TEMP_FILE[1],
-                           filename_$FINAL_FILE[1],
-                           userpwd=paste(safer::decrypt_string(key.ftpuser,key=Sys.info()['nodename']),
-                                         safer::decrypt_string(key.ftppwd,key=Sys.info()['nodename'])
-                                         ,sep=':'),.opts=list(ftp.create.missing.dirs=TRUE)
-      ))
+        print(paste('Saving to ',filename_$FINAL_FILE[1]))
+        key<-ENVAIR_CONNECTION_CHECK()
+        key.ftpuser<-as.character(key$VALUE[key$ITEM=='FTP_USER'])
+        key.ftppwd<-as.character(key$VALUE[key$ITEM=='FTP_PASSWORD'])
+        # print(paste('from:',paste(path.temp,'/',filename,sep=''),
+        #             'to:',filename.final))
+        try(RCurl::ftpUpload(filename_$TEMP_FILE[1],
+                             filename_$FINAL_FILE[1],
+                             userpwd=paste(safer::decrypt_string(key.ftpuser,key=Sys.info()['nodename']),
+                                           safer::decrypt_string(key.ftppwd,key=Sys.info()['nodename'])
+                                           ,sep=':'),.opts=list(ftp.create.missing.dirs=TRUE)
+        ))
+
+      }
+
+
+
 
     }
-
-
-
-
-  }
-  if (tolower(output)=='html')
-  {
-    #converting venting.content into an html file similar to the original venting
-    #retrieve template
-    temp_<-curl(venting.template)
-    template_<-data.frame(LINES=unlist(strsplit(readLines(temp_),split='/n')))%>%
-      dplyr::mutate(LINES=as.character(LINES))
-
-    #create html of string
-    html_<-template_$LINES[1]
-    for (i in 2:nrow(template_))
+    if (tolower(output)=='html')
     {
+      #converting venting.content into an html file similar to the original venting
+      #retrieve template
+      temp_<-curl(venting.template)
+      template_<-data.frame(LINES=unlist(strsplit(readLines(temp_),split='/n')))%>%
+        dplyr::mutate(LINES=as.character(LINES))
 
-      html_<-paste(html_,template_$LINES[i],sep='\n')
+      #create html of string
+      html_<-template_$LINES[1]
+      for (i in 2:nrow(template_))
+      {
+
+        html_<-paste(html_,template_$LINES[i],sep='\n')
+      }
+      #insert date
+      find_<-'<!--INSERT POINT FOR DATE-->'
+      insert_<-as.character(as.Date(venting.date),format='%A %B %d, %Y')
+      html_<-gsub(find_,insert_,html_,ignore.case=TRUE)
+      #insert the venting bulleting
+      find_<-'<!--INSERT POINT FOR VENTING-->'
+      insert_<-ventECCC_
+      html_<-gsub(find_,insert_,html_,ignore.case=TRUE)
+
+      #writes to the file only if the html string is large~>100 strings
+      if (nchar(html_)>100) {write(html_,savefile)}
     }
-    #insert date
-    find_<-'<!--INSERT POINT FOR DATE-->'
-    insert_<-as.character(as.Date(venting.date),format='%A %B %d, %Y')
-    html_<-gsub(find_,insert_,html_,ignore.case=TRUE)
-    #insert the venting bulleting
-    find_<-'<!--INSERT POINT FOR VENTING-->'
-    insert_<-ventECCC_
-    html_<-gsub(find_,insert_,html_,ignore.case=TRUE)
+    if (tolower(output)=='csv')
+    {
+      vent_<-GET_VENTING_ECCC(as.character(now(),'%Y-%m-%d'))%>%
+        COLUMN_REORDER(c('NAME','REGION','VENTING_INDEX_ABBREV','DATE_ISSUED','LAT','LONG'))
 
-    #writes to the file only if the html string is large~>100 strings
-    if (nchar(html_)>100) {write(html_,savefile)}
-  }
-  if (tolower(output)=='csv')
+      if (!is.null(vent_))
+      {
+        data.table::fwrite(vent_,file=savefile)
+      } else
+      {
+        print('There were no venting data retrieved from ECCC')
+
+      }
+    }
+  } else
   {
-    vent_<-GET_VENTING_ECCC()%>%
-      COLUMN_REORDER(c('NAME','REGION','VENTING_INDEX_ABBREV','DATE_ISSUED','LAT','LONG'))
-    data.table::fwrite(vent_,file=savefile)
-
+    print(paste('Venting of the date not found, only found',venting.date, 'and today is', date.start))
   }
-
 }
 
 
@@ -245,11 +286,13 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE)
   }
   #end debug lines
 
+
   RUN_PACKAGE(c('rlang','R6','Rcpp','tidyr','namespace','dplyr','ggplot2','RODBC','reshape',
                 'lazyeval','zoo','DataCombine','data.table',
                 'fasttime','readr','RCurl','tidyr','lubridate',
                 'raster','rgdal','shapefiles','xml2','zip'))
-
+  source('envairfunctions.R')
+  date_today <- as.character(now(),'%Y-%m-%d')
   path.temp<-tempdir()
   unlink(path.temp)
   dir.create(path.temp,showWarnings = FALSE)
@@ -272,28 +315,43 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE)
   file.remove(file.temp)
   #read the insert file for kml file
   venting.insert<-readLines(URL.inserfile)
+  venting.data <- NULL
+  try(
+    venting.data<-GET_VENTING_ECCC(date_today)%>%
+      dplyr::mutate(TODAY_VI_NUMERIC=TODAY_VI_DESC)%>%
+      dplyr::mutate(TODAY_VI_NUMERIC=gsub('good','2',TODAY_VI_NUMERIC,ignore.case=TRUE))%>%
+      dplyr::mutate(TODAY_VI_NUMERIC=gsub('fair','1',TODAY_VI_NUMERIC,ignore.case=TRUE))%>%
+      dplyr::mutate(TODAY_VI_NUMERIC=gsub('poor','0',TODAY_VI_NUMERIC,ignore.case=TRUE))%>%
+      dplyr::mutate(TODAY_VI_NUMERIC=ifelse(TODAY_VI_NUMERIC %in% c('0','1','2'),as.numeric(TODAY_VI_NUMERIC),NA))%>%
+      dplyr::mutate(TOMORROW_VI_NUMERIC=TOMORROW_VI_DESC)%>%
+      dplyr::mutate(TOMORROW_VI_NUMERIC=gsub('good','2',TOMORROW_VI_NUMERIC,ignore.case=TRUE))%>%
+      dplyr::mutate(TOMORROW_VI_NUMERIC=gsub('fair','1',TOMORROW_VI_NUMERIC,ignore.case=TRUE))%>%
+      dplyr::mutate(TOMORROW_VI_NUMERIC=gsub('poor','0',TOMORROW_VI_NUMERIC,ignore.case=TRUE))%>%
+      dplyr::mutate(TOMORROW_VI_NUMERIC=ifelse(TOMORROW_VI_NUMERIC %in% c('0','1','2'),as.numeric(TOMORROW_VI_NUMERIC),NA))%>%
+      dplyr::mutate(VI_NUMERIC=as.numeric(TODAY_VI_NUMERIC)*10+as.numeric(TOMORROW_VI_NUMERIC))%>%
+      #apply rules for old sensitivity zones
+      #removed during the 2019 OBSCR update
+      # dplyr::mutate(LOW_SENSITIVITY_BURN=ifelse(TODAY_VI_NUMERIC>0 & TOMORROW_VI_NUMERIC>0,'YES','NO'))%>%
+      # dplyr::mutate(MEDIUM_SENSITIVITY_BURN=ifelse(TODAY_VI_NUMERIC>1 & TOMORROW_VI_NUMERIC>0,'YES','NO'))%>%
+      # dplyr::mutate(HIGH_SENSITIVITY_BURN=ifelse(TODAY_VI_NUMERIC>1 & TOMORROW_VI_NUMERIC>0,'YES','NO'))%>%
 
-  venting.data<-GET_VENTING_ECCC()%>%
-    dplyr::mutate(TODAY_VI_NUMERIC=TODAY_VI_DESC)%>%
-    dplyr::mutate(TODAY_VI_NUMERIC=gsub('good','2',TODAY_VI_NUMERIC,ignore.case=TRUE))%>%
-    dplyr::mutate(TODAY_VI_NUMERIC=gsub('fair','1',TODAY_VI_NUMERIC,ignore.case=TRUE))%>%
-    dplyr::mutate(TODAY_VI_NUMERIC=gsub('poor','0',TODAY_VI_NUMERIC,ignore.case=TRUE))%>%
-    dplyr::mutate(TODAY_VI_NUMERIC=ifelse(TODAY_VI_NUMERIC %in% c('0','1','2'),as.numeric(TODAY_VI_NUMERIC),NA))%>%
-    dplyr::mutate(TOMORROW_VI_NUMERIC=TOMORROW_VI_DESC)%>%
-    dplyr::mutate(TOMORROW_VI_NUMERIC=gsub('good','2',TOMORROW_VI_NUMERIC,ignore.case=TRUE))%>%
-    dplyr::mutate(TOMORROW_VI_NUMERIC=gsub('fair','1',TOMORROW_VI_NUMERIC,ignore.case=TRUE))%>%
-    dplyr::mutate(TOMORROW_VI_NUMERIC=gsub('poor','0',TOMORROW_VI_NUMERIC,ignore.case=TRUE))%>%
-    dplyr::mutate(TOMORROW_VI_NUMERIC=ifelse(TOMORROW_VI_NUMERIC %in% c('0','1','2'),as.numeric(TOMORROW_VI_NUMERIC),NA))%>%
-    dplyr::mutate(VI_NUMERIC=as.numeric(TODAY_VI_NUMERIC)*10+as.numeric(TOMORROW_VI_NUMERIC))%>%
-    #apply rules for old sensitivity zones
-    #removed during the 2019 OBSCR update
-    # dplyr::mutate(LOW_SENSITIVITY_BURN=ifelse(TODAY_VI_NUMERIC>0 & TOMORROW_VI_NUMERIC>0,'YES','NO'))%>%
-    # dplyr::mutate(MEDIUM_SENSITIVITY_BURN=ifelse(TODAY_VI_NUMERIC>1 & TOMORROW_VI_NUMERIC>0,'YES','NO'))%>%
-    # dplyr::mutate(HIGH_SENSITIVITY_BURN=ifelse(TODAY_VI_NUMERIC>1 & TOMORROW_VI_NUMERIC>0,'YES','NO'))%>%
+      #
+      RENAME_COLUMN(c('TODAY_VI_NUMERIC','TOMORROW_VI_NUMERIC'))#delete the numeric description columns
+  )
+  if (is.null(venting.data))
+  {
+    print(paste('No venting map data for:',date_today))
+    return()
+  }
 
-    #
-    RENAME_COLUMN(c('TODAY_VI_NUMERIC','TOMORROW_VI_NUMERIC'))#delete the numeric description columns
+  if (as.character(venting.data$DATE_ISSUED) != date_today)
+  {
+    print(paste('Date needed and available did not match, exiting',
+                'Date in ECCC:',as.character(venting.data$DATE_ISSUED),
+                'Date Requested:',date_today))
+    return()
 
+  }
   #create 3 unique venting details for each zone
   venting.data.final<-NULL
   for (SENS_ZONE in c('LOW','MEDIUM','HIGH'))
@@ -556,7 +614,8 @@ GET_VENTING_ECCC<-function(date.start=NULL)
   #debug
   if (0)
   {
-    date.start<-NULL
+    date.start<-date_today
+    date.start <- '2019-12-25'
   }
   #date.start<-NULL
   #end debug
@@ -564,7 +623,7 @@ GET_VENTING_ECCC<-function(date.start=NULL)
   RUN_PACKAGE(c('dplyr','data.table','readr','RCurl','tibble'))
   #PURPOSE: Retrieves venting data from the specified URL
   #venting.metadata='ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/Air_Quality/VentingMetaData.csv'
-  venting.url='https://dd.weatheroffice.ec.gc.ca/bulletins/alphanumeric/'    #ECCC venting index data
+  venting.url='http://dd.weatheroffice.ec.gc.ca/bulletins/alphanumeric/'    #ECCC venting index data
   #venting.metadata='ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/Air_Quality/VentingMetaData.csv'
   venting.metadata='https://envistaweb.env.gov.bc.ca/aqo/files/VentingMetaData.csv'
   if (is.null(date.start))
@@ -581,13 +640,18 @@ GET_VENTING_ECCC<-function(date.start=NULL)
     temp.list<-GET_URL_FOLDERS()%>%
       dplyr::arrange(desc(DATE))%>%
       dplyr::mutate(DATE_TEMP=gsub('/','',FOLDER))%>%
-      dplyr::filter(DATE_TEMP==date.start)%>%
       RENAME_COLUMN('DATE_TEMP')%>%
-      dplyr::mutate(URL=paste(venting.url,FOLDER,'FL/CWVR/',sep=''))
+      dplyr::mutate(URL=paste(venting.url,FOLDER,'FL/CWVR/',sep=''))%>%
+      dplyr::filter(grepl(date.start,URL))
 
   }
   venting.date<-NULL
 
+  if (nrow(temp.list) == 0)
+  {
+    print(paste('There are no folders from ECCC for this date:',date.start))
+    return(NULL)
+  }
   venting.content<-NULL #contains the ECCC web data for venting (FLCN39)
   for (i in 1:nrow(temp.list))
   {
@@ -599,39 +663,48 @@ GET_VENTING_ECCC<-function(date.start=NULL)
     #                      )
     if (is.null(venting.content))
     {
-      temp.download<-GET_URL_FOLDERS(temp.list[i,]$URL)%>%
-        dplyr::mutate(URL=paste(temp.list[i,]$URL,FOLDER,sep=''))%>%
-        dplyr::arrange(desc(DATE))
-      for (temp.download.url in temp.download$URL)
+      temp.download <- NULL
+
+      try(
+        temp.download<-GET_URL_FOLDERS(temp.list[i,]$URL)%>%
+          dplyr::mutate(URL=paste(temp.list[i,]$URL,FOLDER,sep=''))%>%
+          dplyr::arrange(desc(DATE))
+      )
+
+
+      if (!is.null(temp.download))
       {
-        if (is.null(venting.content))
+        for (temp.download.url in temp.download$URL)
         {
-          #check the files in the url folder
-          print(paste('scanning content of',temp.download.url))
-          temp<-GET_URL_FOLDERS(temp.download.url)%>%
-            filter(grepl('FLCN39',FOLDER,ignore.case=TRUE))
-
-
-          if (nrow(temp)>0)
+          if (is.null(venting.content))
           {
-            print(paste('processing content:',paste(temp.download.url,temp$FOLDER,sep='')))
-            temp.result <- NULL
-            temp.download.url <- gsub('http://','https://',temp.download.url)
-            try(temp.result <- unlist(readr::read_lines(paste(temp.download.url,temp$FOLDER,sep=''))),silent = TRUE)
-            temp.download.url <- gsub('https://','http://',temp.download.url)
-            try(temp.result <- unlist(readr::read_lines(paste(temp.download.url,temp$FOLDER,sep=''))),silent = TRUE)
+            #check the files in the url folder
+            print(paste('scanning content of',temp.download.url))
+            temp<-GET_URL_FOLDERS(temp.download.url)%>%
+              filter(grepl('FLCN39',FOLDER,ignore.case=TRUE))
 
-            if (length(temp.result)>0)
+
+            if (nrow(temp)>0)
             {
-              print (paste('found Venting file in',temp$FOLDER))
-              venting.content<-temp.result
-              #scan date from path
-              venting.date_ <- unlist(strsplit(temp.download.url,split='/'))
-              for (j in 1:length(venting.date_))
+              print(paste('processing content:',paste(temp.download.url,temp$FOLDER,sep='')))
+              temp.result <- NULL
+              temp.download.url <- gsub('http://','https://',temp.download.url)
+              try(temp.result <- unlist(readr::read_lines(paste(temp.download.url,temp$FOLDER,sep=''))),silent = TRUE)
+              temp.download.url <- gsub('https://','http://',temp.download.url)
+              try(temp.result <- unlist(readr::read_lines(paste(temp.download.url,temp$FOLDER,sep=''))),silent = TRUE)
+
+              if (length(temp.result)>0)
               {
-                if (IsDate(venting.date_[j]))
+                print (paste('found Venting file in',temp$FOLDER))
+                venting.content<-temp.result
+                #scan date from path
+                venting.date_ <- unlist(strsplit(temp.download.url,split='/'))
+                for (j in 1:length(venting.date_))
                 {
-                  venting.date <- as.character(as.Date(venting.date_[j],'%Y%m%d'),format='%Y-%m-%d')
+                  if (IsDate(venting.date_[j]))
+                  {
+                    venting.date <- as.character(as.Date(venting.date_[j],'%Y%m%d'),format='%Y-%m-%d')
+                  }
                 }
               }
             }
