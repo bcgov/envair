@@ -41,7 +41,7 @@ importBC_data<-function(parameter_or_station,
   }
 
   #load packages
-  RUN_PACKAGE(c('dplyr','RCurl','plyr','readr','lubridate','tidyr'))  #,'feather'
+  RUN_PACKAGE(c('dplyr','RCurl','plyr','readr','lubridate','tidyr','stringi'))  #,'feather'
   if (is.null(years))
   {
     years=as.numeric(format(Sys.Date(),'%Y'))
@@ -55,7 +55,9 @@ importBC_data<-function(parameter_or_station,
 
 
   #identify if parameter or station based on the list of parameters that are in unvalidated source
-  temp_<-as.character(unlist(strsplit(getURL(data.unvalidated_source,dirlistonly=TRUE),split='\r\n')))
+  # temp_<-as.character(unlist(strsplit(getURL(data.unvalidated_source,dirlistonly=TRUE),split='\r\n')))
+
+  temp_ <- as.character(unlist(stri_split_lines(getURL(data.unvalidated_source,dirlistonly=TRUE))))
   temp_<-gsub('.csv','',temp_,ignore.case=TRUE)
   if (any(tolower(parameter_or_station) %in% tolower(temp_)))
   {
@@ -70,9 +72,9 @@ importBC_data<-function(parameter_or_station,
 
 
   #identify the latest validation cycle data
-  temp_<-as.character(unlist(strsplit(getURL(data.source,dirlistonly=TRUE),split='\r\n')))
+  temp_<-as.character(unlist(stri_split_lines(getURL(data.source,dirlistonly=TRUE))))
   temp_<-temp_[nchar(temp_)==4] #get only 4-digit folders
-  valcycle<-max(as.numeric(temp_))
+  valcycle<-max(as.numeric(temp_),na.rm = TRUE)
 
   data.result<-NULL
 
@@ -150,10 +152,11 @@ importBC_data<-function(parameter_or_station,
           }
 
           temp_<-NULL
-          temp_<-try(as.character(unlist(strsplit(getURL(source_,dirlistonly=TRUE),split='\r\n'))))
+          temp_<-try(as.character(unlist(stri_split_lines(getURL(source_,dirlistonly=TRUE)))))
 
           sourcefile_<-unlist(strsplit(source_,split='/'))
           sourcefile_<-sourcefile_[length(sourcefile_)]
+
           if (sourcefile_ %in% temp_)
           {
 
@@ -267,8 +270,8 @@ data.result <- data.result%>%
       select(STATION_NAME,EMS_ID)%>%
       unique()%>%
       group_by(STATION_NAME)%>%
-      merge(tidyr::tibble(DATE_PST= seq.POSIXt(from = as.POSIXct(min(data.result$DATE_PST)),
-                                               to = as.POSIXct(max(data.result$DATE_PST)),
+      merge(tidyr::tibble(DATE_PST= seq.POSIXt(from = as.POSIXct(min(data.result$DATE_PST,na.rm = TRUE)),
+                                               to = as.POSIXct(max(data.result$DATE_PST,na.rm = TRUE)),
                                                by='hour')))
 
     print(paste(nrow(df_padding) - nrow(data.result),'rows padded' ))
@@ -413,10 +416,10 @@ listBC_stations<-function(year=NULL)
   # dir.create(dir.temp,showWarnings = FALSE)
 
   #identify the latest validation cycle
-  temp_<-as.character(unlist(strsplit(getURL("ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/AnnualSummary/",
-                                             dirlistonly=TRUE),split='\r\n')))
+  temp_<-as.character(unlist(stri_split_lines(getURL("ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/AnnualSummary/",
+                                             dirlistonly=TRUE))))
   temp_<-temp_[nchar(temp_)==4] #get only 4-digit folders
-  valcycle<-max(as.numeric(temp_))
+  valcycle<-max(as.numeric(temp_),na.rm = TRUE)
 
 
   if (year> valcycle)
@@ -525,7 +528,7 @@ list_parameters <- function()
 {
   RUN_PACKAGE(c('RCurl','dplyr'))
   ftpsource_ <- 'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/Year_to_Date/'
-  temp_<-as.character(unlist(strsplit(getURL(ftpsource_,dirlistonly=TRUE),split='\r\n')))
+  temp_<-as.character(unlist(stri_split_lines(getURL(ftpsource_,dirlistonly=TRUE))))
   temp_ <- temp_[!grepl('station',temp_,ignore.case=TRUE)]
   temp_ <- tolower(gsub('.csv','',temp_,ignore.case=TRUE))
   temp_ <- sort(temp_)
