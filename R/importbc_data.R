@@ -317,6 +317,7 @@ data.result <- data.result%>%
           RENAME_COLUMN('wdir_uvec','wd')
       }
 
+
     } else
     {
       #ws is scalar wind speed #default
