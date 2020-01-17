@@ -410,7 +410,7 @@ listBC_stations<-function(year=NULL)
   if (is.null(year))
   {year<- as.numeric(format(Sys.Date(),'%Y'))}
 
-  RUN_PACKAGE(c('dplyr','RCurl','readr','tibble','stringr'))
+  RUN_PACKAGE(c('dplyr','RCurl','readr','tibble','stringi'))
 
   # dir.temp<-paste(getwd(),'/TEMP',sep="")
   # file.temp<-paste(dir.temp,'/stationdetails.csv',sep="")
