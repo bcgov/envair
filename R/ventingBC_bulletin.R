@@ -576,16 +576,16 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE)
 
     print(paste('Writing the index file in temp location:',
                 path.temp))
-    write(x=temp,file=paste(path.temp,'Venting_Index.kml',sep=''))
+    write(x=temp,file=paste(path.temp,'/Venting_Index.kml',sep=''))
 
     #move to final location in temp file name, then rename to final name
     print(paste('Copying the file to final location',path.output,filename_))
 
 
-    file.copy(from=paste(path.temp,'Venting_Index.kml',sep=''),
+    file.copy(from=paste(path.temp,'/Venting_Index.kml',sep=''),
               to=paste(path.output,'Venting_Index.kml_',sep=''),
               overwrite=TRUE)
-
+    unlink(paste(path.temp,'/Venting_Index.kml',sep=''),force= TRUE)
 
     file.rename(from=paste(path.output,'Venting_Index.kml_',sep=''),
                 to=paste(path.output,filename_,sep=''))
