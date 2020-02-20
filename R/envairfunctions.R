@@ -582,6 +582,9 @@ GET_FTP_DETAILS<-function(path.ftp)
 #'
 #' This function retrieves parameter data from the FTP open data portal
 #' Data includes verified and unverified data
+#'
+#' Updated: 2020-02-13 with updates for reading the data, parsing fix
+#'
 #' @param data.parameter the air quality parameter. can be PM25, PM10, SO2, TRS, H2S, etc.
 #' @param year.start the beginning of query, year only
 #' @param year.end the end of query, year only. the same year if unspecified
@@ -593,14 +596,15 @@ GET_PARAMETER_DATA<-function(data.parameter,
 
 {
   #debug
-  # data.parameter<-'co'
-  # year.start<-2017
-  # year.end=NULL
 
-  #end debug lines
+  if (0)
+  {
+    data.parameter <- 'co'
+    year.start <- 2019
+    year.end=NULL
+  }
 
-  #load packages
-  RUN_PACKAGE(c('dplyr','RCurl'))  #,'feather'
+  RUN_PACKAGE(c('dplyr','RCurl','readr','lubridate'))  #,'feather'
   if (is.null(year.end))
   {
     year.end<-year.start
@@ -619,7 +623,7 @@ GET_PARAMETER_DATA<-function(data.parameter,
 
   #file.data.temp<-paste(path.data.temp,data.parameter,'.feather',sep='')
   #file.remove(file.data.temp)
-
+  path.temp <- tempdir()
   data.result<-NULL
   #scan one year at a time, create a combined feather file
   for (data.year in year.start:year.end)
@@ -627,63 +631,69 @@ GET_PARAMETER_DATA<-function(data.parameter,
 
     #get the file source
 
-    if (data.year<=validation.lastvalidationcycle)
+    if (data.year<= validation.lastvalidationcycle)
     {
       data.path<-paste(data.source,data.year,'/',sep='')
-      path.data.temp<-paste(getwd(),'/temp_valid/',data.year,sep='')
+      path.data.temp<-paste(path.temp,'/temp_valid/',data.year,sep='')
       dir.create(path.data.temp,showWarnings = FALSE)
     } else
     {
       data.path<-data.unvalidated_source
-      path.data.temp<-paste(getwd(),'/temp_valid_recent',sep='')
+      path.data.temp<-paste(path.temp,'/temp_valid_recent',sep='')
       dir.create(path.data.temp,showWarnings = FALSE)
     }
     print(paste('Retrieving data from:',data.path))
 
-    list.data<-GET_FILE_CSV(list.files=paste(data.parameter,"csv",sep='.'),
-                            ftp.path =data.path,path.local =path.data.temp )
-    data.temp<-NULL
+    # list.data<-GET_FILE_CSV(list.files=paste(data.parameter,"csv",sep='.'),
+    #                         ftp.path =data.path,path.local =path.data.temp )
+
+    list.data <- read_csv(paste(data.path,data.parameter,".csv",sep=''))
+
     if (length(list.data)>0)
     {
-      #this means there is a resulting file
-      for (i in 1:nrow(list.data))
-      {
-        temp<-list.data[i,]
-        data.temp<-data.temp%>%
-          rbind(read.table(temp$FULL_PATH,
-                           header=TRUE,sep=',')%>%
-                  dplyr::mutate(VALIDATION_STATUS=ifelse(data.year<= validation.lastvalidationcycle,
-                                                         'VALID','UNVERIFIED')))
-      }
-
+      list.data <- list.data %>%
+        dplyr::mutate(VALIDATION_STATUS = ifelse(data.year <= validation.lastvalidationcycle,
+                                                 'VALID','UNVERIFIED'))
 
       #pad mising data
-      temp.date.start<-min(as.POSIXct(data.temp$DATE_PST,tz='utc'),na.rm = TRUE)
-      temp.date.end<-max(as.POSIXct(data.temp$DATE_PST,tz='utc'),na.rm = TRUE)
+      temp.date.start<-min(as.POSIXct(as.character(list.data$DATE_PST),tz='etc/GMT+8'),na.rm = TRUE)
+      temp.date.end<-max(as.POSIXct(as.character(list.data$DATE_PST),tz='etc/GMT+8'),na.rm = TRUE)
 
-      date.padding<-data.temp%>%
+      date.padding<-list.data%>%
         RENAME_COLUMN(c('DATE_PST','DATE','TIME','RAW_VALUE','ROUNDED_VALUE','UNIT'))%>%
         unique()%>%
         merge(
           data.frame(DATE_PST=seq(from=temp.date.start,to=temp.date.end,by='hours'))
         )
-      data.temp<-data.temp%>%
-        dplyr::mutate(DATE_PST=as.POSIXct(DATE_PST,tz='utc'))%>%
+
+
+      list.data<-list.data%>%
+        dplyr::mutate(DATE_PST=as.POSIXct(as.character(DATE_PST),tz='etc/GMT+8'))%>%
         merge(date.padding,all.y=TRUE)%>%
-        dplyr::mutate(DATE_TEMP=as.POSIXct(DATE_PST,tz='utc')-3600)%>%
+        dplyr::mutate(DATE_TEMP=as.POSIXct(as.character(DATE_PST),tz='etc/GMT+8')-3600)%>%
         dplyr::mutate(DATE=as.character(DATE_TEMP,format='%Y-%m-%d'))%>%
         dplyr::mutate(TIME=as.character(DATE_PST,format='%H:00'))%>%
         dplyr::mutate(TIME=ifelse(TIME=='00:00','24:00',TIME))%>%
-        RENAME_COLUMN('DATE_TEMP')  #remove temporary column
+        dplyr::select(-`DATE_TEMP`)  #remove temporary column
+
       #dplyr::select(DATE_PST,DATE_TEMP,DATE,TIME)
 
       data.result<-data.result%>%
-        plyr::rbind.fill(data.temp)%>%
+        plyr::rbind.fill(list.data)%>%
         dplyr::arrange(STATION_NAME,DATE_PST)%>%
         COLUMN_REORDER(columns=c('DATE_PST','DATE','TIME'))
     }
 
   }
+
+
+  #filter to the specified year
+  data.result <-  data.result%>%
+    dplyr::mutate(YEAR = year(as.Date(DATE))) %>%
+    dplyr::filter(YEAR %in% year.start:year.end) %>%
+    dplyr::select(-YEAR)
+
+
   if (length(data.result>0))
   {
     data.result <- data.frame(lapply(data.result, as.character), stringsAsFactors=FALSE)

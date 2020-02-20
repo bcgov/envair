@@ -527,11 +527,12 @@ listBC_stations<-function(year=NULL)
 #' @export
 list_parameters <- function()
 {
-  RUN_PACKAGE(c('RCurl','dplyr'))
+  RUN_PACKAGE(c('RCurl','dplyr','stringi'))
   ftpsource_ <- 'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/Year_to_Date/'
   temp_<-as.character(unlist(stri_split_lines(getURL(ftpsource_,dirlistonly=TRUE))))
   temp_ <- temp_[!grepl('station',temp_,ignore.case=TRUE)]
   temp_ <- tolower(gsub('.csv','',temp_,ignore.case=TRUE))
   temp_ <- sort(temp_)
+  temp_ <- temp_[temp_ !=""]
   return(temp_)
 }

@@ -24,8 +24,16 @@ GET_STATISTICS_PARAMETER<-function(data.year,parameter,instrument.ignore=!(tolow
   # #
 
   #
+
+  if (0)
+  {
+    data.year <- 2019
+    parameter <- 'co'
+    instrument.ignore=!(tolower(parameter) %in% c('pm25','pm10'))
+    data.source=NULL
+  }
   parameter<-tolower(parameter)
-  RUN_PACKAGE()
+  RUN_PACKAGE(c('dplyr'))
   #download data if not provided
 
   if (is.null(data.source))
@@ -992,5 +1000,193 @@ GET_DAILY_MAX<-function(data.input,column.name='ROUNDED_VALUE',column.date='DATE
     unique()
 
   return(data.output)
+
+}
+
+
+#' Get negative and flat data reports
+#'
+#' @param parameter default is NULL to include all relevant parameters
+#'                  or vector listing all parameters
+#' @param year is the year to check for negative and flat,
+#'             if NULL,
+#' @param file.result is the location where resulting file is to be saved
+#' @param exclude_MVRD
+GET_NEGATIVE_FLAT <- function(parameter = NULL, YEAR = NULL,
+                              file.result = 'negative_flats.csv',
+                              exclude_MVRD = TRUE)
+{
+  if (0)
+  {
+    parameter = c('co','h2s')
+    file.result = 'negative_flats.csv'
+    YEAR <- NULL
+    exclude_MVRD = FALSE
+    source('envairstatfunctions.R')
+    source('importbc_data.R')
+    source('envairfunctions.R')
+  }
+
+  #setup----
+  RUN_PACKAGE(c('stringi','dplyr','plyr','data.table'))
+
+  #define standard deviation threshold values for a flat
+  df_flat_threshold <- tribble(
+    ~parameter,~threshold,
+    'CO',0.000001,
+    'PM25',0.001,
+    'PM10',0.001,
+    'NO2',0.001,
+    'NO',0.001,
+    'NOx',0.001,
+    'O3',0.001,
+    'SO2',0.001,
+    'TRS',0.001,
+    'H2S',0.001,
+    'WSPD_SCLR',0.001,
+    'WSPD_VECT',0.001,
+    'WDIR_UVEC',1,
+    'WDIR_VECT',1
+  )
+
+  #specify all relevant parameters if null
+  if (is.null(parameter))
+  {
+    parameter <- list_parameters()
+    parameter <- parameter[!grepl('aqhi',parameter,ignore.case = TRUE)]
+  }
+
+  #specify the year after latest valid year if NULL
+  if (is.null(YEAR))
+  {
+    #identify the latest validation cycle data
+    data.source<-'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/AnnualSummary/'
+    temp<-as.character(unlist(strsplit(getURL(data.source,dirlistonly=TRUE),split='\r\n')))
+    temp<-temp[nchar(temp)==4] #get only 4-digit folders
+    validation.lastvalidationcycle<-max(as.numeric(temp),na.rm = TRUE)
+    YEAR <- validation.lastvalidationcycle + 1
+
+  }
+  print(paste('Getting flats and negatives for',YEAR))
+  df_result <- NULL
+  for (param in parameter)
+  {
+    print(paste('Processing:',param))
+    data.input <- GET_PARAMETER_DATA(param,year.start = YEAR,year.end = YEAR)
+    if (exclude_MVRD)
+    {
+      #exclude Metro Vancouver stations
+      data.input <- data.input%>%
+        dplyr::filter(toupper(OWNER) != 'MVRD')
+    }
+
+    #get negative values-----
+
+    #group together, create summary of negative
+    data.input.negative <- data.input[data.input$ROUNDED_VALUE<0,] %>%
+      dplyr::filter(!is.na(DATE_PST),
+                    tolower(PARAMETER) != 'temp_mean')
+
+
+    print(paste('Processing negative values. There are',nrow(data.input.negative),'results'))
+
+    if (nrow(data.input.negative) >0)
+    {
+      df_result <- df_result %>%
+        plyr::rbind.fill(
+          data.input.negative%>%
+            mutate(FLAG = 'NEGATIVE')
+        )
+    }
+
+
+    #flat data analysis------
+    df_flat_threshold_ <- df_flat_threshold %>%
+      dplyr::filter(toupper(parameter) == toupper(param))
+    if (nrow(df_flat_threshold_)>0)
+    {
+      dbl_threshold <- df_flat_threshold_$threshold[1]
+    } else
+    {
+      #if not defined, it has to be zero
+      dbl_threshold <- 0
+    }
+    data.input.flat <- data.input%>%
+      dplyr::group_by(STATION_NAME_FULL,INSTRUMENT) %>%
+      dplyr::arrange(DATE_PST)%>%
+      mutate(RAW_01=lead(RAW_VALUE,1),
+             RAW_02=lead(RAW_VALUE,2),
+             RAW_03=lead(RAW_VALUE,3),
+             RAW_04=lead(RAW_VALUE,4)) %>%
+      dplyr::group_by(STATION_NAME_FULL,DATE_PST,INSTRUMENT) %>%
+      dplyr::mutate(StDev = sd(c(RAW_VALUE,RAW_01,RAW_02,RAW_03,RAW_04),
+                               na.rm = TRUE)) %>%
+      dplyr::ungroup() %>%
+      dplyr::filter(StDev <= dbl_threshold)
+    print(paste('Processing flat values. There are',nrow(data.input.flat),'results'))
+    if (nrow(data.input.flat) >0)
+    {
+      df_result <- df_result %>%
+        plyr::rbind.fill(
+          data.input.flat%>%
+            select(-RAW_01,-RAW_02,-RAW_03,-RAW_04) %>%
+            mutate(FLAG = 'FLAT')
+        )
+    }
+
+
+    #summarize the flat and negative result--------
+    #calculate how many negatives and flat events,
+    df_result <- df_result %>%
+      ungroup() %>%
+      unique()%>%
+      group_by(STATION_NAME_FULL,PARAMETER,INSTRUMENT,FLAG) %>%
+      dplyr::arrange(DATE_PST) %>%
+      dplyr::mutate(DATE_PST_next =  lead(DATE_PST)) %>%
+      dplyr::mutate(DATE_diff = as.numeric(difftime(ymd_hms(as.character(DATE_PST_next)),ymd_hms(as.character(DATE_PST)),units = 'hours'))) %>%
+      dplyr::mutate(DATE_diff = ifelse(is.na(DATE_diff),999,DATE_diff)) %>%
+      dplyr::ungroup()%>%
+      # #find which is first instance of event
+      group_by(STATION_NAME_FULL,PARAMETER,INSTRUMENT,FLAG) %>%
+      dplyr::arrange(DATE_PST) %>%
+
+      #identify which is the end of an event, if the next item in sequence>1, but previous was 1, then end of event
+      #these events have index = -999
+
+      dplyr::mutate (index = ifelse((DATE_diff>1 & lag(DATE_diff) == 1),
+                                    999,1)) %>%
+      #remove events that are not the beginning or end,
+      #these will have index of -1
+      dplyr::mutate (index = ifelse((DATE_diff == 1 & lag(DATE_diff) == 1),
+                                    -1,index))%>%
+      #the remaining NA means these are at the  beginning of each group of STATION, PARAMETER,INSTRUMENT,FLAG
+      dplyr::mutate(index = ifelse(is.na(index),1,index)) %>%
+      #remove the middle values, non-start/ending
+      dplyr::filter(!(DATE_diff ==1 & index == -1)) %>%
+      #index == 0 means start of multi-hour event
+      #index == 1 means single hour event
+      dplyr::mutate(index = ifelse(DATE_diff != 999 & lead(index == 999),0,index)) %>%
+      #create a start and stop time for each event
+      dplyr::mutate(DATE_END = ifelse(index ==0, lead(DATE_PST),DATE_PST)) %>%
+      dplyr::filter(index != 999) %>%
+      #for flats, add 4 hours to duration
+      dplyr::mutate(DATE_END = ifelse(FLAG == 'FLAT',
+                                      as.character(ymd_hms(DATE_END) + 4*3600, format = '%Y-%m-%d %H:%M:%S'),
+                                      DATE_END)) %>%
+      dplyr::mutate(DURATION_hrs = as.numeric(difftime(ymd_hms(DATE_END),
+                                                       ymd_hms(DATE_PST),
+                                                       units = 'hours')) + 1) %>%
+      dplyr::ungroup()%>%
+      dplyr::select(DATE_PST,DATE_END,DURATION_hrs,STATION_NAME_FULL,PARAMETER,INSTRUMENT,FLAG,ROUNDED_VALUE)
+
+
+
+  }
+
+  #save to file
+  if (!is.null(df_result))
+  {
+    try(data.table::fwrite(df_result,file.result))
+  }
 
 }
