@@ -35,9 +35,12 @@ importBC_data<-function(parameter_or_station,
   {
     parameters<-c('wspd_sclr')
     years<-2009:2019
-    parameters=NULL
+    parameters='pm25'
     stations=NULL
-    parameter_or_station<-c('wspd_sclr')
+    parameter_or_station<-c('o3')
+    parameter_or_station <- 'pm25'
+    years <- 1999
+    pad = FALSE
   }
 
   #load packages
@@ -144,10 +147,11 @@ importBC_data<-function(parameter_or_station,
       #unify NAPS ID, EMS ID for the station represented by multiple loggers
       RENAME_COLUMN(c('NAPS_ID','EMS_ID')) %>%
       RENAME_COLUMN(c('newNAPS','newems'),c('NAPS_ID','EMS_ID'))%>%
+      unique() %>%
       dplyr::group_by(key)%>%
       dplyr::mutate(number =n())%>%
-      dplyr::ungroup() %>%
-      unique()
+      dplyr::ungroup()
+
 
     if (max(duplicate$number,na.rm = TRUE)>1)
     {
