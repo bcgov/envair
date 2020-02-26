@@ -161,7 +161,7 @@ importBC_data<-function(parameter_or_station,
         filter(number>1) %>%
         group_by(key) %>%
         dplyr::mutate(index = 1:n(),
-                      INSTRUMENT = ifelse(is.na(INSTRUMENT),'UNKNOWN',INSTRUMENT)) %>%
+                      INSTRUMENT = ifelse(is.na(INSTRUMENT),'UNKNOWN',as.character(INSTRUMENT))) %>%
         dplyr::mutate(newINST = ifelse(index>1,
                                        paste(INSTRUMENT,index,sep='_'),
                                        INSTRUMENT)) %>%
@@ -194,7 +194,8 @@ importBC_data<-function(parameter_or_station,
         )
 
       data.result <- rbind.fill(df_result_noduplicate,df_result_duplicate) %>%
-        RENAME_COLUMN(c('year_','key'))
+        RENAME_COLUMN(c('year_','key'))%>%
+        dplyr::arrange(STATION_NAME,DATE_PST)
 
 
     }
