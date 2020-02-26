@@ -33,11 +33,11 @@ importBC_data<-function(parameter_or_station,
   #debug
   if (0)
   {
-    parameters<-c('no','no2')
-    years<-2017:2018
+    parameters<-c('wspd_sclr')
+    years<-2009:2019
     parameters=NULL
     stations=NULL
-    parameter_or_station<-c('Trail Columbia Gardens Airport')
+    parameter_or_station<-c('wspd_sclr')
   }
 
   #load packages
@@ -78,9 +78,10 @@ importBC_data<-function(parameter_or_station,
 
   data.result<-NULL
 
+  #data retrieval-----
   if (!is.null(parameters))
   {
-    #user wanted to look for parameters, not stations
+    #user wanted to look for parameters, not stations----
     # scan one parameter at a time
     use_openairformat = FALSE #it will not be openair format
     for (parameter in parameters)
@@ -115,10 +116,92 @@ importBC_data<-function(parameter_or_station,
       #Pad dates, recalculate DATE and TIME
     }
 
+    #stop if there are no result
+    if (is.null(data.result))
+    {
+      return(NULL)
+    }
+
+    #remove duplicates in parameter data----
+    data.result <- data.result%>%
+      RENAME_COLUMN(c('DATE','TIME'))  #remove these columns
+    #covert DATE_PST to POSIXct date
+    tz(data.result$DATE_PST) <- 'Etc/GMT+8'
+
+    #DISABLED feature----
+    #remove duplicates
+
+    #check if there are duplicate entries
+    # duplicates will have the instrument name index
+    duplicate <- data.result%>%
+      dplyr::mutate(year_= year(DATE_PST - 3600)) %>%
+      dplyr::mutate(key = paste(STATION_NAME,year_,INSTRUMENT,sep='-')) %>%
+      dplyr::select(EMS_ID,STATION_NAME,NAPS_ID,STATION_NAME_FULL,INSTRUMENT,year_,key)%>%
+      unique()%>%
+      dplyr::group_by(STATION_NAME)%>%
+      dplyr::mutate(newNAPS = max(NAPS_ID,na.rm=TRUE), newems = max(EMS_ID,na.rm = TRUE)) %>%
+      ungroup() %>%
+      #unify NAPS ID, EMS ID for the station represented by multiple loggers
+      RENAME_COLUMN(c('NAPS_ID','EMS_ID')) %>%
+      RENAME_COLUMN(c('newNAPS','newems'),c('NAPS_ID','EMS_ID'))%>%
+      dplyr::group_by(key)%>%
+      dplyr::mutate(number =n())%>%
+      dplyr::ungroup() %>%
+      unique()
+
+    if (max(duplicate$number,na.rm = TRUE)>1)
+    {
+      #fix for duplicate station entries
+      print('Station has duplicate entries, might take longer than usual')
+
+      #list of the actual duplicates
+      #index the instrument if it is a duplicate
+
+      duplicate <- duplicate %>%
+        filter(number>1) %>%
+        group_by(key) %>%
+        dplyr::mutate(index = 1:n(),
+                      INSTRUMENT = ifelse(is.na(INSTRUMENT),'UNKNOWN',INSTRUMENT)) %>%
+        dplyr::mutate(newINST = ifelse(index>1,
+                                       paste(INSTRUMENT,index,sep='_'),
+                                       INSTRUMENT)) %>%
+        ungroup() %>%
+        RENAME_COLUMN('INSTRUMENT') %>%
+        RENAME_COLUMN('newINST','INSTRUMENT') %>%
+        COLUMN_REORDER(colnames(data.result))
+
+
+      #combine with data.result
+      #split the data.result first
+      data.result <- data.result %>%
+        dplyr::mutate(year_= year(DATE_PST - 3600)) %>%
+        dplyr::mutate(key = paste(STATION_NAME,year_,INSTRUMENT,sep='-'))
+
+      #these contain the station without duplicates
+      df_result_noduplicate <- data.result %>%
+        filter(!key %in% duplicate$key)
+
+      #these contain station with duplicates, perform counts
+      df_result_duplicate <- data.result %>%
+        filter(key %in% duplicate$key)
+
+      df_result_duplicate <- df_result_duplicate %>%
+        #replace instrument with those re-defined in duplicate
+        RENAME_COLUMN('INSTRUMENT') %>%
+        left_join(
+          duplicate%>%
+            dplyr::select(key,INSTRUMENT)
+        )
+
+      data.result <- rbind.fill(df_result_noduplicate,df_result_duplicate) %>%
+        RENAME_COLUMN(c('year_','key'))
+
+
+    }
 
   } else
   {
-    #retrieve station data, not parameters
+    #retrieve station data, not parameters-----
     #search based on the station name,if it matches
     list.stations<-listBC_stations()%>%
       dplyr::filter(tolower(STATION_NAME) %in% tolower(stations))
@@ -168,96 +251,34 @@ importBC_data<-function(parameter_or_station,
       }
     }
 
+    #stop if there are no result
+    if (is.null(data.result))
+    {
+      return(NULL)
+    }
+
+
+    data.result <- data.result%>%
+      RENAME_COLUMN(c('DATE','TIME'))  #remove these columns
+    #covert DATE_PST to POSIXct date
+    tz(data.result$DATE_PST) <- 'Etc/GMT+8'
+
+
+
+
   }
 
+  #filter year----
+  data.result <- data.result %>%
+    dplyr::mutate(year_= year(DATE_PST - 3600)) %>%
+    filter(year_ %in% years) %>%
+    RENAME_COLUMN('year_')
 
   #stop if there are no result
   if (is.null(data.result))
   {
     return(NULL)
   }
-
-  #remove DATE,TIME columns, just utilize the DATE_PST
-  data.result <- data.result%>%
-    RENAME_COLUMN(c('DATE','TIME'))  #remove these columns
-  #covert DATE_PST to POSIXct date
-  tz(data.result$DATE_PST) <- 'Etc/GMT+8'
-
-
-  #check if there are duplicate entries
-  #merge their
-  duplicate <- data.result%>%
-    dplyr::select(EMS_ID,STATION_NAME)%>%
-    unique()%>%
-    dplyr::group_by(STATION_NAME)%>%
-    dplyr::mutate(number =n(),newems = max(EMS_ID,na.rm = TRUE))%>%
-    dplyr::ungroup()%>%
-    RENAME_COLUMN('EMS_ID')%>% #delete
-    RENAME_COLUMN('newems','EMS_ID')%>% #rename with the latest
-    unique()
-
-  if (max(duplicate$number,na.rm = TRUE)>1)
-  {
-    #fix for duplicate station entries
-    print('Station has duplicate entries, might take longer than usual')
-
-    #list instrument and data columns
-    cols_ <- colnames(data.result)
-    cols_ <- cols_[!cols_ %in% c('STATION_NAME','DATE','TIME','EMS_ID','DATE_PST')]
-    cols_instrument_ <- cols_[grepl('instrument',cols_,ignore.case = TRUE)]
-    cols_ <- cols_[!cols_ %in% cols_instrument_]
-
-    #dates only to pad removed entries
-    df_dates <- data.result%>%
-      dplyr::select(DATE_PST,STATION_NAME)%>%
-      unique()
-
-
-    #process duplicate station data, remove EMS ID, assign with a common one
-    data.duplicate <- data.result%>%  #
-      dplyr::filter(STATION_NAME %in% duplicate$STATION_NAME)%>%
-      RENAME_COLUMN(cols_instrument_)%>%
-      tidyr::pivot_longer(cols = cols_,names_to = 'PARAMETER',values_to = 'VALUES')%>%
-      RENAME_COLUMN('EMS_ID')%>%
-      merge(duplicate%>%
-              dplyr::select(STATION_NAME,EMS_ID))%>%
-      dplyr::filter(!is.na(as.numeric(VALUES)))%>%
-      tidyr::pivot_wider(names_from = PARAMETER, values_from = VALUES)
-
-    #process instrument names, combine for all entries on each station, get only one value for each instrument
-    data.duplicate.instruments <- data.result%>%
-      dplyr::filter(STATION_NAME %in% duplicate$STATION_NAME)%>%
-      dplyr::select(STATION_NAME,cols_instrument_)%>%
-      unique()%>%
-      tidyr::pivot_longer(-STATION_NAME, names_to='parameter',values_to='instrument')%>%
-      unique()
-    #use counter to remove duplicates
-    data.duplicate.instruments <- data.duplicate.instruments%>%
-      dplyr::arrange(desc(instrument))%>%
-      dplyr::mutate(counter = 1:nrow(data.duplicate.instruments))%>%
-      dplyr::group_by(STATION_NAME,parameter)%>%
-      dplyr::mutate(use_counter = min(counter,na.rm = TRUE))%>%
-      dplyr::ungroup()%>%
-      dplyr::filter(counter == use_counter)%>%
-      dplyr::select(-counter,-use_counter)%>%
-      tidyr::pivot_wider(names_from = parameter, values_from = instrument)
-
-    #insert instrument details to duplicate data
-
-    data.duplicate <- data.duplicate%>%
-      left_join(data.duplicate.instruments)%>%
-      COLUMN_REORDER(c('DATE_PST','DATE','TIME','STATION_NAME','EMS_ID',
-                       sort(c(cols_,cols_instrument_))))%>%
-      right_join(df_dates)
-
-    #bind again with data.result
-    data.result <- data.result%>%
-      dplyr::filter(!STATION_NAME %in% duplicate$STATION_NAME)%>%
-      plyr::rbind.fill(data.duplicate)
-
-
-  }
-
 
   if (pad)
   {
