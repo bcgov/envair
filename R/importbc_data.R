@@ -311,12 +311,16 @@ importBC_data<-function(parameter_or_station,
     col_ <- colnames(data.result)
     col_instrument <- col_[grepl('instrument',col_,ignore.case = TRUE)]
 
+    tz(data.result$DATE_PST) <- 'etc/GMT+8'
     df_padding <- data.result%>%
       select(STATION_NAME,EMS_ID)%>%
       unique()%>%
       group_by(STATION_NAME)%>%
-      merge(tidyr::tibble(DATE_PST= seq.POSIXt(from = as.POSIXct(min(data.result$DATE_PST,na.rm = TRUE)),
-                                               to = as.POSIXct(max(data.result$DATE_PST,na.rm = TRUE)),
+      merge(tidyr::tibble(DATE_PST= seq.POSIXt(from = as.POSIXct(paste(
+                                                                 year(min(data.result$DATE_PST,na.rm = TRUE)),'-01-01 01:00',
+                                                                 sep=''
+                                                                 ), tz='etc/GMT+8'),
+                                               to = as.POSIXct(as.character(max(data.result$DATE_PST,na.rm = TRUE)),tz='etc/GMT+8'),
                                                by='hour')))
 
     print(paste(nrow(df_padding) - nrow(data.result),'rows padded' ))
