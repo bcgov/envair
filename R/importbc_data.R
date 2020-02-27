@@ -38,8 +38,8 @@ importBC_data<-function(parameter_or_station,
     parameters='pm25'
     stations=NULL
     parameter_or_station<-c('o3')
-    parameter_or_station <- 'pm10'
-    years <- 2000
+    parameter_or_station <- 'Harmac Cedar Woodbank'
+    years <- 2010
     pad = FALSE
   }
 
@@ -220,7 +220,7 @@ importBC_data<-function(parameter_or_station,
         dplyr::filter(grepl(stations,STATION_NAME,ignore.case=TRUE))
     }
 
-    if (nrow(list.stations>0))
+    if (nrow(list.stations)>0)
     {
       #that means there were stations on the list
       #retrieve data from each station
@@ -259,6 +259,7 @@ importBC_data<-function(parameter_or_station,
     #stop if there are no result
     if (is.null(data.result))
     {
+      print('No Data found.')
       return(NULL)
     }
 
@@ -278,6 +279,7 @@ importBC_data<-function(parameter_or_station,
   #stop if there are no result
   if (is.null(data.result))
   {
+    print('No data found.')
     return(NULL)
   }
 
