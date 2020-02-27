@@ -37,9 +37,9 @@ importBC_data<-function(parameter_or_station,
     years<-2009:2019
     parameters='pm25'
     stations=NULL
-    parameter_or_station<-c('o3')
-    parameter_or_station <- 'Harmac Cedar Woodbank'
-    years <- 2010
+    parameter_or_station<-c('h2s')
+    parameter_or_station <- 'Harmac Cedar Woobank'
+    years <- 1999
     pad = FALSE
   }
 
@@ -119,10 +119,31 @@ importBC_data<-function(parameter_or_station,
       #Pad dates, recalculate DATE and TIME
     }
 
+
+
     #stop if there are no result
     if (is.null(data.result))
     {
       return(NULL)
+    }
+
+    #fix for no NAPS bug
+    #insert NAPS ID
+    if (!'NAPS_ID' %in% colnames(data.result))
+    {
+      data.result <- data.result %>%
+        left_join(
+          listBC_stations(data.year) %>%
+            dplyr::select(STATION_NAME,NAPS_ID) %>%
+            unique()
+        )
+    }
+
+    #fix for no STATION_NAME_FULL
+    if (!'STATION_NAME_FULL' %in% colnames(data.result))
+    {
+      data.result <- data.result %>%
+        dplyr::mutate(STATION_NAME_FULL = STATION_NAME)
     }
 
     #remove duplicates in parameter data----
