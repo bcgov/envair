@@ -3,11 +3,13 @@
 #' This function renames or deletes the column of a dataframe based on its name
 #' @param data.year numeric year. includes unverified and validated year
 #' @param parameter string or vector containing the parameter that will be evaluated.
-#' @param instrument.ignore if specified, ignores the instrument technology and merges dataset during statistical calculations. Default is FALSE for particulate (PM25,PM10) instruments
-#' @param data.source defines the source of data if manually downloaded, default of NULL means it grabs from the BC ENV's open data portal
+#' @param instrument.ignore if specified, ignores the instrument technology and merges dataset during statistical calculations.
+#'              Default is NULL where it becomes FALSE for particulate (PM25,PM10) instruments
 #' @keywords statistics, annual data, valid data, unverified data
 #' GET_STATISTICS_PARAMETER()
-GET_STATISTICS_PARAMETER<-function(data.year,parameter,instrument.ignore=!(tolower(parameter) %in% c('pm25','pm10')),data.source=NULL)
+#'
+#' @export
+GET_STATISTICS_PARAMETER<-function(data.year,parameter,instrument.ignore=NULL)
 {
   #gets the statistics for that parameter at the particular year
   #parameters include PM2.5, PM10,O3,no2,no,so2,trs,h2s,co
@@ -28,52 +30,112 @@ GET_STATISTICS_PARAMETER<-function(data.year,parameter,instrument.ignore=!(tolow
   if (0)
   {
     data.year <- 2019
-    parameter <- 'co'
-    instrument.ignore=!(tolower(parameter) %in% c('pm25','pm10'))
+    parameter <- 'pm25'
+    source('envairfunctions.R')
+    source('envairstatfunctions.R')
+    source('importbc_data.R')
+    instrument.ignore=NULL
+
     data.source=NULL
   }
+
+  #setup
   parameter<-tolower(parameter)
   RUN_PACKAGE(c('dplyr'))
+  if (is.null(instrument.ignore))
+  {
+    instrument.ignore=!(tolower(parameter) %in% c('pm25','pm10'))
+  }
+
   #download data if not provided
 
-  if (is.null(data.source))
-  {
-    data.input<-GET_PARAMETER_DATA(data.parameter=parameter,year.start=data.year,year.end=data.year)%>%
-      dplyr::ungroup()%>%
-      dplyr::mutate(IGNORE=instrument.ignore)%>%  #this is the only way if else works
-      dplyr::mutate(INSTRUMENT=ifelse(IGNORE,paste(toupper(parameter),'Analyser'),INSTRUMENT))%>%
-      RENAME_COLUMN('IGNORE')
-  } else
-  {
-    data.input<-data.source%>%
-      dplyr::mutate(YEAR=year(as.Date(DATE)))%>%
-      dplyr::filter(YEAR==data.year)%>%
-      dplyr::mutate(IGNORE=instrument.ignore)%>%   #this is the only way if else works
-      dplyr::mutate(INSTRUMENT=ifelse(IGNORE,
-                                      paste(toupper(parameter),'Analyser'),
-                                      as.character(INSTRUMENT)))%>%
-      RENAME_COLUMN('IGNORE')
+  data.input <- NULL
+  try(data.input <- importBC_data(parameter,data.year,pad = TRUE))
 
-    if (nrow(data.input)<100)
-    {
-      data.input<-GET_PARAMETER_DATA(data.parameter=parameter,year.start = data.year)%>%
-        dplyr::mutate(IGNORE=instrument.ignore)%>%   #this is the only way if else works
-        dplyr::mutate(INSTRUMENT=ifelse(IGNORE,
-                                        paste(toupper(parameter),'Analyser'),
-                                        as.character(INSTRUMENT)))%>%
-        RENAME_COLUMN('IGNORE')
+  #escape if null----
+  if (is.null(data.input))
+  {
+    print(paste('The parameter',parameter,'came out blank'))
+    return(NULL)
+  }
 
-    }
+  #rename instrument name when instrument is ignored in grouping
+  if (instrument.ignore)
+  {
+    data.input <-  data.input %>%
+      mutate(INSTRUMENT = paste(toupper(parameter),'Analyzer'))
   }
 
 
+# COMMMENTED OUT 20200207------
+#   if (is.null(data.source))
+#   {
+#     data.input<-GET_PARAMETER_DATA(data.parameter=parameter,year.start=data.year,year.end=data.year)%>%
+#       dplyr::ungroup()%>%
+#       dplyr::mutate(IGNORE=instrument.ignore)%>%  #this is the only way if else works
+#       dplyr::mutate(INSTRUMENT=ifelse(IGNORE,paste(toupper(parameter),'Analyser'),INSTRUMENT))%>%
+#       RENAME_COLUMN('IGNORE')
+#   } else
+#   {
+#     data.input<-data.source%>%
+#       dplyr::mutate(YEAR=year(as.Date(DATE)))%>%
+#       dplyr::filter(YEAR==data.year)%>%
+#       dplyr::mutate(IGNORE=instrument.ignore)%>%   #this is the only way ifelse works
+#       dplyr::mutate(INSTRUMENT=ifelse(IGNORE,
+#                                       paste(toupper(parameter),'Analyser'),
+#                                       as.character(INSTRUMENT)))%>%
+#       RENAME_COLUMN('IGNORE')
+#
+#     if (nrow(data.input)<100)
+#     {
+#       data.input<-GET_PARAMETER_DATA(data.parameter=parameter,year.start = data.year)%>%
+#         dplyr::mutate(IGNORE=instrument.ignore)%>%   #this is the only way if else works
+#         dplyr::mutate(INSTRUMENT=ifelse(IGNORE,
+#                                         paste(toupper(parameter),'Analyser'),
+#                                         as.character(INSTRUMENT)))%>%
+#         RENAME_COLUMN('IGNORE')
+#
+#     }
+#   }
 
 
-  #added to merge the results from Kamloops Federal Building
+
+
+
+
+
+  #added to merge multiple instruments for PM2.5 from Kamloops Federal Building----
   #applies to 2017 data only
   if (data.year==2017 & parameter=='pm25')
   {
-    data.input<-MERGE_INSTRUMENTS(data.input,'Kamloops Federal Building',c('PM25 SHARP5030','BAM1020'))
+    #separate Kamloops from non-Kamlooops station
+    data.input_ <- data.input %>%
+      dplyr::filter(STATION_NAME != 'Kamloops Federal Building')
+
+    data.input_x <- data.input %>%
+      dplyr::filter(STATION_NAME == 'Kamloops Federal Building',
+                    !is.na(RAW_VALUE))
+
+    #locate duplicated dates and remove, prioritize SHARP
+    data.input_x <- data.input_x %>%
+      group_by(DATE_PST,STATION_NAME) %>%
+      dplyr::arrange(desc(INSTRUMENT)) %>%
+      dplyr::mutate(index = 1:n()) %>%
+      ungroup() %>%
+      dplyr::mutate(INSTRUMENT = 'SHARP5030/BAM1020') %>%
+      filter(index ==1) %>%
+      RENAME_COLUMN('index')
+
+
+
+
+
+    #combine again
+    data.input <- rbind.fill(data.input_,data.input_x) %>%
+      arrange(STATION_NAME,INSTRUMENT,DATE_PST)
+    rm('data.input_')
+    rm('data.input_x')
+
   }
 
 
@@ -150,39 +212,16 @@ GET_STATISTICS_PARAMETER<-function(data.year,parameter,instrument.ignore=!(tolow
       #                                   as.character(INSTRUMENT)))
       #
 
-      if (is.null(data.source))
-      {
-        data.input.previous<-GET_PARAMETER_DATA(parameter,data.year-1)%>%
-          dplyr::mutate(IGNORE=instrument.ignore)%>%   #this is the only way if else works
-          dplyr::mutate(INSTRUMENT=ifelse(IGNORE,
-                                          paste(toupper(parameter),'Analyser'),
-                                          as.character(INSTRUMENT)))%>%
-          RENAME_COLUMN('IGNORE')
 
-      } else
-      {
-        data.input.previous<-data.source%>%
-          dplyr::mutate(YEAR=year(as.Date(DATE)))%>%
-          dplyr::filter(YEAR==data.year-1)%>%
-          dplyr::mutate(IGNORE=instrument.ignore)%>%   #this is the only way if else works
-          dplyr::mutate(INSTRUMENT=ifelse(IGNORE,
-                                          paste(toupper(parameter),'Analyser'),
-                                          as.character(INSTRUMENT)))%>%
-          RENAME_COLUMN('IGNORE')
+        data.input.previous<-importBC_data(parameter,data.year-1)
 
-
-
-        if (nrow(data.input.previous)< 100)
+        #rename instrument name when instrument is ignored in grouping
+        if (instrument.ignore)
         {
-          data.input.previous<-GET_PARAMETER_DATA(data.parameter=parameter,data.year-1)%>%
-            dplyr::mutate(IGNORE=instrument.ignore)%>%   #this is the only way if else works
-            dplyr::mutate(INSTRUMENT=ifelse(IGNORE,
-                                            paste(toupper(parameter),'Analyser'),
-                                            as.character(INSTRUMENT)))%>%
-            RENAME_COLUMN('IGNORE')
-
+          data.input.previous <-  data.input.previous %>%
+            mutate(INSTRUMENT = paste(toupper(parameter),'Analyzer'))
         }
-      }
+
 
       #make input data consistent before merge
       data.input<-data.input%>%
@@ -642,7 +681,7 @@ GET_VALID_COUNT<-function(data.hourly,day.threshold=0.75,precision=1,Q2Q3only=FA
   data.hourly<-dplyr::ungroup(data.hourly)
   data.totals<-data.hourly%>%
     dplyr::mutate(DATE_TEMP=as.POSIXct(as.character(DATE_PST),tz='utc'))%>%
-    dplyr::summarise(DATE_START=min(DATE_TEMP),DATE_END=max(DATE_TEMP))
+    dplyr::summarise(DATE_START=min(DATE_TEMP,na.rm = TRUE),DATE_END=max(DATE_TEMP, na.rm=TRUE))
   # dplyr::mutate(DATE_START=as.POSIXct(paste(DATE_START,'-01-01 01:00',sep=''),tz='utc'),
   #        DATE_END=as.POSIXct(paste(DATE_END,'-01-01',sep=''),tz='utc'))
 
@@ -770,6 +809,7 @@ GET_VALID_COUNT<-function(data.hourly,day.threshold=0.75,precision=1,Q2Q3only=FA
   return(data.temp)
 }
 
+#' Created before pivot_wider and pivot_longer became available
 GET_PIVOT_TABLE<-function(data.input,columnname.category,columnname.value,columnname.levels=NULL)
 {
 
@@ -1018,10 +1058,10 @@ GET_NEGATIVE_FLAT <- function(parameter = NULL, YEAR = NULL,
 {
   if (0)
   {
-    parameter = c('co','h2s')
+    parameter = c('no2')
     file.result = 'negative_flats.csv'
     YEAR <- NULL
-    exclude_MVRD = FALSE
+    exclude_MVRD = TRUE
     source('envairstatfunctions.R')
     source('importbc_data.R')
     source('envairfunctions.R')
@@ -1137,49 +1177,50 @@ GET_NEGATIVE_FLAT <- function(parameter = NULL, YEAR = NULL,
 
     #summarize the flat and negative result--------
     #calculate how many negatives and flat events,
-    df_result <- df_result %>%
-      ungroup() %>%
-      unique()%>%
-      group_by(STATION_NAME_FULL,PARAMETER,INSTRUMENT,FLAG) %>%
-      dplyr::arrange(DATE_PST) %>%
-      dplyr::mutate(DATE_PST_next =  lead(DATE_PST)) %>%
-      dplyr::mutate(DATE_diff = as.numeric(difftime(ymd_hms(as.character(DATE_PST_next)),ymd_hms(as.character(DATE_PST)),units = 'hours'))) %>%
-      dplyr::mutate(DATE_diff = ifelse(is.na(DATE_diff),999,DATE_diff)) %>%
-      dplyr::ungroup()%>%
-      # #find which is first instance of event
-      group_by(STATION_NAME_FULL,PARAMETER,INSTRUMENT,FLAG) %>%
-      dplyr::arrange(DATE_PST) %>%
+    try(
+      df_result <- df_result %>%
+        ungroup() %>%
+        unique()%>%
+        group_by(STATION_NAME_FULL,PARAMETER,INSTRUMENT,FLAG) %>%
+        dplyr::arrange(DATE_PST) %>%
+        dplyr::mutate(DATE_PST_next =  lead(DATE_PST)) %>%
+        dplyr::mutate(DATE_diff = as.numeric(difftime(ymd_hms(as.character(DATE_PST_next)),ymd_hms(as.character(DATE_PST)),units = 'hours'))) %>%
+        dplyr::mutate(DATE_diff = ifelse(is.na(DATE_diff),999,DATE_diff)) %>%
+        dplyr::ungroup()%>%
+        # #find which is first instance of event
+        group_by(STATION_NAME_FULL,PARAMETER,INSTRUMENT,FLAG) %>%
+        dplyr::arrange(DATE_PST) %>%
 
-      #identify which is the end of an event, if the next item in sequence>1, but previous was 1, then end of event
-      #these events have index = -999
+        #identify which is the end of an event, if the next item in sequence>1, but previous was 1, then end of event
+        #these events have index = -999
 
-      dplyr::mutate (index = ifelse((DATE_diff>1 & lag(DATE_diff) == 1),
-                                    999,1)) %>%
-      #remove events that are not the beginning or end,
-      #these will have index of -1
-      dplyr::mutate (index = ifelse((DATE_diff == 1 & lag(DATE_diff) == 1),
-                                    -1,index))%>%
-      #the remaining NA means these are at the  beginning of each group of STATION, PARAMETER,INSTRUMENT,FLAG
-      dplyr::mutate(index = ifelse(is.na(index),1,index)) %>%
-      #remove the middle values, non-start/ending
-      dplyr::filter(!(DATE_diff ==1 & index == -1)) %>%
-      #index == 0 means start of multi-hour event
-      #index == 1 means single hour event
-      dplyr::mutate(index = ifelse(DATE_diff != 999 & lead(index == 999),0,index)) %>%
-      #create a start and stop time for each event
-      dplyr::mutate(DATE_END = ifelse(index ==0, lead(DATE_PST),DATE_PST)) %>%
-      dplyr::filter(index != 999) %>%
-      #for flats, add 4 hours to duration
-      dplyr::mutate(DATE_END = ifelse(FLAG == 'FLAT',
-                                      as.character(ymd_hms(DATE_END) + 4*3600, format = '%Y-%m-%d %H:%M:%S'),
-                                      DATE_END)) %>%
-      dplyr::mutate(DURATION_hrs = as.numeric(difftime(ymd_hms(DATE_END),
-                                                       ymd_hms(DATE_PST),
-                                                       units = 'hours')) + 1) %>%
-      dplyr::ungroup()%>%
-      dplyr::select(DATE_PST,DATE_END,DURATION_hrs,STATION_NAME_FULL,PARAMETER,INSTRUMENT,FLAG,ROUNDED_VALUE)
+        dplyr::mutate (index = ifelse((DATE_diff>1 & lag(DATE_diff) == 1),
+                                      999,1)) %>%
+        #remove events that are not the beginning or end,
+        #these will have index of -1
+        dplyr::mutate (index = ifelse((DATE_diff == 1 & lag(DATE_diff) == 1),
+                                      -1,index))%>%
+        #the remaining NA means these are at the  beginning of each group of STATION, PARAMETER,INSTRUMENT,FLAG
+        dplyr::mutate(index = ifelse(is.na(index),1,index)) %>%
+        #remove the middle values, non-start/ending
+        dplyr::filter(!(DATE_diff ==1 & index == -1)) %>%
+        #index == 0 means start of multi-hour event
+        #index == 1 means single hour event
+        dplyr::mutate(index = ifelse(DATE_diff != 999 & lead(index == 999),0,index)) %>%
+        #create a start and stop time for each event
+        dplyr::mutate(DATE_END = ifelse(index ==0, lead(DATE_PST),DATE_PST)) %>%
+        dplyr::filter(index != 999) %>%
+        #for flats, add 4 hours to duration
+        dplyr::mutate(DATE_END = ifelse(FLAG == 'FLAT',
+                                        as.character(ymd_hms(DATE_END) + 4*3600, format = '%Y-%m-%d %H:%M:%S'),
+                                        DATE_END)) %>%
+        dplyr::mutate(DURATION_hrs = as.numeric(difftime(ymd_hms(DATE_END),
+                                                         ymd_hms(DATE_PST),
+                                                         units = 'hours')) + 1) %>%
+        dplyr::ungroup()%>%
+        dplyr::select(DATE_PST,DATE_END,DURATION_hrs,STATION_NAME_FULL,PARAMETER,INSTRUMENT,FLAG,ROUNDED_VALUE)
 
-
+    )
 
   }
 
@@ -1187,6 +1228,38 @@ GET_NEGATIVE_FLAT <- function(parameter = NULL, YEAR = NULL,
   if (!is.null(df_result))
   {
     try(data.table::fwrite(df_result,file.result))
-  }
+  } else
+    try(data.table::fwrite(tibble(STATION_NAME = 'NONE',PARAMETER = toupper(param)),file.result))
 
 }
+
+
+#' Retrieve the nth highest number
+#'
+#' @param data.input is the dataframe input
+#' @param column.name is the name of the column where the nth highest value is retrieved
+#' @param data.order is the order of data
+GET_nTH_HIGHEST<-function(data.input,column.name='ROUNDED_VALUE',data.order=4)
+  #PURPOSE: Retrieves the nth highest value
+
+{
+  #----debig initialization-----
+  # data.input<-GET_DATA_FTP(2015,'o3')
+  # data.order=4
+  # column.name='ROUNDED_VALUE'
+  data.output<-data.input%>%
+    RENAME_COLUMN(column.name,'TEMP_VALUE_COLUMN')%>%
+    dplyr::select(STATION_NAME,INSTRUMENT,EMS_ID,TEMP_VALUE_COLUMN)%>%
+    dplyr::mutate(TEMP_COUNT=1,TEMP_VALUE_COLUMN=as.numeric(TEMP_VALUE_COLUMN))%>%
+    dplyr::arrange(STATION_NAME,INSTRUMENT,EMS_ID,desc(TEMP_VALUE_COLUMN))%>%
+    dplyr::group_by(STATION_NAME,INSTRUMENT,EMS_ID)%>%
+    dplyr::mutate(TEMP_INDEX=cumsum(TEMP_COUNT))%>%
+    dplyr::filter(TEMP_INDEX==data.order)%>%
+    RENAME_COLUMN(c('TEMP_COUNT','TEMP_INDEX'))%>%   #remove counter columns
+    RENAME_COLUMN('TEMP_VALUE_COLUMN',column.name)%>%#rename column back to orig
+    return()
+
+}
+
+
+

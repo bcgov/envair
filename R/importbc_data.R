@@ -37,9 +37,9 @@ importBC_data<-function(parameter_or_station,
     years<-2009:2019
     parameters='pm25'
     stations=NULL
-    parameter_or_station<-c('h2s')
+    parameter_or_station<-c('pm25')
     parameter_or_station <- 'Harmac Cedar Woobank'
-    years <- 1999
+    years <- 2019
     pad = FALSE
   }
 
@@ -106,17 +106,42 @@ importBC_data<-function(parameter_or_station,
         print(paste('Retrieving data from:',list.data))
 
 
+        try(df_data <- NULL%>%
+              rbind.fill(readr::read_csv(list.data)%>%
+                           dplyr::mutate(VALIDATION_STATUS=ifelse(data.year<= valcycle,
+                                                                  'VALID','UNVERIFIED')
+                           ))
+        )
+        #filter data to specified year
+        #filter year----
+        if (0)
+        {
+          df_data <- df_data %>%
+            filter(STATION_NAME == 'Prince George Plaza 400')
+        }
+
+        if (!is.null(df_data))
+        {
+          df_data <- df_data %>%
+            dplyr::mutate(year_= year(DATE_PST - 3600)) %>%
+            filter(year_ %in% years) %>%
+            RENAME_COLUMN('year_')
+
+          data.result <- plyr::rbind.fill(data.result, df_data)
+
+        }
 
 
-        data.result<-data.result%>%
-          plyr::rbind.fill(
-            readr::read_csv(list.data)%>%
-              dplyr::mutate(VALIDATION_STATUS=ifelse(data.year<= valcycle,
-                                                     'VALID','UNVERIFIED'))
-          )
       }
 
-      #Pad dates, recalculate DATE and TIME
+
+
+
+
+
+
+
+
     }
 
 
@@ -291,11 +316,7 @@ importBC_data<-function(parameter_or_station,
     tz(data.result$DATE_PST) <- 'Etc/GMT+8'
   }
 
-  #filter year----
-  data.result <- data.result %>%
-    dplyr::mutate(year_= year(DATE_PST - 3600)) %>%
-    filter(year_ %in% years) %>%
-    RENAME_COLUMN('year_')
+
 
   #stop if there are no result
   if (is.null(data.result))
@@ -307,13 +328,14 @@ importBC_data<-function(parameter_or_station,
   if (pad)
   {
     #pad data, add missing data entries as NA
-    #note that this does not group station name anymore
+
     col_ <- colnames(data.result)
     col_instrument <- col_[grepl('instrument',col_,ignore.case = TRUE)]
 
     tz(data.result$DATE_PST) <- 'etc/GMT+8'
+
     df_padding <- data.result%>%
-      select(STATION_NAME,EMS_ID)%>%
+      select(STATION_NAME,EMS_ID,INSTRUMENT)%>%
       unique()%>%
       group_by(STATION_NAME)%>%
       merge(tidyr::tibble(DATE_PST= seq.POSIXt(from = as.POSIXct(paste(
