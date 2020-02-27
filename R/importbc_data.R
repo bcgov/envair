@@ -38,8 +38,8 @@ importBC_data<-function(parameter_or_station,
     parameters='pm25'
     stations=NULL
     parameter_or_station<-c('o3')
-    parameter_or_station <- 'pm25'
-    years <- 1999
+    parameter_or_station <- 'pm10'
+    years <- 2000
     pad = FALSE
   }
 
@@ -194,7 +194,7 @@ importBC_data<-function(parameter_or_station,
         RENAME_COLUMN('INSTRUMENT') %>%
         left_join(
           duplicate%>%
-            dplyr::select(key,INSTRUMENT)
+            dplyr::select(key,STATION_NAME_FULL,INSTRUMENT)
         )
 
       data.result <- rbind.fill(df_result_noduplicate,df_result_duplicate) %>%
@@ -267,10 +267,6 @@ importBC_data<-function(parameter_or_station,
       RENAME_COLUMN(c('DATE','TIME'))  #remove these columns
     #covert DATE_PST to POSIXct date
     tz(data.result$DATE_PST) <- 'Etc/GMT+8'
-
-
-
-
   }
 
   #filter year----
