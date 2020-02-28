@@ -30,7 +30,7 @@ GET_STATISTICS_PARAMETER<-function(data.year,parameter,instrument.ignore=NULL)
   if (0)
   {
     data.year <- 2019
-    parameter <- 'pm25'
+    parameter <- 'o3'
     source('envairfunctions.R')
     source('envairstatfunctions.R')
     source('importbc_data.R')
@@ -65,43 +65,6 @@ GET_STATISTICS_PARAMETER<-function(data.year,parameter,instrument.ignore=NULL)
     data.input <-  data.input %>%
       mutate(INSTRUMENT = paste(toupper(parameter),'Analyzer'))
   }
-
-
-# COMMMENTED OUT 20200207------
-#   if (is.null(data.source))
-#   {
-#     data.input<-GET_PARAMETER_DATA(data.parameter=parameter,year.start=data.year,year.end=data.year)%>%
-#       dplyr::ungroup()%>%
-#       dplyr::mutate(IGNORE=instrument.ignore)%>%  #this is the only way if else works
-#       dplyr::mutate(INSTRUMENT=ifelse(IGNORE,paste(toupper(parameter),'Analyser'),INSTRUMENT))%>%
-#       RENAME_COLUMN('IGNORE')
-#   } else
-#   {
-#     data.input<-data.source%>%
-#       dplyr::mutate(YEAR=year(as.Date(DATE)))%>%
-#       dplyr::filter(YEAR==data.year)%>%
-#       dplyr::mutate(IGNORE=instrument.ignore)%>%   #this is the only way ifelse works
-#       dplyr::mutate(INSTRUMENT=ifelse(IGNORE,
-#                                       paste(toupper(parameter),'Analyser'),
-#                                       as.character(INSTRUMENT)))%>%
-#       RENAME_COLUMN('IGNORE')
-#
-#     if (nrow(data.input)<100)
-#     {
-#       data.input<-GET_PARAMETER_DATA(data.parameter=parameter,year.start = data.year)%>%
-#         dplyr::mutate(IGNORE=instrument.ignore)%>%   #this is the only way if else works
-#         dplyr::mutate(INSTRUMENT=ifelse(IGNORE,
-#                                         paste(toupper(parameter),'Analyser'),
-#                                         as.character(INSTRUMENT)))%>%
-#         RENAME_COLUMN('IGNORE')
-#
-#     }
-#   }
-
-
-
-
-
 
 
   #added to merge multiple instruments for PM2.5 from Kamloops Federal Building----
@@ -140,12 +103,6 @@ GET_STATISTICS_PARAMETER<-function(data.year,parameter,instrument.ignore=NULL)
 
 
 
-  # data.stationmeta<-GET_STATION_DETAILS_FTP(data.year)%>%
-  #   dplyr::select(STATION_NAME,EMS_ID,REGION,OWNER,NAPS_ID)%>%
-  #   dplyr::mutate(NAPS_ID=as.character(NAPS_ID))
-
-
-  #station.details<-GET_STATIONDETAILS()   #grab this from the FTP site
 
   #add YEAR in data input
   #to make it consistent across data sources
@@ -418,36 +375,16 @@ GET_STATISTICS_PARAMETER<-function(data.year,parameter,instrument.ignore=NULL)
     {
       # data.input.previous<-GET_DATA_FTP(data.year,'co')%>%
       #   dplyr::mutate(INSTRUMENT=ifelse(instrument.ignore,paste(toupper(parameter),'Analyser'),as.character(INSTRUMENT)))
-      if (is.null(data.source))
-      {
-        data.input.previous<-GET_PARAMETER_DATA(parameter,data.year-1)%>%
-          dplyr::mutate(IGNORE=instrument.ignore)%>%   #this is the only way if else works
-          dplyr::mutate(INSTRUMENT=ifelse(IGNORE,
-                                          paste(toupper(parameter),'Analyser'),
-                                          as.character(INSTRUMENT)))%>%
-          RENAME_COLUMN('IGNORE')
 
-      } else
-      {
-        data.input.previous<-data.source%>%
-          dplyr::mutate(YEAR=year(as.Date(DATE)))%>%
-          dplyr::filter(YEAR==data.year-1)%>%
-          dplyr::mutate(IGNORE=instrument.ignore)%>%   #this is the only way if else works
-          dplyr::mutate(INSTRUMENT=ifelse(IGNORE,
-                                          paste(toupper(parameter),'Analyser'),
-                                          as.character(INSTRUMENT)))%>%
-          RENAME_COLUMN('IGNORE')
+      data.input.previous<-importBC_data(parameter,data.year-1)
 
-        if (nrow(data.input)< 100)
-        {
-          data.input.previous<-GET_PARAMETER_DATA(data.parameter=parameter,data.year-1)%>%
-            dplyr::mutate(IGNORE=instrument.ignore)%>%   #this is the only way if else works
-            dplyr::mutate(INSTRUMENT=ifelse(IGNORE,
-                                            paste(toupper(parameter),'Analyser'),
-                                            as.character(INSTRUMENT)))%>%
-            RENAME_COLUMN('IGNORE')
-        }
+      #rename instrument name when instrument is ignored in grouping
+      if (instrument.ignore)
+      {
+        data.input.previous <-  data.input.previous %>%
+          mutate(INSTRUMENT = paste(toupper(parameter),'Analyzer'))
       }
+
 
       #make input data consistent before merge
       data.input<-data.input%>%
@@ -626,13 +563,15 @@ GET_STATISTICS_PARAMETER<-function(data.year,parameter,instrument.ignore=NULL)
 
     }
     rm(data.input)   #release memory
-    data.stationmeta<-GET_STATION_DETAILS_FTP(data.year)%>%
-      dplyr::select(STATION_NAME,EMS_ID,REGION,OWNER,NAPS_ID)%>%
-      dplyr::mutate(NAPS_ID=as.character(NAPS_ID))
 
-    data.output<-merge(data.stationmeta,data.output,all.y=TRUE)%>%
-      RENAME_COLUMN(c('DATE','TIME'))%>%
-      unique()#combine with the station meta data
+    #
+    # data.stationmeta<-listBC_stations()%>%
+    #   dplyr::select(STATION_NAME,EMS_ID)%>%
+    #   dplyr::mutate(NAPS_ID=as.character(NAPS_ID))
+    #
+    # data.output<-merge(data.stationmeta,data.output,all.y=TRUE)%>%
+    #   RENAME_COLUMN(c('DATE','TIME'))%>%
+    #   unique()#combine with the station meta data
 
 
 
