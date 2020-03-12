@@ -616,16 +616,21 @@ GET_VENTING_ECCC<-function(date.start=NULL)
   {
     date.start<-date_today
     date.start <- '2019-12-25'
+    date.start <- '2016-09-01'
   }
   #date.start<-NULL
   #end debug
 
-  RUN_PACKAGE(c('dplyr','data.table','readr','RCurl','tibble'))
+  #setup---
+  RUN_PACKAGE(c('dplyr','data.table','readr','RCurl','tibble','lubridate'))
   #PURPOSE: Retrieves venting data from the specified URL
   #venting.metadata='ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/Air_Quality/VentingMetaData.csv'
   venting.url='http://dd.weatheroffice.ec.gc.ca/bulletins/alphanumeric/'    #ECCC venting index data
   #venting.metadata='ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/Air_Quality/VentingMetaData.csv'
   venting.metadata='https://envistaweb.env.gov.bc.ca/aqo/files/VentingMetaData.csv'
+  venting.url2 <- 'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/VentingBulletins/'
+
+
   if (is.null(date.start))
   {
     #get the latest venting files
@@ -646,71 +651,101 @@ GET_VENTING_ECCC<-function(date.start=NULL)
 
   }
   venting.date<-NULL
+  venting.content<- NULL #this will have FLCN text
 
-  if (nrow(temp.list) == 0)
-  {
-    print(paste('There are no folders from ECCC for this date:',date.start))
-    return(NULL)
-  }
-  venting.content<-NULL #contains the ECCC web data for venting (FLCN39)
-  for (i in 1:nrow(temp.list))
+  #scan for date,
+  #    !=0 means ECCC (priority)
+  #    ==  sca from ENV ftp
+  if (nrow(temp.list) != 0)
   {
 
-    # temp.download<-rbind(temp.download,
-    #                      GET_URL_FOLDERS(temp.list[i,]$URL)%>%
-    #                        dplyr::mutate(URL=paste(temp.list[i,]$URL,FOLDER,sep=''))%>%
-    #                        dplyr::arrange(desc(DATE))
-    #                      )
-    if (is.null(venting.content))
+    for (i in 1:nrow(temp.list))
     {
-      temp.download <- NULL
 
-      try(
-        temp.download<-GET_URL_FOLDERS(temp.list[i,]$URL)%>%
-          dplyr::mutate(URL=paste(temp.list[i,]$URL,FOLDER,sep=''))%>%
-          dplyr::arrange(desc(DATE))
-      )
-
-
-      if (!is.null(temp.download))
+      # temp.download<-rbind(temp.download,
+      #                      GET_URL_FOLDERS(temp.list[i,]$URL)%>%
+      #                        dplyr::mutate(URL=paste(temp.list[i,]$URL,FOLDER,sep=''))%>%
+      #                        dplyr::arrange(desc(DATE))
+      #                      )
+      if (is.null(venting.content))
       {
-        for (temp.download.url in temp.download$URL)
+        temp.download <- NULL
+
+        try(
+          temp.download<-GET_URL_FOLDERS(temp.list[i,]$URL)%>%
+            dplyr::mutate(URL=paste(temp.list[i,]$URL,FOLDER,sep=''))%>%
+            dplyr::arrange(desc(DATE))
+        )
+
+
+        if (!is.null(temp.download))
         {
-          if (is.null(venting.content))
+          for (temp.download.url in temp.download$URL)
           {
-            #check the files in the url folder
-            print(paste('scanning content of',temp.download.url))
-            temp<-GET_URL_FOLDERS(temp.download.url)%>%
-              filter(grepl('FLCN39',FOLDER,ignore.case=TRUE))
-
-
-            if (nrow(temp)>0)
+            if (is.null(venting.content))
             {
-              print(paste('processing content:',paste(temp.download.url,temp$FOLDER,sep='')))
-              temp.result <- NULL
-              temp.download.url <- gsub('http://','https://',temp.download.url)
-              try(temp.result <- unlist(readr::read_lines(paste(temp.download.url,temp$FOLDER,sep=''))),silent = TRUE)
-              temp.download.url <- gsub('https://','http://',temp.download.url)
-              try(temp.result <- unlist(readr::read_lines(paste(temp.download.url,temp$FOLDER,sep=''))),silent = TRUE)
+              #check the files in the url folder
+              print(paste('scanning content of',temp.download.url))
+              temp<-GET_URL_FOLDERS(temp.download.url)%>%
+                filter(grepl('FLCN39',FOLDER,ignore.case=TRUE))
 
-              if (length(temp.result)>0)
+
+              if (nrow(temp)>0)
               {
-                print (paste('found Venting file in',temp$FOLDER))
-                venting.content<-temp.result
-                #scan date from path
-                venting.date_ <- unlist(strsplit(temp.download.url,split='/'))
-                for (j in 1:length(venting.date_))
-                {
-                  if (IsDate(venting.date_[j]))
-                  {
-                    venting.date <- as.character(as.Date(venting.date_[j],'%Y%m%d'),format='%Y-%m-%d')
-                  }
-                }
+                print(paste('processing content:',paste(temp.download.url,temp$FOLDER,sep='')))
+                temp.result <- NULL
+                temp.download.url <- gsub('http://','https://',temp.download.url)
+                try(temp.result <- unlist(readr::read_lines(paste(temp.download.url,temp$FOLDER,sep=''))),silent = TRUE)
+                temp.download.url <- gsub('https://','http://',temp.download.url)
+                try(temp.result <- unlist(readr::read_lines(paste(temp.download.url,temp$FOLDER,sep=''))),silent = TRUE)
+                venting.content <- temp.result
+                download.url <- temp.download.url
               }
             }
           }
         }
       }
+    }
+
+
+  } else
+  {
+    #if ECCC does not have data, located from ENV ftp, venting.url2
+
+    ftp.url <- paste(venting.url2,year(ymd(date.start)),'/',sep='')
+
+    lst_ventfiles <- getURL(ftp.url,verbose=TRUE,
+                            ftp.use.epsv=TRUE, dirlistonly = TRUE
+    )
+
+    #create dataframe with 0 row
+    df_ventfiles <- tibble(Files='BLANK') %>%
+      filter(FALSE)
+    try(
+      df_ventfiles <- tibble(Files = unlist(strsplit(lst_ventfiles,'\r\n'))) %>%
+        separate(col=Files,
+                 into=c('TXT1','TXT2','TXT3'),
+                 sep='_',
+                 remove = FALSE)%>%
+        dplyr::mutate(Created = ymd(TXT3),
+                      Fullpath = paste(ftp.url,Files,sep='')) %>%
+        dplyr::filter(Created == ymd(date.start))
+    )
+
+
+    try(
+      venting.content <- unlist(readr::read_lines(df_ventfiles$Fullpath[1])),
+      silent = TRUE
+    )
+    download.url <- ftp.url
+    #terminate if no data found
+    #that means data not in ENV, ECCC sites
+    if (is.null(venting.content))
+    {
+
+      print(paste('There are no folders from ECCC for this date:',date.start))
+      return(NULL)
+
     }
   }
 
@@ -718,6 +753,30 @@ GET_VENTING_ECCC<-function(date.start=NULL)
 
   venting.guidelines<-c('poor','fair','good') #the guideline list ,used to identify if line is data
 
+  #retrieve venting.date
+  if (length(venting.content)>0 & !is.null(venting.content))
+  {
+
+    #scan date from path
+
+    venting.date_ <- unlist(strsplit(download.url,split='/'))
+    for (j in 1:length(venting.date_))
+    {
+      if (IsDate(venting.date_[j]))
+      {
+        venting.date <- as.character(as.Date(venting.date_[j],'%Y%m%d'),format='%Y-%m-%d')
+      }
+    }
+
+    #if venting date not retrieved, use the search date
+    if (is.null(venting.date))
+    {
+      venting.date <- as.character(ymd(date.start),format='%Y-%m-%d')
+    }
+  } else
+  {
+    return(NULL)
+  }
 
   #get venting metadata,check if file exist first
   venting.meta<-read.table(venting.metadata,sep=',',header = TRUE)%>%
