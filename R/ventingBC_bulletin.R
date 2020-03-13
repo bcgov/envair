@@ -622,7 +622,7 @@ GET_VENTING_ECCC<-function(date.start=NULL)
   #end debug
 
   #setup---
-  RUN_PACKAGE(c('dplyr','data.table','readr','RCurl','tibble','lubridate'))
+  RUN_PACKAGE(c('dplyr','data.table','readr','RCurl','tibble','lubridate','tidyr'))
   #PURPOSE: Retrieves venting data from the specified URL
   #venting.metadata='ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/Air_Quality/VentingMetaData.csv'
   venting.url='http://dd.weatheroffice.ec.gc.ca/bulletins/alphanumeric/'    #ECCC venting index data
@@ -641,6 +641,7 @@ GET_VENTING_ECCC<-function(date.start=NULL)
   } else
   {
     #get the one that matches specified date
+    date.start <- as.character(date.start,'%Y-%m-%d')
     date.start<-gsub('-','',date.start)
     temp.list<-GET_URL_FOLDERS()%>%
       dplyr::arrange(desc(DATE))%>%
@@ -713,7 +714,7 @@ GET_VENTING_ECCC<-function(date.start=NULL)
     #if ECCC does not have data, located from ENV ftp, venting.url2
 
     ftp.url <- paste(venting.url2,year(ymd(date.start)),'/',sep='')
-
+    print(paste('Retrieving data from:',ftp.url))
     lst_ventfiles <- getURL(ftp.url,verbose=TRUE,
                             ftp.use.epsv=TRUE, dirlistonly = TRUE
     )
@@ -723,7 +724,7 @@ GET_VENTING_ECCC<-function(date.start=NULL)
       filter(FALSE)
     try(
       df_ventfiles <- tibble(Files = unlist(strsplit(lst_ventfiles,'\r\n'))) %>%
-        separate(col=Files,
+        tidyr::separate(col=Files,
                  into=c('TXT1','TXT2','TXT3'),
                  sep='_',
                  remove = FALSE)%>%
