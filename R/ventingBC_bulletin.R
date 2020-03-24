@@ -281,6 +281,8 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE)
   #debug
   if (0)
   {
+    source('ventingBC_bulletin.R')
+    source('envairfunctions.R')
     path.output<-'C:/TEMP/'
     HD<-FALSE
   }
@@ -308,8 +310,13 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE)
   URL.inserfile<-'https://envistaweb.env.gov.bc.ca/aqo/files/Venting_format.xml'
 
 
+
   download.file(URL.shapefile,file.temp)
 
+  if (0)
+  {
+    file.temp<-'A:/Data Systems/IT 6000-6999/Systems development 6450/IT Projects 6450-20/Ventilation Index Map/CovidOBSCRBan/Venting_Blank_COVID.kml'
+  }
   #read KML file
   file.shapefile<-readKML(file.temp,keep_name_description = FALSE)
   file.remove(file.temp)
@@ -354,7 +361,7 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE)
   }
   #create 3 unique venting details for each zone
   venting.data.final<-NULL
-  for (SENS_ZONE in c('LOW','MEDIUM','HIGH'))
+  for (SENS_ZONE in c('LOW','MEDIUM','HIGH','HIGH_CVD'))
   {
     print(SENS_ZONE)
 
@@ -378,29 +385,65 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE)
 
   #note that VI_NUMERIC=<TODAY><TOMORROW>
   #where good=2, fair=1, poor=0
-  venting.data.final<-venting.data.final%>%
-    dplyr::mutate(BURN_DURATION='N/A')%>% #define the initial burn duration
-    dplyr::mutate(BURN_DURATION=ifelse(SENSI=='HIGH' & VI_NUMERIC %in% c(21,22),'\u2264 2 days*',BURN_DURATION))%>%
-    dplyr::mutate(BURN_DURATION=ifelse(SENSI=='HIGH' & VI_NUMERIC %in% c(00,01,02,10,11,12),'0',BURN_DURATION))%>%
-    dplyr::mutate(BURN_DURATION=ifelse(SENSI=='LOW' & VI_NUMERIC %in% c(11,12,21,22),'\u2264 6 days*',BURN_DURATION))%>%
-    dplyr::mutate(BURN_DURATION=ifelse(SENSI=='LOW' & VI_NUMERIC %in% c(00,01,02,10,20),'0',BURN_DURATION))%>%
-    dplyr::mutate(BURN_DURATION=ifelse(SENSI=='MEDIUM' & VI_NUMERIC %in% c(21,22),'\u2264 4 days*',BURN_DURATION))%>%
-    dplyr::mutate(BURN_DURATION=ifelse(SENSI=='MEDIUM' & VI_NUMERIC %in% c(00,01,02,10,11,12),'0',BURN_DURATION))%>%
-    #Current condition good, on medium and high sensitivity zone
-    dplyr::mutate(BURN_DURATION=ifelse(SENSI=='MEDIUM' & VI_NUMERIC %in% c(20),'1-DAY*',BURN_DURATION))%>%
-    dplyr::mutate(BURN_DURATION=ifelse(SENSI=='HIGH' & VI_NUMERIC==20,'1-DAY*',BURN_DURATION))%>%
 
+  venting.data.final<-venting.data.final%>%
+
+    #define the initial burn duration----
+    dplyr::mutate(BURN_DURATION='N/A')%>%
+    dplyr::mutate(BURN_DURATION=ifelse(grepl('HIGH',SENSI,ignore.case = TRUE) &
+                                         VI_NUMERIC %in% c(21,22),
+                                       '\u2264 2 days*',
+                                       BURN_DURATION))%>%
+    dplyr::mutate(BURN_DURATION=ifelse(grepl('HIGH',SENSI,ignore.case = TRUE) &
+                                         VI_NUMERIC %in% c(00,01,02,10,11,12),
+                                       '0',
+                                       BURN_DURATION))%>%
+    dplyr::mutate(BURN_DURATION=ifelse(grepl('LOW',SENSI,ignore.case = TRUE) &
+                                         VI_NUMERIC %in% c(11,12,21,22),
+                                       '\u2264 6 days*',
+                                       BURN_DURATION))%>%
+    dplyr::mutate(BURN_DURATION=ifelse(grepl('LOW',SENSI,ignore.case = TRUE) &
+                                         VI_NUMERIC %in% c(00,01,02,10,20),
+                                       '0',
+                                       BURN_DURATION))%>%
+    dplyr::mutate(BURN_DURATION=ifelse(grepl('MEDIUM',SENSI,ignore.case = TRUE) &
+                                         VI_NUMERIC %in% c(21,22),
+                                       '\u2264 4 days*',
+                                       BURN_DURATION))%>%
+    dplyr::mutate(BURN_DURATION=ifelse(grepl('MEDIUM',SENSI,ignore.case = TRUE) &
+                                         VI_NUMERIC %in% c(00,01,02,10,11,12),
+                                       '0',
+                                       BURN_DURATION))%>%
+    #Current condition good, on medium and high sensitivity zone
+    dplyr::mutate(BURN_DURATION=ifelse(grepl('MEDIUM',SENSI,ignore.case = TRUE) &
+                                         VI_NUMERIC %in% c(20),
+                                       '1-DAY*',
+                                       BURN_DURATION))%>%
+    dplyr::mutate(BURN_DURATION=ifelse(grepl('HIGH',SENSI,ignore.case = TRUE) &
+                                         VI_NUMERIC==20,
+                                       '1-DAY*',
+                                       BURN_DURATION))%>%
+
+    #added for COVID 19 exceptional BAN
+    dplyr::mutate(BURN_DURATION=ifelse(grepl('HIGH_CVD',SENSI,ignore.case = TRUE),
+                                       '0*',
+                                       BURN_DURATION))%>%
+
+    #define the BURN category, defined based on BURN_DURATION----
     dplyr::mutate(BURN='N/A')%>%
-    dplyr::mutate(BURN=ifelse(BURN_DURATION=='0','NO',BURN))%>%
-    dplyr::mutate(BURN=ifelse(!BURN_DURATION %in% c('N/A','NOT ALLOWED','NO','NA','0'),
+    dplyr::mutate(BURN=ifelse(BURN_DURATION %in% c('0','0*'),'NO',BURN))%>%
+    dplyr::mutate(BURN=ifelse(!BURN_DURATION %in% c('N/A','NOT ALLOWED','NO','NA','0','0*'),
                               'YES (1-DAY)',BURN))%>%
-    dplyr::mutate(BURN=ifelse(!BURN_DURATION %in% c('N/A','NOT ALLOWED','NO','NA','0','1-DAY','1-DAY*'),
+    dplyr::mutate(BURN=ifelse(!BURN_DURATION %in% c('N/A','NOT ALLOWED','NO','NA','0','0*','1-DAY','1-DAY*'),
                               'YES (>1 DAY)',BURN))%>%
+
+    #add the special note
     dplyr::mutate(NOTE='')%>%
     dplyr::mutate(NOTE=ifelse(BURN_DURATION=='\u2264 2 days*','*Up to 2 days burn, subject to start and end times specified in regulation',NOTE))%>%
     dplyr::mutate(NOTE=ifelse(BURN_DURATION=='\u2264 4 days*','*Up to 4 days burn, subject to start and end times specified in regulation',NOTE))%>%
     dplyr::mutate(NOTE=ifelse(BURN_DURATION=='\u2264 6 days*','*Up to 6 days burn, subject to start and end times specified in regulation',NOTE))%>%
     dplyr::mutate(NOTE=ifelse(BURN_DURATION=='1-DAY*','*Open burning ends by 4 p.m. or two hours before sunset, whichever is later, on the same day the open burning starts.',NOTE))%>%
+    dplyr::mutate(NOTE=ifelse(BURN_DURATION=='0*','*No burning allowed due to COVID-19',NOTE))%>%
     RENAME_COLUMN(c('NAME'),c('Name'))
 
 
@@ -433,6 +476,10 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE)
                                          "<br/><br/>",venting.shapefile$NOTE,
                                          '</p>',sep=''
     )
+
+    #clean up special text like HIGH_CVD
+    venting.shapefile$Description <- gsub('HIGH_CVD','HIGH',
+                                          venting.shapefile$Description)
 
     #make changes in description for metrovancouver stations
     temp<-venting.insert[grep('<Metro_description>',x=venting.insert,ignore.case=TRUE)]
