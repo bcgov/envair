@@ -276,18 +276,25 @@ ventingBC_bulletin<-function(date.start=NULL,
 #' ventingBC_kml(HD=FALSE)
 #'
 #' @export
-ventingBC_kml<-function(path.output=NULL,HD=TRUE)
+ventingBC_kml<-function(path.output=NULL,HD=TRUE,isCOVID = TRUE)
 {
   #debug
   if (0)
   {
+    setwd("A:/Air/Operations ORCS/Technology/Software Codes ScriptsExecutables/R_SCRIPTS/03_BCGovR/envair/R")
     source('ventingBC_bulletin.R')
     source('envairfunctions.R')
     path.output<-'C:/TEMP/'
     HD<-FALSE
+    path.temp <- 'C:/TEMP/'
+    isCOVID = TRUE
   }
   #end debug lines
 
+  #setup------
+  #special message for COVID19
+  msg_COVID <- '*Open burning restricted for all High Smoke Sensitivity  Zones until Wednesday, 15th April 2020.
+  No new fires may be initiated and no material added to existing fires.'
 
   RUN_PACKAGE(c('rlang','R6','Rcpp','tidyr','namespace','dplyr','ggplot2','RODBC','reshape',
                 'lazyeval','zoo','DataCombine','data.table',
@@ -310,7 +317,7 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE)
   URL.inserfile<-'https://envistaweb.env.gov.bc.ca/aqo/files/Venting_format.xml'
 
 
-
+  print(paste('Downloading blank shapefile to:',file.temp))
   download.file(URL.shapefile,file.temp)
 
   if (0)
@@ -345,6 +352,7 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE)
       #
       RENAME_COLUMN(c('TODAY_VI_NUMERIC','TOMORROW_VI_NUMERIC'))#delete the numeric description columns
   )
+
   if (is.null(venting.data))
   {
     print(paste('No venting map data for:',date_today))
@@ -359,99 +367,79 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE)
     return()
 
   }
-  #create 3 unique venting details for each zone
-  venting.data.final<-NULL
-  for (SENS_ZONE in c('LOW','MEDIUM','HIGH','HIGH_CVD'))
+
+  #create 3 unique venting details for each venting zone
+  venting.data.final<-venting.data %>%
+    merge(tribble(
+      ~SENSI,
+      'LOW',
+      'MEDIUM',
+      'HIGH'
+    ))
+
+  #define the rules for venring
+  df_vent_rule <- tribble(
+    ~SENSI,~TODAY_VI_DESC,~TOMORROW_VI_DESC,~BURN,~BURN_DURATION,~NOTE,
+    'LOW','GOOD','GOOD','YES (>1 DAY)','\u2264 6 days*','*Up to 6 days burn, subject to start and end times specified in regulation',
+    'LOW','GOOD','FAIR','YES (>1 DAY)','\u2264 6 days*','*Up to 6 days burn, subject to start and end times specified in regulation',
+    'LOW','GOOD','POOR','NO','0','',
+    'LOW','FAIR','GOOD','YES (>1 DAY)','\u2264 6 days*','*Up to 6 days burn, subject to start and end times specified in regulation',
+    'LOW','FAIR','FAIR','YES (>1 DAY)','\u2264 6 days*','*Up to 6 days burn, subject to start and end times specified in regulation',
+    'LOW','FAIR','POOR','NO','0','',
+    'LOW','POOR','GOOD','NO','0','',
+    'LOW','POOR','FAIR','NO','0','',
+    'LOW','POOR','POOR','NO','0','',
+    'MEDIUM','GOOD','GOOD','YES (>1 DAY)','\u2264 4 days*','*Up to 4 days burn, subject to start and end times specified in regulation',
+    'MEDIUM','GOOD','FAIR','YES (>1 DAY)','\u2264 4 days*','*Up to 4 days burn, subject to start and end times specified in regulation',
+    'MEDIUM','GOOD','POOR','YES (1-DAY)','1-DAY*','*Open burning ends by 4 p.m. or two hours before sunset, whichever is later, on the same day the open burning starts.',
+    'MEDIUM','FAIR','GOOD','NO','0','',
+    'MEDIUM','FAIR','FAIR','NO','0','',
+    'MEDIUM','FAIR','POOR','NO','0','',
+    'MEDIUM','POOR','GOOD','NO','0','',
+    'MEDIUM','POOR','FAIR','NO','0','',
+    'MEDIUM','POOR','POOR','NO','0','',
+    'HIGH','GOOD','GOOD','YES (>1 DAY)','\u2264 2 days*','*Up to 2 days burn, subject to start and end times specified in regulation',
+    'HIGH','GOOD','FAIR','YES (>1 DAY)','\u2264 2 days*','*Up to 2 days burn, subject to start and end times specified in regulation',
+    'HIGH','GOOD','POOR','YES (1-DAY)','1-DAY*','*Open burning ends by 4 p.m. or two hours before sunset, whichever is later, on the same day the open burning starts.',
+    'HIGH','FAIR','GOOD','NO','0','',
+    'HIGH','FAIR','FAIR','NO','0','',
+    'HIGH','FAIR','POOR','NO','0','',
+    'HIGH','POOR','GOOD','NO','0','',
+    'HIGH','POOR','FAIR','NO','0','',
+    'HIGH','POOR','POOR','NO','0',''
+  )
+
+  if (isCOVID)
   {
-    print(SENS_ZONE)
-
-    venting.data.final<-venting.data.final%>%
-      rbind(
-        venting.data%>%
-          dplyr::mutate(SENSI=SENS_ZONE)
-        #removed during 2019 OBSCR update
-        # RENAME_COLUMN(paste(SENS_ZONE,'_SENSITIVITY_BURN',sep=''),'TEMP')%>%
-        # dplyr::mutate(BURN=TEMP)%>%
-        # RENAME_COLUMN(c('TEMP','LOW_SENSITIVITY_BURN','MEDIUM_SENSITIVITY_BURN','HIGH_SENSITIVITY_BURN'))
-      )
-
-
+    df_vent_rule <- df_vent_rule %>%
+      dplyr::mutate(BURN = ifelse(SENSI == 'HIGH',
+                                  'NO*',
+                                  BURN)) %>%
+      dplyr::mutate(BURN_DURATION = ifelse(SENSI == 'HIGH',
+                                           '0',
+                                           BURN_DURATION)) %>%
+      dplyr::mutate(NOTE = ifelse(SENSI == 'HIGH',
+                                  msg_COVID,
+                                  NOTE))
   }
 
 
-
-  #prepare venting data and shapr file for merging
-  #rename venting data column names to match shapefile name
-
-  #note that VI_NUMERIC=<TODAY><TOMORROW>
-  #where good=2, fair=1, poor=0
-
-  venting.data.final<-venting.data.final%>%
-
-    #define the initial burn duration----
-    dplyr::mutate(BURN_DURATION='N/A')%>%
-    dplyr::mutate(BURN_DURATION=ifelse(grepl('HIGH',SENSI,ignore.case = TRUE) &
-                                         VI_NUMERIC %in% c(21,22),
-                                       '\u2264 2 days*',
-                                       BURN_DURATION))%>%
-    dplyr::mutate(BURN_DURATION=ifelse(grepl('HIGH',SENSI,ignore.case = TRUE) &
-                                         VI_NUMERIC %in% c(00,01,02,10,11,12),
-                                       '0',
-                                       BURN_DURATION))%>%
-    dplyr::mutate(BURN_DURATION=ifelse(grepl('LOW',SENSI,ignore.case = TRUE) &
-                                         VI_NUMERIC %in% c(11,12,21,22),
-                                       '\u2264 6 days*',
-                                       BURN_DURATION))%>%
-    dplyr::mutate(BURN_DURATION=ifelse(grepl('LOW',SENSI,ignore.case = TRUE) &
-                                         VI_NUMERIC %in% c(00,01,02,10,20),
-                                       '0',
-                                       BURN_DURATION))%>%
-    dplyr::mutate(BURN_DURATION=ifelse(grepl('MEDIUM',SENSI,ignore.case = TRUE) &
-                                         VI_NUMERIC %in% c(21,22),
-                                       '\u2264 4 days*',
-                                       BURN_DURATION))%>%
-    dplyr::mutate(BURN_DURATION=ifelse(grepl('MEDIUM',SENSI,ignore.case = TRUE) &
-                                         VI_NUMERIC %in% c(00,01,02,10,11,12),
-                                       '0',
-                                       BURN_DURATION))%>%
-    #Current condition good, on medium and high sensitivity zone
-    dplyr::mutate(BURN_DURATION=ifelse(grepl('MEDIUM',SENSI,ignore.case = TRUE) &
-                                         VI_NUMERIC %in% c(20),
-                                       '1-DAY*',
-                                       BURN_DURATION))%>%
-    dplyr::mutate(BURN_DURATION=ifelse(grepl('HIGH',SENSI,ignore.case = TRUE) &
-                                         VI_NUMERIC==20,
-                                       '1-DAY*',
-                                       BURN_DURATION))%>%
-
-    #added for COVID 19 exceptional BAN
-    dplyr::mutate(BURN_DURATION=ifelse(grepl('HIGH_CVD',SENSI,ignore.case = TRUE),
-                                       '0*',
-                                       BURN_DURATION))%>%
-
-    #define the BURN category, defined based on BURN_DURATION----
-    dplyr::mutate(BURN='N/A')%>%
-    dplyr::mutate(BURN=ifelse(BURN_DURATION %in% c('0','0*'),'NO',BURN))%>%
-    dplyr::mutate(BURN=ifelse(!BURN_DURATION %in% c('N/A','NOT ALLOWED','NO','NA','0','0*'),
-                              'YES (1-DAY)',BURN))%>%
-    dplyr::mutate(BURN=ifelse(!BURN_DURATION %in% c('N/A','NOT ALLOWED','NO','NA','0','0*','1-DAY','1-DAY*'),
-                              'YES (>1 DAY)',BURN))%>%
-
-    #add the special note
-    dplyr::mutate(NOTE='')%>%
-    dplyr::mutate(NOTE=ifelse(BURN_DURATION=='\u2264 2 days*','*Up to 2 days burn, subject to start and end times specified in regulation',NOTE))%>%
-    dplyr::mutate(NOTE=ifelse(BURN_DURATION=='\u2264 4 days*','*Up to 4 days burn, subject to start and end times specified in regulation',NOTE))%>%
-    dplyr::mutate(NOTE=ifelse(BURN_DURATION=='\u2264 6 days*','*Up to 6 days burn, subject to start and end times specified in regulation',NOTE))%>%
-    dplyr::mutate(NOTE=ifelse(BURN_DURATION=='1-DAY*','*Open burning ends by 4 p.m. or two hours before sunset, whichever is later, on the same day the open burning starts.',NOTE))%>%
-    dplyr::mutate(NOTE=ifelse(BURN_DURATION=='0*','*No burning allowed due to COVID-19',NOTE))%>%
-    RENAME_COLUMN(c('NAME'),c('Name'))
+  #combine message with venting.data.final
+  venting.data.final <- venting.data.final %>%
+    left_join(df_vent_rule)
 
 
   #change shapefile file types to string
   file.shapefile$Name<-as.character(file.shapefile$Name)
   file.shapefile$SENSI<-as.character(file.shapefile$SENSI)
 
-  venting.shapefile<-merge(file.shapefile,venting.data.final,by=c('Name','SENSI'))
+
+
+  venting.data.final<-venting.data.final %>%
+    dplyr::rename(Name = NAME)
+
+
+  venting.shapefile <- merge(file.shapefile,venting.data.final,by=c('Name','SENSI'))
 
   if (is.null(path.output))
   {
@@ -499,9 +487,9 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE)
     #insert the styleURL definition that defines polygon styles
     #this will be inserted at the <Document> line
     venting.text<-readLines(paste(path.temp,'/vent_temp.kml',sep=''))
+    print(paste('Created temp kml and extracting content',path.temp))
 
-
-    #insert styleURL lines
+    #insert styleURL linespath.temp
     #remove default style lines, replace with actual style
     #in each scan, it will identify that
     temp<-NULL
@@ -545,7 +533,7 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE)
         #look where the </name> is
         for (j in 1:length(polygon.temp))
         {
-          if (grepl('sensitivity',polygon.temp[j],ignore.case=TRUE))
+          if (grepl(';sensitivity zone',polygon.temp[j],ignore.case=TRUE))
           {
             #
             #print(paste('sensitivity',polygon.temp[j+1]))
@@ -554,6 +542,10 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE)
             polygon.zone<-toupper(unlist(strsplit(polygon.zone,split='&'))[1])
             #print(polygon.zone)
             #   print(paste('scanning kml entry for:',toupper(polygon.name)))
+            # if (polygon.zone != 'NA')
+            # {
+            #   crash
+            # }
           }
         }
       }
@@ -565,6 +557,7 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE)
       {
         #replace the style line with the template styles
         #determine if this area and zone is a burn or no burn zone
+
         venting.temp<-venting.data.final%>%
           dplyr::filter(tolower(Name)==tolower(polygon.name))%>%
           dplyr::filter(tolower(SENSI)==tolower(polygon.zone))
@@ -577,6 +570,7 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE)
           temp.style<-ifelse(venting.temp[1,]$BURN=='YES (1-DAY)','YES-1DAY',temp.style)
           temp.style<-ifelse(venting.temp[1,]$BURN=='YES (>1 DAY)','YES-MULTIDAY',temp.style)
           temp.style<-ifelse(venting.temp[1,]$BURN=='NO','NO',temp.style)
+          temp.style<-ifelse(venting.temp[1,]$BURN=='NO*','NO*',temp.style)
           temp.style<-ifelse(grepl('vancouver',venting.temp[1,]$Name,ignore.case = TRUE),
                              'NA',temp.style)
           temp.line<-paste('<styleUrl>#',temp.style,'</styleUrl>',sep='')
@@ -584,7 +578,12 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE)
         {
           temp.line<-'<styleUrl>#NA</styleUrl>'
         }
-        print(paste('inserting the style:',temp.line))
+        print(paste('inserting the style:',temp.line,'for',venting.temp[1,]$SENSI))
+        if (0)
+        {
+          #this crashes
+          # crash
+        }
       }
 
       if (grepl('<Folder>',temp.line,ignore.case=TRUE))
@@ -772,9 +771,9 @@ GET_VENTING_ECCC<-function(date.start=NULL)
     try(
       df_ventfiles <- tibble(Files = unlist(strsplit(lst_ventfiles,'\r\n'))) %>%
         tidyr::separate(col=Files,
-                 into=c('TXT1','TXT2','TXT3'),
-                 sep='_',
-                 remove = FALSE)%>%
+                        into=c('TXT1','TXT2','TXT3'),
+                        sep='_',
+                        remove = FALSE)%>%
         dplyr::mutate(Created = ymd(TXT3),
                       Fullpath = paste(ftp.url,Files,sep='')) %>%
         dplyr::filter(Created == ymd(date.start))
@@ -863,7 +862,7 @@ GET_VENTING_ECCC<-function(date.start=NULL)
     tidyr::separate(col=X5,into=c('TODAY_VI','TODAY_VI_DESC'),sep='/',extra='drop')%>%
     tidyr::separate(col=X8,into=c('TOMORROW_VI','TOMORROW_VI_DESC'),sep='/',extra='drop')
   if (nrow(venting.table)>0)
-    {
+  {
     venting.table<-venting.table%>%
       merge(venting.meta,all.x=TRUE)
     print(paste('OK.',nrow(venting.table),'rows'))
@@ -872,11 +871,11 @@ GET_VENTING_ECCC<-function(date.start=NULL)
   }
 
 
- if (nrow(venting.table)>0)
- {
-   print('Success. Ignore warnings and errors')
-   venting.table <- tibble::as.tibble(venting.table)
- }
+  if (nrow(venting.table)>0)
+  {
+    print('Success. Ignore warnings and errors')
+    venting.table <- tibble::as.tibble(venting.table)
+  }
   return(venting.table)
 
 
