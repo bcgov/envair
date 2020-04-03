@@ -406,7 +406,8 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE,isCOVID = TRUE)
     'HIGH','FAIR','POOR','NO','0','',
     'HIGH','POOR','GOOD','NO','0','',
     'HIGH','POOR','FAIR','NO','0','',
-    'HIGH','POOR','POOR','NO','0',''
+    'HIGH','POOR','POOR','NO','0','',
+    'HIGH','N/A','N/A','NO','0',''
   )
 
   if (isCOVID)
@@ -418,15 +419,36 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE,isCOVID = TRUE)
       dplyr::mutate(BURN_DURATION = ifelse(SENSI == 'HIGH',
                                            '0',
                                            BURN_DURATION)) %>%
+      dplyr::mutate(TODAY_VI_DESC = ifelse(SENSI == 'HIGH',
+                                           'N/A',
+                                           TODAY_VI_DESC)) %>%
+      dplyr::mutate(TOMORROW_VI_DESC = ifelse(SENSI == 'HIGH',
+                                              'N/A',
+                                              TOMORROW_VI_DESC)) %>%
       dplyr::mutate(NOTE = ifelse(SENSI == 'HIGH',
                                   msg_COVID,
                                   NOTE))
+
+    venting.data.final <- venting.data.final %>%
+      dplyr::mutate(TODAY_VI_DESC = ifelse(SENSI == 'HIGH',
+                                           'N/A',
+                                           TODAY_VI_DESC)) %>%
+      dplyr::mutate(TOMORROW_VI_DESC = ifelse(SENSI == 'HIGH',
+                                              'N/A',
+                                              TOMORROW_VI_DESC)) %>%
+      dplyr::mutate(TODAY_VI = ifelse(SENSI == 'HIGH',
+                                           'N/A',
+                                           TODAY_VI)) %>%
+      dplyr::mutate(TOMORROW_VI = ifelse(SENSI == 'HIGH',
+                                              'N/A',
+                                              TOMORROW_VI))
   }
 
 
   #combine message with venting.data.final
   venting.data.final <- venting.data.final %>%
-    left_join(df_vent_rule)
+    left_join(df_vent_rule) %>%
+    unique()
 
 
   #change shapefile file types to string
@@ -474,6 +496,7 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE,isCOVID = TRUE)
     temp<-gsub(pattern="<Metro_description>",replacement="",x=temp,ignore.case=TRUE)
     temp<-gsub(pattern="</Metro_description>",replacement="",x=temp,ignore.case=TRUE)
     venting.shapefile$Description[toupper(venting.shapefile$Name)=='METRO VANCOUVER']<-temp
+
 
     #write temporarilty into a KML file
     print(paste('Writing temporary kml file (unmodded) into:',path.temp))
@@ -622,6 +645,9 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE,isCOVID = TRUE)
 
     print(paste('Writing the index file in temp location:',
                 path.temp))
+    #delete the N/A VI value
+    temp <- gsub('N/A (N/A)','N/A',temp,ignore.case = TRUE)
+
     write(x=temp,file=paste(path.temp,'/Venting_Index.kml',sep=''))
 
     #move to final location in temp file name, then rename to final name
