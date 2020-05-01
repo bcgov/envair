@@ -271,12 +271,14 @@ ventingBC_bulletin<-function(date.start=NULL,
 #' @param path.output where kml files will be saved. If null, function returns shape file
 #' @param HD is boolean. If true, it will use high quality map >50 MB. This exceeds Web ARcMap requirements
 #'                       If false, this will use simplified map (0.0002 degrees) of <10MB file size
+#' @param isCOVID is boolean; if TRUE, it applies HSSZ fireban due to COVID 19
+#' @param fireban is vector containg the sensitivity zones where a fireban is applied
 #'
 #'  @examples
 #' ventingBC_kml(HD=FALSE)
 #'
 #' @export
-ventingBC_kml<-function(path.output=NULL,HD=TRUE,isCOVID = TRUE)
+ventingBC_kml<-function(path.output=NULL,HD=TRUE,isCOVID = TRUE,fireban=NULL)
 {
   #debug
   if (0)
@@ -288,12 +290,13 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE,isCOVID = TRUE)
     HD<-FALSE
     path.temp <- 'C:/TEMP/'
     isCOVID = TRUE
+    fireban = c('MEDIUM','LOW')
   }
   #end debug lines
 
   #setup------
   #special message for COVID19
-  msg_COVID <- '*Open burning restricted for all High Smoke Sensitivity  Zones until Wednesday, 15th April 2020.
+  msg_COVID <- '*Open burning restricted for all High Smoke Sensitivity  Zones until Monday, 15th June 2020.
   No new fires may be initiated and no material added to existing fires.'
 
   RUN_PACKAGE(c('rlang','R6','Rcpp','tidyr','namespace','dplyr','ggplot2','RODBC','reshape',
@@ -729,7 +732,12 @@ GET_VENTING_ECCC<-function(date.start=NULL)
   #scan for date,
   #    !=0 means ECCC (priority)
   #    ==  sca from ENV ftp
-  if (nrow(temp.list) != 0)
+  #updated: 2020-05-01
+  #sites older than 2 days will use ENV FTP site
+
+  date_now <- as.character(Sys.Date(),'%Y-%m-%d')
+  date_diff <- difftime(date_now,date.start,units='days')
+  if (nrow(temp.list) != 0 & date_diff<3)
   {
 
     for (i in 1:nrow(temp.list))
