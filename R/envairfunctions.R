@@ -570,7 +570,7 @@ GET_FTP_DETAILS<-function(path.ftp)
     tidyr::separate(FILEALL,c('DATE','TIME','INDEX','FILENAME'),sep=' +',extra='drop')%>%
     dplyr::mutate(URL=paste(path.ftp,FILENAME,sep=''))%>%
     dplyr::mutate(CREATION_TIME=paste(DATE,TIME))%>%
-    dplyr::mutate(CREATION_TIME=as.POSIXct(strptime(CREATION_TIME,"%m-%d-%y %I:%M%p"),tz='utc'))%>%
+    dplyr::mutate(CREATION_TIME=as.POSIXct(strptime(CREATION_TIME,"%m-%d-%y %I:%M%p"),tz='etc/gmt+8'))%>%
     dplyr::mutate(DATE=format(strptime(DATE,"%m-%d-%y"),'%Y-%m-%d'))%>%
     dplyr::mutate(TIME=format(strptime(TIME,"%I:%M%p"),'%H:%M'))
 }
@@ -950,6 +950,7 @@ GET_RECENT_STATION_DATA<-function(STATION='ALL',timebase=60)
 #' Get Rolling Mean function
 #'
 #' This function creates a rolling mean based on specified hours
+#' NOTE: use GET_RUNNING_AVG() for tidy version
 #'
 #' @param data.input is dataframe containing data
 #' @param data.input.previous is dataframe of earlier data, added to have complete rolling mean
@@ -1260,11 +1261,12 @@ GET_URL_FOLDERS<-function(source.url='http://dd.weatheroffice.ec.gc.ca/bulletins
 #' This function saves the dataframe into a file
 #' @param data_to_save is the dataframe to save into a file, or
 #'                     for file_only, it is the file to transfer
-#' @param filename is string defining the name of the file
+#' @param filename is string defining the name of the file,
+#'                if NULL, it keeps the namefrom data_to_save, works only if file_only = TRUE
 #' @param path.target is string defining the path where the file will be saved
 #' @param path.temp default NULL, is where the file is temporarily saved. if null, file is saved in working directory
 #' @param file_only is true, it performs a file transfer to FTP
-SAVE_TO_FILE<-function(data_to_save,filename,path.target,
+SAVE_TO_FILE<-function(data_to_save,filename=NULL,path.target,
                        path.temp=NULL,file_only = FALSE)
 {
 
@@ -1298,6 +1300,11 @@ SAVE_TO_FILE<-function(data_to_save,filename,path.target,
     path.target<-substr(path.target,1,nchar(path.target)-1)
   }
 
+  if (is.null(filename))
+  {
+    filename <- basename(data_to_save)
+    file_only <- TRUE
+  }
   function1_ok<-FALSE
   function2_ok<-FALSE
   RUN_PACKAGE(c('dplyr'))
@@ -1401,6 +1408,7 @@ SAVE_TO_FILE<-function(data_to_save,filename,path.target,
 
   return(TRUE)
 }
+
 
 
 #TIDY Functions Beyond here-------
@@ -1546,3 +1554,403 @@ direction <- function(angle)
   return(df_result$result)
 }
 
+#' Fix tooltip in rmarkdown kable
+#' This fixes tooltip issue by creating new lines
+#' by inserting spaces
+#'
+#' @param txt is a string containing the tooltip
+#'             lines are separated by sep_string
+#' @param sep_string is the string separator for the lines
+#'            default is <br>
+FIX_tooltip <- function(txt,sep_string='<br>')
+{
+  if (0)
+  {
+    txt <- df_alerts$tooltips1
+    sep_string <- '<br>'
+
+  }
+  library(dplyr)
+  library(stringr)
+
+  #print('Fix_tooltip running...')
+  df_txt <- tibble(Text = txt) %>%
+    dplyr::mutate(num_breaks = str_count(sep_string),
+                  index=1:n())
+
+
+  total_breaks <- max(df_txt$num_breaks,na.rm=TRUE)
+
+  #escape if there are no breaks
+  if (total_breaks==0)
+  {
+    return(txt)
+  }
+
+  #separate one at a time
+  lst_ <- NULL
+  for (i in 1:(total_breaks+1))
+  {
+    lst_ <- c(lst_,paste('txt_',i,sep=''))
+  }
+
+  df_txt %>%
+    tidyr::separate(Text,sep=sep_string,into=lst_,extra = 'merge',remove = TRUE)%>%
+    pivot_longer(cols=lst_,names_to='line',values_to = 'content')%>%
+    filter(!is.na(content),
+           content!='')%>%
+    dplyr::mutate(char_length = nchar(content))%>%
+    group_by(index)%>%
+    dplyr::mutate(max_char = max(char_length,na.rm = TRUE))%>%
+    ungroup()%>%
+    mutate(content=str_pad(content,max_char+2,side='right'))%>%
+    group_by(index) %>%
+    arrange(line)%>%
+    dplyr::summarise(Text = paste(content,collapse='\r\n'))%>%
+    pull(Text)
+
+}
+
+
+#' Calculate the running average
+#'
+#' Gets the running average of specific parameters
+#' requires a pivot_longer format
+#'
+#' @param airdata is the dataframe containing the air quality
+#'                data. Requires columns listing the parameter and the value
+#' @param parameter is vector contaling parameters listed in the parameter column
+#'                where the running average is calculated
+#'                if NULL, it will include each parameters in averaging
+#' @param date_column is the column contains the date-time is ymd_hm format
+#' @param parameter_column is the column listing all the paremetsr
+#' @param value_column is the column containing the data value
+#' @param averaging_time is the time to perform running average
+#' @param grouping_column is the column where result will be grouped by
+#' @param threshold_percent is the percent of data that are valid, otherwise
+#'                          the averaging result is NA
+GET_RUNNING_AVG <- function(airdata,parameter=NULL,
+                            date_column = 'DATE_PST',
+                            parameter_column='name',
+                            value_column='value',
+                            averaging_time = 24,
+                            grouping_column = 'STATION_NAME',
+                            threshold_percent=75)
+{
+
+  #debug----
+  if (0)
+  {
+    airdata <- df_raw_all
+    parameter <- 'pm25'
+    date_column = 'DATE_PST'
+    parameter_column='name'
+    value_column='value'
+    averaging_time = 24
+    grouping_column = 'STATION_NAME'
+    threshold_percent=75
+  }
+
+  #setup-----
+  RUN_PACKAGE(c('dplyr','lubridate','plyr'))
+
+  #rename columns
+  df_airdata <- airdata%>%
+    RENAME_COLUMN(c(parameter_column,
+                    date_column,
+                    value_column,
+                    grouping_column),
+                  c('parameter_column',
+                    'date_column',
+                    'value_column',
+                    'grouping_column')) %>%
+    mutate(`date_column` = ymd_hm(`date_column`))
+
+  df_airdata_orig <- df_airdata
+
+  if (is.null(parameter))
+  {
+    #add all parameters if parameter is nULL
+    parameter <- unique(df_airdata$parameter_column)
+  }
+
+  if (!any(tolower(parameter) %in% tolower(unique(df_airdata$parameter_column))))
+  {
+    #that means the parameter is not on the data
+    return(airdata)
+  }
+  #identify the min and max dates
+  #fill with the missing dates and time
+  min_date <- min(df_airdata$date_column,na.rm=TRUE)
+  max_date <- max(df_airdata$date_column,na.rm=TRUE)
+
+  df_fill <- df_airdata%>%
+    dplyr::select(`parameter_column`,`grouping_column`) %>%
+    unique()%>%
+    merge(tibble(`date_column` =
+                   seq.POSIXt(min_date,max_date,by='hour')))
+
+  df_airdata <- df_airdata %>%
+    left_join(df_fill) %>%
+    arrange(`date_column`)
+
+  #retrieve the past n_hours of value-----
+  df_airdata_ <- NULL
+  for (i in 1:averaging_time)
+  {
+    if (0)
+    {
+      i=1
+    }
+    df_ <- df_airdata %>%
+      group_by(`grouping_column`,`parameter_column`) %>%
+      dplyr::mutate(prev_value = lag(`value_column`,n=i-1)) %>%
+      dplyr::mutate(n_ = ifelse(is.na(as.numeric(prev_value)),0,1),
+                    lag = i)
+
+    df_airdata_ <- df_airdata_ %>%
+      rbind.fill(df_)
+
+  }
+
+  #calculate the averages, process output-----
+  df_airdata <- df_airdata_ %>%
+    group_by(`grouping_column`,`parameter_column`,`date_column`,`value_column`) %>%
+    dplyr::summarise(total_value = sum(as.numeric(`prev_value`),na.rm = TRUE),
+                     total_n = sum(n_,na.rm=TRUE)) %>%
+    ungroup() %>%
+    dplyr::filter(tolower(`parameter_column`) %in% parameter)%>%
+    mutate(ave_value = total_value/total_n,
+           valid_perc = (total_n/averaging_time)*100) %>%
+    mutate(ave_value = ifelse(valid_perc>=threshold_percent,
+                              ave_value,
+                              ''),
+           `parameter_column` = paste(`parameter_column`,averaging_time,sep='_'))%>%
+    dplyr::select(`grouping_column`,`parameter_column`,`date_column`,ave_value) %>%
+    dplyr::rename(`value_column` = ave_value)
+
+  #combine the result with original input----
+  result <- df_airdata_orig %>%
+    rbind.fill(df_airdata) %>%
+    mutate(`date_column` = as.character(format(`date_column`,'%Y-%m-%d %H:%M'))) %>%
+    arrange(`grouping_column`,`parameter_column`,`date_column`) %>%
+    RENAME_COLUMN(c("date_column","parameter_column","grouping_column","value_column"),
+                  c(date_column,parameter_column,grouping_column,value_column))
+
+  return(result)
+}
+
+
+#' Determine if date is DST in BC or not
+#'
+#' @param datetime
+isit_DST <- function(datetime = Sys.time())
+{
+  if (0)
+  {
+    datetime <- Sys.time()
+    datetime <- '2020-01-01 01:00'
+  }
+
+  str_time_pst <- as.character(ymd_hm(datetime,tz='etc/gmt+8'),'%Y-%m-%d %H:%M')
+  str_time_local <- as.character(format(ymd_hm(str_time_pst,tz='etc/gmt+8'),
+                                        tz='America/Vancouver','%Y-%m-%d %H:%M'))
+  time_diff <- difftime(ymd_hm(str_time_local),ymd_hm(str_time_pst),units ='hours')
+  if (as.integer(time_diff) ==1)
+  {
+    return(TRUE)
+  } else
+  {
+    return(FALSE)
+  }
+}
+
+#' Forward fills data with orevious value
+#'
+#' This addresses the issue where a station has multiple dataloggers
+#' and some dataloggers have not updated recent data
+#' Works only for 1-station entry, no STATION_NAME_FULL
+#'
+#' @param data_all is the dataframe containing all data in original wide format
+#' @param threshold is the number of hours of maximum delay
+FILL_Recent_Data <- function(data_all,threshold=2)
+{
+
+  #package load----
+  RUN_PACKAGE(c('dplyr','tidyr','lubridate'))
+
+  #debug-----
+  if (0)
+  {
+    data_all <- GET_DATA_STATION_DAS('Prince George Plaza 400',
+                                     startdate = '2020-05-01',enddate = '2020-05-20',
+                                     webviewonly = TRUE)
+    threshold <- 2
+  }
+
+  #setup-----
+  #quit if more than one station name
+  if (length(unique(data_all$STATION_NAME))>1)
+  {
+    print('ERROR: More than one station on the list. Please send one')
+    print('Stations found:',unique(data_all$STATION_NAME))
+    return(data_all)
+  }
+
+
+  #define the parameter suffixed
+  suffix <- c('UNITS','ROUNDED','UNIT','INSTRUMENT')
+
+
+  print(paste('Processing',nrow(data_all),'rows of data for forward-filling'))
+  #get column names, retrieve list of parameters----
+  cols_ <- colnames(data_all)
+  maincols <- c('STATION_NAME','DATE_PST')
+  cols_sensor <- cols_[grepl('_ROUNDED$',cols_)]
+  cols_sensor <- gsub('_ROUNDED$','',cols_sensor)
+
+  #switch to longer format
+  data_all <- data_all %>%
+    arrange(ymd_hm(DATE_PST)) %>%
+    dplyr::mutate(index =1:n())
+
+  df_data <- data_all %>%
+    select(c(maincols,'index',cols_sensor)) %>%
+    pivot_longer(cols = -c(maincols,'index'))
+
+  #identify the latest data
+  df_latest <- df_data %>%
+    filter(!(is.na(value))) %>%
+    group_by(STATION_NAME,name) %>%
+    dplyr::mutate(max_index =max(index,na.rm=TRUE)) %>%
+    ungroup() %>%
+    filter(index==max_index) %>%
+    #do not substitute as latest value if >threshold hrs
+    #substitute the DATE_PST as the latest DATE_PST
+    group_by(STATION_NAME) %>%
+    dplyr::mutate(dev_maxindex = max(index,na.rm=TRUE) - index) %>%
+    dplyr::filter(dev_maxindex<=threshold) %>%
+    ungroup()
+
+  #split the original wide table
+  df_result <- NULL
+  for (dev in sort(unique(df_latest$dev_maxindex)))
+  {
+    df_latest_ <- df_latest[df_latest$dev_maxindex==dev,]
+    #define all related parameters, this includes adding the suffix
+    df_cols <- tibble(source_parameter = df_latest$name[df_latest$dev_maxindex == dev]) %>%
+      merge(tibble(param_suffix = c(toupper(suffix),'source_param')))%>%
+      mutate(parameter = paste(source_parameter,param_suffix,sep='_'))%>%
+      mutate(parameter=gsub('_source_param','',parameter))%>%
+      filter(parameter %in% cols_)
+
+    df_ <- data_all %>%
+      select(c(maincols,df_cols$parameter,'index'))
+    if (dev == 0)
+    {
+      df_result <- df_
+    } else
+    {
+      print(paste('Forward filling:',dev,'rows'))
+      df_filler <- df_%>%
+        filter(index==df_latest_$max_index[1]) %>%
+        select(-maincols)
+
+      df_remove<- df_%>%
+        filter(index>df_latest_$max_index[1])%>%
+        select(maincols)
+
+      df_add <- df_remove %>%
+        merge(df_filler)
+
+      df_ <- df_ %>%
+        filter(index<=df_latest_$max_index[1])%>%
+        rbind.fill(df_add) %>%
+        select(-index)
+
+      df_result <- merge(df_result,df_)
+    }
+
+  }
+
+  df_result <- df_result %>%
+    COLUMN_REORDER(cols_)
+
+  return(df_result)
+}
+
+#' Convert to Local Pacific Timezone
+#'
+#' @param DATE_PST is vector of PST date-time in ymd_hm format
+#' @param format is the format of the output
+GET_LOCAL_Time <- function(DATE_PST, format = '%Y-%m-%d %H:%M')
+{
+  #load package
+  RUN_PACKAGE(c('dplyr','lubridate'))
+
+  if (0)
+  {
+    DATE_PST <- df_data_orig_$DATE_PST
+    format = '%B %Y-%m-%d %H:%M'
+  }
+
+  #setup----
+  #makes sure it is character
+  DATE_PST <- as.character(DATE_PST,'%Y-%m-%d %H:%M')
+
+  result <- format(ymd_hm(DATE_PST,tz='etc/gmt+8'),tz='America/Vancouver',format = format)
+  return(result)
+}
+
+#' Retrieves the excel files Containing the Statistical Summary
+#' This fixes the header where in the header is made of two rows
+#'
+#' @param filename is the full path of the file
+GET_SAS_EXCEL_FILE <- function(filename)
+{
+  if (0)
+  {
+    filename <- "A:/Air/Operations ORCS/Data/05_CAAQS/R Summaries/2019_UNSUPPRESSED/Submitted_200520/2019_NO2_UNSUPPRESSED.xlsx"
+  }
+
+  #header of the excel file, extracted separately
+  df_stat_header <- read_excel(filename,n_max=2,col_names = FALSE)
+  df_stat_header_trans  <- df_stat_header%>%
+    data.table::transpose() %>%
+    dplyr::mutate(V1 = gsub('HOURLY PERCENTILES','%(hr)',V1,ignore.case = TRUE)) %>%
+    dplyr::mutate(V1 = gsub('DAILY PERCENTILES','%(day)',V1,ignore.case = TRUE)) %>%
+    dplyr::mutate(V1 = gsub('^.*MONITORING MONTHS.*$','(days)',V1,ignore.case = TRUE)) %>%
+    dplyr::mutate(V1 = gsub('^.*QUARTERLY DATA.*$','(%days)',V1,ignore.case = TRUE))
+
+  #remove NA of column category values
+  repeat
+  {
+    # df_nonNAs <- df_stat_header_trans[!is.na(df_stat_header_trans$V1),]
+    # df_NAs<- df_stat_header_trans[is.na(df_stat_header_trans$V1),]
+
+    df_stat_header_trans <- df_stat_header_trans %>%
+      dplyr::mutate(V1=ifelse(is.na(V1),lag(V1),V1))
+
+    if ((!any(is.na(df_stat_header_trans$V1)))){break}
+  }
+
+  df_stat_header_trans <- df_stat_header_trans %>%
+    dplyr::mutate(columnname = ifelse(is.na(V2),
+                                      V1,
+                                      paste(V2,V1,sep=''))
+    )
+
+  df_stat_official <- read_excel(filename,skip=2,col_names = FALSE)
+
+
+  colnames(df_stat_official) <- df_stat_header_trans$columnname
+  try(
+    df_stat_official <- df_stat_official %>%
+      dplyr::mutate(
+        `Q1(%days)` = as.integer(`Q1(%days)`),
+        `Q2(%days)` = as.integer(`Q2(%days)`),
+        `Q3(%days)` = as.integer(`Q3(%days)`),
+        `Q4(%days)` = as.integer(`Q4(%days)`)
+      ))
+  return(df_stat_official)
+}
