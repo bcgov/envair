@@ -564,16 +564,16 @@ listBC_stations<-function(year=NULL)
     #and also creates a column called STATION_NAME_FULL
     station.details<-station.details%>%
       dplyr::mutate(STATION_NAME_FULL=STATION_NAME)%>%
-      dplyr::mutate(STATION_NAME=gsub(' Met_60','',STATION_NAME_FULL,ignore.case=TRUE))%>%
-      dplyr::mutate(STATION_NAME=gsub('_60','',STATION_NAME,ignore.case=TRUE))%>%
-      dplyr::mutate(STATION_NAME=gsub(' Met_15','',STATION_NAME,ignore.case=TRUE))%>%
-      dplyr::mutate(STATION_NAME=gsub('_15','',STATION_NAME,ignore.case=TRUE))%>%
-      dplyr::mutate(STATION_NAME=gsub(' Met_1','',STATION_NAME,ignore.case=TRUE))%>%
-      dplyr::mutate(STATION_NAME=gsub('_1','',STATION_NAME,ignore.case=TRUE))%>%
-      dplyr::mutate(STATION_NAME=gsub('_OLD','',STATION_NAME,ignore.case=TRUE))%>%
-      dplyr::mutate(STATION_NAME=gsub(' Met','',STATION_NAME,ignore.case=TRUE))%>%
-      dplyr::mutate(STATION_NAME=gsub('_Met','',STATION_NAME,ignore.case=TRUE))%>%
-      dplyr::mutate(STATION_NAME=gsub('_Amb','',STATION_NAME,ignore.case=TRUE))%>%
+      dplyr::mutate(STATION_NAME=gsub(' Met_60$','',STATION_NAME_FULL,ignore.case=TRUE))%>%
+      dplyr::mutate(STATION_NAME=gsub('_60$','',STATION_NAME,ignore.case=TRUE))%>%
+      dplyr::mutate(STATION_NAME=gsub(' Met_15$','',STATION_NAME,ignore.case=TRUE))%>%
+      dplyr::mutate(STATION_NAME=gsub('_15$','',STATION_NAME,ignore.case=TRUE))%>%
+      dplyr::mutate(STATION_NAME=gsub(' Met_1$','',STATION_NAME,ignore.case=TRUE))%>%
+      dplyr::mutate(STATION_NAME=gsub('_1$','',STATION_NAME,ignore.case=TRUE))%>%
+      dplyr::mutate(STATION_NAME=gsub('_OLD$','',STATION_NAME,ignore.case=TRUE))%>%
+      dplyr::mutate(STATION_NAME=gsub(' Met$','',STATION_NAME,ignore.case=TRUE))%>%
+      dplyr::mutate(STATION_NAME=gsub('_Met$','',STATION_NAME,ignore.case=TRUE))%>%
+      dplyr::mutate(STATION_NAME=gsub('_Amb$','',STATION_NAME,ignore.case=TRUE))%>%
       COLUMN_REORDER(columns=c("SERIAL_CODE","EMS_ID","STATION_NAME",'STATION_NAME_FULL'))
 
 

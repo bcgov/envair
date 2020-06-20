@@ -35,7 +35,7 @@ ventingBC_bulletin<-function(date.start=NULL,
   }
   # date.start<-NULL
   #end debug
-  RUN_PACKAGE('lubridate')
+  RUN_PACKAGE(c('lubridate','curl','dplyr'))
   if (is.null(date.start)) {date.start <- as.character(now(),'%Y-%m-%d')}
   #These are pre-defined based on intended output locations if running on DAS server
   #results are based on whether it is saving into ftp or file
@@ -221,7 +221,21 @@ ventingBC_bulletin<-function(date.start=NULL,
     {
       #converting venting.content into an html file similar to the original venting
       #retrieve template
-      temp_<-curl(venting.template)
+      #save in work directory as backup
+      temp_ <- NULL
+      try(temp_<-curl(venting.template))
+      if (is.null(temp_))
+      {
+        print(paste('WEBSITE MISSING:',venting.template))
+        try(temp_ <- curl('venting_template.html_'))
+      } else
+      {
+        #save venting template as backup
+        # for next time, if site is missing
+        writeLines(readLines(venting.template),
+                   'venting_template.html_')
+      }
+
       template_<-data.frame(LINES=unlist(strsplit(readLines(temp_),split='/n')))%>%
         dplyr::mutate(LINES=as.character(LINES))
 
@@ -273,12 +287,12 @@ ventingBC_bulletin<-function(date.start=NULL,
 #'                       If false, this will use simplified map (0.0002 degrees) of <10MB file size
 #' @param isCOVID is boolean; if TRUE, it applies HSSZ fireban due to COVID 19
 #' @param fireban is vector containg the sensitivity zones where a fireban is applied
-#'
+#'                 DOES NOT WORK
 #'  @examples
 #' ventingBC_kml(HD=FALSE)
 #'
 #' @export
-ventingBC_kml<-function(path.output=NULL,HD=TRUE,isCOVID = TRUE,fireban=NULL)
+ventingBC_kml<-function(path.output=NULL,HD=TRUE,isCOVID = FALSE,fireban=NULL)
 {
   #debug
   if (0)
@@ -333,6 +347,9 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE,isCOVID = TRUE,fireban=NULL)
   #read the insert file for kml file
   venting.insert<-readLines(URL.inserfile)
   venting.data <- NULL
+
+  #note that GET_VENTING_ECCC gives a good, fair, poor
+  #here, numeric values assigned ,good =2, fair =1, poor=0
   try(
     venting.data<-GET_VENTING_ECCC(date_today)%>%
       dplyr::mutate(TODAY_VI_NUMERIC=TODAY_VI_DESC)%>%
@@ -380,7 +397,7 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE,isCOVID = TRUE,fireban=NULL)
       'HIGH'
     ))
 
-  #define the rules for venring
+  #define the rules for venting
   df_vent_rule <- tribble(
     ~SENSI,~TODAY_VI_DESC,~TOMORROW_VI_DESC,~BURN,~BURN_DURATION,~NOTE,
     'LOW','GOOD','GOOD','YES (>1 DAY)','\u2264 6 days*','*Up to 6 days burn, subject to start and end times specified in regulation',
@@ -410,9 +427,13 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE,isCOVID = TRUE,fireban=NULL)
     'HIGH','POOR','GOOD','NO','0','',
     'HIGH','POOR','FAIR','NO','0','',
     'HIGH','POOR','POOR','NO','0','',
-    'HIGH','N/A','N/A','NO','0',''
+    'HIGH','N/A','N/A','NO','0','',
+    'LOW','N/A','N/A','NO','0','',
+    'MEDIUM','N/A','N/A','NO','0','',
   )
 
+  #this modifies the rules (df_vent_rule)
+  #and also masks the data content (df_venting.data.final)
   if (isCOVID)
   {
     df_vent_rule <- df_vent_rule %>%
@@ -432,6 +453,7 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE,isCOVID = TRUE,fireban=NULL)
                                   msg_COVID,
                                   NOTE))
 
+    #change the VI_DESC column to N/A to mask the value
     venting.data.final <- venting.data.final %>%
       dplyr::mutate(TODAY_VI_DESC = ifelse(SENSI == 'HIGH',
                                            'N/A',
