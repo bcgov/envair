@@ -507,8 +507,12 @@ listBC_stations<-function(year=NULL)
   #temp<-RCurl::getURL(ftp.station,ftp.use.epsv=FALSE,header=TRUE)
 
   # download.file(ftp.station,destfile=file.temp,quiet=FALSE)
+  #updated 2020-06-10 fix for ON,1 for active, OFF, 0 for inactive
   station.details<-readr::read_csv(ftp.station)%>%
-    dplyr::mutate(STATUS=ifelse(STATUS==1,'ACTIVE','INACTIVE'))
+    dplyr::mutate(STATUS=ifelse(STATUS=='ON',1,STATUS)) %>%
+    dplyr::mutate(STATUS=ifelse(STATUS=='OFF',0,STATUS)) %>%
+    dplyr::mutate(STATUS=ifelse(STATUS==1,'ACTIVE',STATUS)) %>%
+    dplyr::mutate(STATUS=ifelse(STATUS==0,'INACTIVE',STATUS))
 
   #fix if there are no NOTES column
   if (!any('NOTES' %in% colnames(station.details)))
