@@ -33,18 +33,16 @@ importBC_data<-function(parameter_or_station,
   #debug
   if (0)
   {
-    parameters<-c('wspd_sclr')
-    years<-2009:2019
-    parameters='pm25'
-    stations=NULL
-    parameter_or_station<-c('pm25')
-    parameter_or_station <- 'Harmac Cedar Woobank'
+
+    parameter_or_station <- 'no2'
     years <- 2019
     pad = FALSE
+    use_openairformat <- FALSE
+    use_ws_vector <- FALSE
   }
 
   #load packages
-  RUN_PACKAGE(c('dplyr','RCurl','plyr','readr','lubridate','tidyr','stringi'))  #,'feather'
+  RUN_PACKAGE(c('plyr','dplyr','RCurl','readr','lubridate','tidyr','stringi'))  #,'feather'
   if (is.null(years))
   {
     years=as.numeric(format(Sys.Date(),'%Y'))
@@ -101,17 +99,23 @@ importBC_data<-function(parameter_or_station,
         {
           source_<-paste(data.source,data.year,'/',sep='')
         }
+
         list.data<-paste(source_,'/',parameter,".csv",sep='')
 
         print(paste('Retrieving data from:',list.data))
 
-
-        try(df_data <- NULL%>%
-              rbind.fill(readr::read_csv(list.data)%>%
-                           dplyr::mutate(VALIDATION_STATUS=ifelse(data.year<= valcycle,
-                                                                  'VALID','UNVERIFIED')
-                           ))
-        )
+        df_data <- NULL
+        try(df_data <-readr::read_csv(list.data,
+                                      col_types = cols(
+                                        DATE_PST = col_datetime(),
+                                        NAPS_ID = col_character(),
+                                        EMS_ID = col_character(),
+                                        RAW_VALUE = col_double(),
+                                        ROUNDED_VALUE = col_double()
+                                      )) %>%
+              dplyr::mutate(VALIDATION_STATUS=ifelse(data.year<= valcycle,
+                                                     'VALID','UNVERIFIED')
+              ))
         #filter data to specified year
         #filter year----
         if (0)
@@ -133,15 +137,6 @@ importBC_data<-function(parameter_or_station,
 
 
       }
-
-
-
-
-
-
-
-
-
     }
 
 
@@ -174,7 +169,7 @@ importBC_data<-function(parameter_or_station,
     #remove duplicates in parameter data----
     data.result <- data.result%>%
       RENAME_COLUMN(c('DATE','TIME'))  #remove these columns
-    #covert DATE_PST to POSIXct date
+    #convert DATE_PST to POSIXct date
     tz(data.result$DATE_PST) <- 'Etc/GMT+8'
 
     #DISABLED feature----
@@ -296,7 +291,14 @@ importBC_data<-function(parameter_or_station,
 
             print(paste('Downloading data from:',source_))
             data.result<-data.result%>%
-              plyr::rbind.fill(readr::read_csv(source_))
+              plyr::rbind.fill(readr::read_csv(source_,
+                                               col_types = cols(
+                                                 DATE_PST = col_datetime(),
+                                                 NAPS_ID = col_character(),
+                                                 EMS_ID = col_character(),
+                                                 RAW_VALUE = col_double(),
+                                                 ROUNDED_VALUE = col_double()
+                                               )))
           }
         }
       }
@@ -339,11 +341,11 @@ importBC_data<-function(parameter_or_station,
       unique()%>%
       group_by(STATION_NAME)%>%
       merge(tidyr::tibble(DATE_PST= seq.POSIXt(from = as.POSIXct(paste(
-                                                                 year(min(data.result$DATE_PST,na.rm = TRUE)),'-01-01 01:00',
-                                                                 sep=''
-                                                                 ), tz='etc/GMT+8'),
-                                               to = as.POSIXct(as.character(max(data.result$DATE_PST,na.rm = TRUE)),tz='etc/GMT+8'),
-                                               by='hour')))
+        year(min(data.result$DATE_PST,na.rm = TRUE)),'-01-01 01:00',
+        sep=''
+      ), tz='etc/GMT+8'),
+      to = as.POSIXct(as.character(max(data.result$DATE_PST,na.rm = TRUE)),tz='etc/GMT+8'),
+      by='hour')))
 
     print(paste(nrow(df_padding) - nrow(data.result),'rows padded' ))
 
