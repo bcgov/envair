@@ -4,8 +4,7 @@
 \alias{GET_STATION_DETAILS_FTP}
 \title{GET STATION DETAILS FUNCTION}
 \usage{
-GET_STATION_DETAILS_FTP(data.year = as.character(format(Sys.Date(),
-  "\%Y")))
+GET_STATION_DETAILS_FTP(data.year = as.character(format(Sys.Date(), "\%Y")))
 }
 \arguments{
 \item{data.year}{the year where station details are retrieved from. Defaults to current year
