@@ -1202,13 +1202,13 @@ GET_DATEPADDED_DATA<-function(data.unpadded,column.datefield='DATE_PST',
 #'
 #' This function retrieves the list of folders that are in the specified URL
 #' @param source.url is the URL containing the data folders, default is ECCC datamart
-GET_URL_FOLDERS<-function(source.url='http://dd.weatheroffice.ec.gc.ca/bulletins/alphanumeric/' )
+GET_URL_FOLDERS<-function(source.url='http://dd.weather.gc.ca/bulletins/alphanumeric/' )
 {
   if (0)
   {
-    source.url='https://dd.weatheroffice.ec.gc.ca/bulletins/alphanumeric/20191107/FL/CWVR'
-    source.url = 'https://dd.weatheroffice.ec.gc.ca/bulletins/alphanumeric/20191108/FL/CWVR/14/'
-    source.url <- 'http://dd.weatheroffice.ec.gc.ca/air_quality/aqhi/pyr/observation/realtime/csv/'
+    source.url='https://dd.weather.gc.ca/bulletins/alphanumeric/20191107/FL/CWVR'
+    source.url = 'https://dd.weather.gc.ca/bulletins/alphanumeric/20191108/FL/CWVR/14/'
+    source.url <- 'http://dd.weather.gc.ca/air_quality/aqhi/pyr/observation/realtime/csv/'
   }
   #retrieves list of files from the URL
   RUN_PACKAGE(c('dplyr','tidyr','httr','curl'))

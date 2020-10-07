@@ -54,7 +54,7 @@ ventingBC_bulletin<-function(date.start=NULL,
 
   #PURPOSE: Retrieves venting data from the specified URL
   #venting.metadata='ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/Air_Quality/VentingMetaData.csv'
-  venting.url='https://dd.weatheroffice.ec.gc.ca/bulletins/alphanumeric/'    #ECCC venting index data
+  venting.url='https://dd.weather.gc.ca/bulletins/alphanumeric/'    #ECCC venting index data
   #venting.metadata='ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/Air_Quality/VentingMetaData.csv'
   venting.template='https://envistaweb.env.gov.bc.ca/aqo/files/bulletin/venting_template.html'
   RUN_PACKAGE(c('dplyr','curl'))
@@ -722,7 +722,7 @@ GET_VENTING_ECCC<-function(date.start=NULL)
   RUN_PACKAGE(c('dplyr','data.table','readr','RCurl','tibble','lubridate','tidyr'))
   #PURPOSE: Retrieves venting data from the specified URL
   #venting.metadata='ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/Air_Quality/VentingMetaData.csv'
-  venting.url='http://dd.weatheroffice.ec.gc.ca/bulletins/alphanumeric/'    #ECCC venting index data
+  venting.url='http://dd.weather.gc.ca/bulletins/alphanumeric/'    #ECCC venting index data
   #venting.metadata='ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/Air_Quality/VentingMetaData.csv'
   venting.metadata='https://envistaweb.env.gov.bc.ca/aqo/files/VentingMetaData.csv'
   venting.url2 <- 'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/VentingBulletins/'
@@ -955,8 +955,8 @@ importECCC_forecast<-function(parameter=NULL)
   #end debug
 
   RUN_PACKAGE(c('dplyr','tidyr','XML'))
-  source.url<-'http://dd.weatheroffice.ec.gc.ca/air_quality/aqhi/pyr/forecast/model/csv/'
-  description.url<-'http://dd.weatheroffice.ec.gc.ca/air_quality/doc/AQHI_XML_File_List.xml' #contains details of AQHI sites
+  source.url<-'http://dd.weather.gc.ca/air_quality/aqhi/pyr/forecast/model/csv/'
+  description.url<-'http://dd.weather.gc.ca/air_quality/doc/AQHI_XML_File_List.xml' #contains details of AQHI sites
   parameter<-tolower(parameter)
   source.files<-GET_URL_FOLDERS(source.url)%>%
     dplyr::filter(TYPE=='[TXT]')%>%
