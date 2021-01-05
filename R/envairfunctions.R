@@ -1597,7 +1597,7 @@ FIX_tooltip <- function(txt,sep_string='<br>')
   df_txt %>%
     tidyr::separate(Text,sep=sep_string,into=lst_,extra = 'merge',remove = TRUE)%>%
     pivot_longer(cols=lst_,names_to='line',values_to = 'content')%>%
-    filter(!is.na(content),
+    dplyr::filter(!is.na(content),
            content!='')%>%
     dplyr::mutate(char_length = nchar(content))%>%
     group_by(index)%>%
@@ -1709,7 +1709,7 @@ GET_RUNNING_AVG <- function(airdata,parameter=NULL,
                     lag = i)
 
     df_airdata_ <- df_airdata_ %>%
-      rbind.fill(df_)
+      plyr::rbind.fill(df_)
 
   }
 
@@ -1731,7 +1731,7 @@ GET_RUNNING_AVG <- function(airdata,parameter=NULL,
 
   #combine the result with original input----
   result <- df_airdata_orig %>%
-    rbind.fill(df_airdata) %>%
+    plyr::rbind.fill(df_airdata) %>%
     mutate(`date_column` = as.character(format(`date_column`,'%Y-%m-%d %H:%M'))) %>%
     arrange(`grouping_column`,`parameter_column`,`date_column`) %>%
     RENAME_COLUMN(c("date_column","parameter_column","grouping_column","value_column"),
@@ -1820,11 +1820,11 @@ FILL_Recent_Data <- function(data_all,threshold=2)
 
   #identify the latest data
   df_latest <- df_data %>%
-    filter(!(is.na(value))) %>%
+    dplyr::filter(!(is.na(value))) %>%
     group_by(STATION_NAME,name) %>%
     dplyr::mutate(max_index =max(index,na.rm=TRUE)) %>%
     ungroup() %>%
-    filter(index==max_index) %>%
+    dplyr::filter(index==max_index) %>%
     #do not substitute as latest value if >threshold hrs
     #substitute the DATE_PST as the latest DATE_PST
     group_by(STATION_NAME) %>%
@@ -1842,7 +1842,7 @@ FILL_Recent_Data <- function(data_all,threshold=2)
       merge(tibble(param_suffix = c(toupper(suffix),'source_param')))%>%
       mutate(parameter = paste(source_parameter,param_suffix,sep='_'))%>%
       mutate(parameter=gsub('_source_param','',parameter))%>%
-      filter(parameter %in% cols_)
+      dplyr::filter(parameter %in% cols_)
 
     df_ <- data_all %>%
       select(c(maincols,df_cols$parameter,'index'))
@@ -1853,19 +1853,19 @@ FILL_Recent_Data <- function(data_all,threshold=2)
     {
       print(paste('Forward filling:',dev,'rows'))
       df_filler <- df_%>%
-        filter(index==df_latest_$max_index[1]) %>%
+        dplyr::filter(index==df_latest_$max_index[1]) %>%
         select(-maincols)
 
       df_remove<- df_%>%
-        filter(index>df_latest_$max_index[1])%>%
+        dplyr::filter(index>df_latest_$max_index[1])%>%
         select(maincols)
 
       df_add <- df_remove %>%
         merge(df_filler)
 
       df_ <- df_ %>%
-        filter(index<=df_latest_$max_index[1])%>%
-        rbind.fill(df_add) %>%
+        dplyr::filter(index<=df_latest_$max_index[1])%>%
+        plyr::rbind.fill(df_add) %>%
         select(-index)
 
       df_result <- merge(df_result,df_)

@@ -117,18 +117,18 @@ importBC_data<-function(parameter_or_station,
                                                      'VALID','UNVERIFIED')
               ))
         #filter data to specified year
-        #filter year----
+        #dplyr::filter year----
         if (0)
         {
           df_data <- df_data %>%
-            filter(STATION_NAME == 'Prince George Plaza 400')
+            dplyr::filter(STATION_NAME == 'Prince George Plaza 400')
         }
 
         if (!is.null(df_data))
         {
           df_data <- df_data %>%
             dplyr::mutate(year_= year(DATE_PST - 3600)) %>%
-            filter(year_ %in% years) %>%
+            dplyr::filter(year_ %in% years) %>%
             RENAME_COLUMN('year_')
 
           data.result <- plyr::rbind.fill(data.result, df_data)
@@ -203,7 +203,7 @@ importBC_data<-function(parameter_or_station,
       #index the instrument if it is a duplicate
 
       duplicate <- duplicate %>%
-        filter(number>1) %>%
+        dplyr::filter(number>1) %>%
         group_by(key) %>%
         dplyr::mutate(index = 1:n(),
                       INSTRUMENT = ifelse(is.na(INSTRUMENT),'UNKNOWN',as.character(INSTRUMENT))) %>%
@@ -224,11 +224,11 @@ importBC_data<-function(parameter_or_station,
 
       #these contain the station without duplicates
       df_result_noduplicate <- data.result %>%
-        filter(!key %in% duplicate$key)
+        dplyr::filter(!key %in% duplicate$key)
 
       #these contain station with duplicates, perform counts
       df_result_duplicate <- data.result %>%
-        filter(key %in% duplicate$key)
+        dplyr::filter(key %in% duplicate$key)
 
       df_result_duplicate <- df_result_duplicate %>%
         #replace instrument with those re-defined in duplicate
