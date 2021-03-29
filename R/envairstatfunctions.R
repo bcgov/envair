@@ -29,7 +29,7 @@ GET_STATISTICS_PARAMETER<-function(data.year,parameter,instrument.ignore=NULL)
 
   if (0)
   {
-    data.year <- 2019
+    data.year <- 2020
     parameter <- 'o3'
     source('envairfunctions.R')
     source('envairstatfunctions.R')
