@@ -1,16 +1,10 @@
-
 ---
-output: 
-  github_document: 
-    toc: TRUE
+output: github_document
+html_preview: TRUE
+toc: TRUE
 ---
-
 
 <!-- Edit the README.Rmd only!!! The README.md is generated automatically from README.Rmd. -->
-
-bcgov/envair: BC air quality data retrieval and analysis tool
-==========================================================================
-
 
 ```{r, echo = FALSE}
 knitr::opts_chunk$set(
@@ -19,13 +13,17 @@ knitr::opts_chunk$set(
 )
 ```
 
-# Overview
+# envair
 
-bcgov/envair is an R package developed by the BC Ministry of Environment and Climate Change Strategy  Knowledge Management Branch/Environmental and Climate Monitoring Section (ENV/KMB/ECMS) air quality monitoring unit. Package enables R-based retrieval and processing of [air quality monitoring data](https://envistaweb.env.gov.bc.ca/). Output is now compatible with the popular [openair package](https://cran.r-project.org/web/packages/openair/openair.pdf).
+[![Lifecycle:Maturing](https://img.shields.io/badge/Lifecycle-Maturing-007EC6)](<Redirect-URL>)  
 
-# Installation 
+## Overview
 
-You can install `envair` directly from this GitHub repository. To proceed, you will need the [remotes](https://cran.r-project.org/package=remotes) package:
+`envair` is an R package developed by the BC Ministry of Environment and Climate Change Strategy Knowledge Management Branch/Environmental and Climate Monitoring Section (ENV/KMB/ECMS) air quality monitoring unit. `envair` enables retrieval and processing of [air quality monitoring data](https://envistaweb.env.gov.bc.ca/) from the ambient air quality provincial monitoring network. Output is now compatible with the popular [openair package](https://cran.r-project.org/web/packages/openair/openair.pdf).
+
+## Installation 
+
+`envair` can be installed directly from this GitHub repository. To proceed, you will need the [remotes](https://cran.r-project.org/package=remotes) package:
 
 ```{r, eval=FALSE}
 install.packages("remotes")
@@ -38,7 +36,7 @@ remotes::install_github("bcgov/envair")
 library(envair)
 ```
 
-# Functions
+## Functions
 
 * `importBC_data()` Retrieves station or parameter data from specified year/s between 1980 and yesterday.
 
@@ -58,10 +56,7 @@ library(envair)
 
 * `ventingBC_kml()` Creates a kml or shape file based on the 2019 OBSCR rules. This incorporates venting index and sensitivity zones.
 
-
-
-# Usage and Examples
-
+## Usage and Examples
 
 #### `importBC_data()`
 
@@ -119,7 +114,6 @@ listBC_stations(2016)
 ```
 
 
-
 ```{r, echo = FALSE}
 table_ <- read.csv('listbc_stations.csv',sep=',')
 knitr::kable(table_[1:4,])
@@ -166,7 +160,6 @@ importECCC_forecast('no2')
 
 * creates a kml object based on the 2019 OBSCR rules
 * directory to save kml file can be specified. File will be saved in that directory as _Venting_Index_HD.kml_.
-
 
 ```{r, eval = FALSE}
 ventingBC_kml()
