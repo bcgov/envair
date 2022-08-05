@@ -35,12 +35,15 @@ knitr::opts_chunk$set(
 ```
 
 # bcgovr 
+[![img](https://img.shields.io/badge/Lifecycle-Maturing-007EC6)](https://github.com/bcgov/repomountie/blob/master/doc/lifecycle-badges.md)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-# Overview
+
+## Overview
 
 bcgov/envair is an R package developed by the BC Ministry of Environment and Climate Change Strategy  Knowledge Management Branch/Environmental and Climate Monitoring Section (ENV/KMB/ECMS) air quality monitoring unit. Package enables R-based retrieval and processing of [air quality monitoring data](https://envistaweb.env.gov.bc.ca/). Output is now compatible with the popular [openair package](https://cran.r-project.org/web/packages/openair/openair.pdf).
 
-# Installation 
+## Installation 
 
 You can install `envair` directly from this GitHub repository. To proceed, you will need the [remotes](https://cran.r-project.org/package=remotes) package:
 
@@ -55,7 +58,7 @@ remotes::install_github("bcgov/envair")
 library(envair)
 ```
 
-# Functions
+## Functions
 
 * `importBC_data()` Retrieves station or parameter data from specified year/s between 1980 and yesterday.
 
@@ -77,7 +80,7 @@ library(envair)
 
 
 
-# Usage and Examples
+## Usage and Examples
 
 
 #### `importBC_data()`

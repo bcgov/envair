@@ -2,24 +2,36 @@
 -   <a href="#bcgovenvair-bc-air-quality-data-retrieval-and-analysis-tool"
     id="toc-bcgovenvair-bc-air-quality-data-retrieval-and-analysis-tool">bcgov/envair:
     BC air quality data retrieval and analysis tool</a>
--   <a href="#bcgovr-" id="toc-bcgovr-">bcgovr
-    <img src="tools/readme/logo.png" align="right" /></a>
--   <a href="#overview" id="toc-overview">Overview</a>
--   <a href="#installation" id="toc-installation">Installation</a>
--   <a href="#functions" id="toc-functions">Functions</a>
--   <a href="#usage-and-examples" id="toc-usage-and-examples">Usage and
-    Examples</a>
+-   <a href="#bcgovr" id="toc-bcgovr">bcgovr</a>
+    -   <a href="#overview" id="toc-overview">Overview</a>
+    -   <a href="#installation" id="toc-installation">Installation</a>
+    -   <a href="#functions" id="toc-functions">Functions</a>
+    -   <a href="#usage-and-examples" id="toc-usage-and-examples">Usage and
+        Examples</a>
 
+<!--
+Copyright 2022 Province of British Columbia
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and limitations under the License.
+-->
 <!-- Edit the README.Rmd only!!! The README.md is generated automatically from README.Rmd. -->
 
 # bcgov/envair: BC air quality data retrieval and analysis tool
 
-# bcgovr <img src="tools/readme/logo.png" align="right" />
+# bcgovr
 
 [![img](https://img.shields.io/badge/Lifecycle-Maturing-007EC6)](https://github.com/bcgov/repomountie/blob/master/doc/lifecycle-badges.md)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-# Overview
+## Overview
 
 bcgov/envair is an R package developed by the BC Ministry of Environment
 and Climate Change Strategy Knowledge Management Branch/Environmental
@@ -29,7 +41,7 @@ monitoring data](https://envistaweb.env.gov.bc.ca/). Output is now
 compatible with the popular [openair
 package](https://cran.r-project.org/web/packages/openair/openair.pdf).
 
-# Installation
+## Installation
 
 You can install `envair` directly from this GitHub repository. To
 proceed, you will need the
@@ -47,7 +59,7 @@ remotes::install_github("bcgov/envair")
 library(envair)
 ```
 
-# Functions
+## Functions
 
 -   `importBC_data()` Retrieves station or parameter data from specified
     year/s between 1980 and yesterday.
@@ -79,7 +91,7 @@ library(envair)
 -   `ventingBC_kml()` Creates a kml or shape file based on the 2019
     OBSCR rules. This incorporates venting index and sensitivity zones.
 
-# Usage and Examples
+## Usage and Examples
 
 #### `importBC_data()`
 
