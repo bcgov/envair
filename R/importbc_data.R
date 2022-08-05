@@ -60,6 +60,7 @@ importBC_data<-function(parameter_or_station,
 
   temp_ <- as.character(unlist(stringi::stri_split_lines(getURL(data.unvalidated_source,dirlistonly=TRUE))))
   temp_<-gsub('.csv','',temp_,ignore.case=TRUE)
+
   if (any(tolower(parameter_or_station) %in% tolower(temp_)))
   {
     parameters <- parameter_or_station
@@ -238,7 +239,7 @@ importBC_data<-function(parameter_or_station,
             dplyr::select(key,STATION_NAME_FULL,INSTRUMENT)
         )
 
-      data.result <- rbind.fill(df_result_noduplicate,df_result_duplicate) %>%
+      data.result <- plyr::rbind.fill(df_result_noduplicate,df_result_duplicate) %>%
         RENAME_COLUMN(c('year_','key'))%>%
         dplyr::arrange(STATION_NAME,DATE_PST)
 
