@@ -1,10 +1,30 @@
 Type: Package
 Package: envair
 Title: BC ENV Air Quality Monitoring Data Access
-Version: 0.0.3.000
-Authors@R: person("Jerome", "Robles", email = "jerome.robles@gov.bc.ca", role = c("aut", "cre"))
+Version: 0.1.0.000
+Authors@R: 
+    c(person(given = "Jerome", 
+             family = "Robles", 
+             email = "jerome.robles@gov.bc.ca", 
+             role = c("aut", "cre")),
+      person(given = "Zoe",
+             family="Gao",
+             email="zoe.gao@gov.bc.ca",
+             role=c("aut", "cre")),
+      person(given = "Province of British Columbia",
+             role = "cph"))   
+    )
 Description: Retrieve air quality monitoring data from the BC Ministry of Environnment and Climate Change Public FTP
 Depends: R (>= 3.5.1)
+Imports:
+     dplyr (>=1.0),
+     RCurl (>=1.98-1.7),
+     readr (>=2.1.2),
+     tibble (>=3.1.8),
+     stringi (>=1.7.6),
+     plyr (>=1.8.7),
+     lubridate (>=1.8.0),
+     curl (>=4.3.2)
 License: Apache 
 Encoding: UTF-8
 LazyData: true
