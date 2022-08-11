@@ -10,7 +10,7 @@ Authors@R:
       person(given = "Zoe",
              family="Gao",
              email="zoe.gao@gov.bc.ca",
-             role=c("aut", "cre")),
+             role=c("aut", "ctr")),
       person(given = "Province of British Columbia",
              role = "cph")   
     )
