@@ -21,6 +21,8 @@
 #'              if 'csv' it creates the csv file that populates the http://www.env.gov.bc.ca/epd/bcairquality/aqo/csv/VentingIndex.csv
 #'
 #' ventingBC_bulletin()
+#'
+#' @export
 ventingBC_bulletin<-function(date.start=NULL,
                              savefile=NULL,
                              output='html')
@@ -35,7 +37,7 @@ ventingBC_bulletin<-function(date.start=NULL,
   }
   # date.start<-NULL
   #end debug
-  RUN_PACKAGE(c('lubridate','curl','dplyr'))
+  # RUN_PACKAGE(c('lubridate','curl','dplyr'))
   if (is.null(date.start)) {date.start <- as.character(now(),'%Y-%m-%d')}
   #These are pre-defined based on intended output locations if running on DAS server
   #results are based on whether it is saving into ftp or file
