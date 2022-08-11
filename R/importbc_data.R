@@ -24,7 +24,6 @@
 #' importBC_data('pm25',2015:2016,use_openairformat = FALSE)
 #' importBC_data(c('Prince George','Kamloops'),c(2010,2015))
 #'
-#' @import dplyr
 #' @export
 importBC_data<-function(parameter_or_station,
                         years=NULL,use_openairformat=TRUE,
