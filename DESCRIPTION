@@ -12,7 +12,7 @@ Authors@R:
              email="zoe.gao@gov.bc.ca",
              role=c("aut", "cre")),
       person(given = "Province of British Columbia",
-             role = "cph"))   
+             role = "cph")   
     )
 Description: Retrieve air quality monitoring data from the BC Ministry of Environnment and Climate Change Public FTP
 Depends: R (>= 3.5.1)
