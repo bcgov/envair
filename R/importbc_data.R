@@ -15,15 +15,16 @@
 #' @param years the years that will be retrieved. For sequence, use 2009:2015. For non
 #' sequential years, use c(2010,2015,2018)
 #' If not declared, the current year will be used
-#'@param use_openairformat is boolean,if TRUE, output is compatible with openair
-#'#'@param use_ws_vector default is FALSE, if TRUE and use_openairformat is TRUE, ws is the vector wind speed
-#'@param pad, default is FALSE. if true, it will pad missing dates. This requires greater memory
+#' @param use_openairformat is boolean,if TRUE, output is compatible with openair
+#' @param use_ws_vector default is FALSE, if TRUE and use_openairformat is TRUE, ws is the vector wind speed
+#' @param pad, default is FALSE. if true, it will pad missing dates. This requires greater memory
 #'
 #'@examples
 #' importBC_data('Prince George Plaza 400')
 #' importBC_data('pm25',2015:2016,use_openairformat = FALSE)
 #' importBC_data(c('Prince George','Kamloops'),c(2010,2015))
 #'
+#' @import dplyr
 #' @export
 importBC_data<-function(parameter_or_station,
                         years=NULL,use_openairformat=TRUE,

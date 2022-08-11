@@ -62,7 +62,7 @@ GET_FILE_CSV<-function(list.files,ftp.path,path.local=NULL,clean=TRUE)
   #get details of files in FTP
   data.filedetails<-
     data.frame(FILEALL=unlist(strsplit(x=
-                                         getURL(url=ftp.path,verbose=FALSE,
+                                         RCurl::getURL(url=ftp.path,verbose=FALSE,
                                                 ftp.use.epsv=TRUE
                                          ),
                                        split='\r\n')))%>%
@@ -570,7 +570,7 @@ GET_FTP_DETAILS<-function(path.ftp)
 {
   data.filedetails<-
     data.frame(FILEALL=unlist(strsplit(x=
-                                         getURL(url=path.ftp,verbose=FALSE,
+                                         RCurl::getURL(url=path.ftp,verbose=FALSE,
                                                 ftp.use.epsv=TRUE
                                          ),
                                        split='\r\n')))%>%
@@ -623,7 +623,7 @@ GET_PARAMETER_DATA<-function(data.parameter,
 
 
   #identify the latest validation cycle data
-  temp<-as.character(unlist(strsplit(getURL(data.source,dirlistonly=TRUE),split='\r\n')))
+  temp<-as.character(unlist(strsplit(RCurl::getURL(data.source,dirlistonly=TRUE),split='\r\n')))
   temp<-temp[nchar(temp)==4] #get only 4-digit folders
   validation.lastvalidationcycle<-max(as.numeric(temp),na.rm = TRUE)
 
@@ -925,7 +925,7 @@ GET_RECENT_STATION_DATA<-function(STATION='ALL',timebase=60)
     unique()
 
   #retrieve data from ftp
-  files_<-data.frame(FILENAME=as.character(unlist(strsplit(getURL(
+  files_<-data.frame(FILENAME=as.character(unlist(strsplit(RCurl::getURL(
     data.ftpsource, dirlistonly=TRUE),split='\r\n'))),
     ATTRIBUTES=as.character(unlist(strsplit(getURL(
       data.ftpsource, dirlistonly=FALSE),split='\r\n')))
@@ -1221,7 +1221,7 @@ GET_URL_FOLDERS<-function(source.url='http://dd.weather.gc.ca/bulletins/alphanum
   RUN_PACKAGE(c('dplyr','tidyr','httr','curl'))
 
   #note: Do not use the RCurl version of reading https, there is an SSL
-  set_config( config( ssl_verifypeer = 0L ) )
+  set_config(config( ssl_verifypeer = 0L ) )
 
   result <- NULL
 
