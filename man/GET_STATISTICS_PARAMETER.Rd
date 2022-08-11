@@ -4,21 +4,15 @@
 \alias{GET_STATISTICS_PARAMETER}
 \title{Gets the statistical details of a parameter}
 \usage{
-GET_STATISTICS_PARAMETER(
-  data.year,
-  parameter,
-  instrument.ignore = !(tolower(parameter) \%in\% c("pm25", "pm10")),
-  data.source = NULL
-)
+GET_STATISTICS_PARAMETER(data.year, parameter, instrument.ignore = NULL)
 }
 \arguments{
 \item{data.year}{numeric year. includes unverified and validated year}
 
 \item{parameter}{string or vector containing the parameter that will be evaluated.}
 
-\item{instrument.ignore}{if specified, ignores the instrument technology and merges dataset during statistical calculations. Default is FALSE for particulate (PM25,PM10) instruments}
-
-\item{data.source}{defines the source of data if manually downloaded, default of NULL means it grabs from the BC ENV's open data portal}
+\item{instrument.ignore}{if specified, ignores the instrument technology and merges dataset during statistical calculations.
+Default is NULL where it becomes FALSE for particulate (PM25,PM10) instruments}
 }
 \description{
 This function renames or deletes the column of a dataframe based on its name

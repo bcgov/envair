@@ -1750,7 +1750,7 @@ GET_RUNNING_AVG <- function(airdata,parameter=NULL,
 
 #' Determine if date is DST in BC or not
 #'
-#' @param datetime
+#' @param datetime is the date and time
 isit_DST <- function(datetime = Sys.time())
 {
   if (0)

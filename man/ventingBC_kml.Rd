@@ -4,14 +4,18 @@
 \alias{ventingBC_kml}
 \title{Creates kml files or shapefiles}
 \usage{
-ventingBC_kml(path.output = NULL, HD = TRUE)
+ventingBC_kml(path.output = NULL, HD = TRUE, isCOVID = FALSE, fireban = NULL)
 }
 \arguments{
 \item{path.output}{where kml files will be saved. If null, function returns shape file}
 
 \item{HD}{is boolean. If true, it will use high quality map >50 MB. This exceeds Web ARcMap requirements
-                      If false, this will use simplified map (0.0002 degrees) of <10MB file size
+If false, this will use simplified map (0.0002 degrees) of <10MB file size}
 
+\item{isCOVID}{is boolean; if TRUE, it applies HSSZ fireban due to COVID 19}
+
+\item{fireban}{is vector containg the sensitivity zones where a fireban is applied
+                DOES NOT WORK
  @examples
 ventingBC_kml(HD=FALSE)}
 }

@@ -20,7 +20,7 @@
 #'              if 'ftp' then it will save into the Open Data Portal FTP page
 #'              if 'csv' it creates the csv file that populates the http://www.env.gov.bc.ca/epd/bcairquality/aqo/csv/VentingIndex.csv
 #'
-#' @example
+#' @examples
 #' ventingBC_bulletin()
 #'
 #' @export

@@ -4,10 +4,20 @@
 \alias{GET_VALID_COUNT}
 \title{Counts the number of valid hours or days}
 \usage{
-GET_VALID_COUNT(data.hourly, day.threshold = 0.75, precision = 1,
-  Q2Q3only = FALSE)
+GET_VALID_COUNT(
+  data.hourly,
+  day.threshold = 0.75,
+  precision = 1,
+  Q2Q3only = FALSE
+)
 }
 \arguments{
+\item{data.hourly}{hourly data}
+
+\item{day.threshold}{threshold for data captire}
+
+\item{precision}{precision of output}
+
 \item{Q2Q3}{only
 GET_VALID_COUNT()}
 }

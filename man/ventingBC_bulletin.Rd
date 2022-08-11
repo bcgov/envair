@@ -16,10 +16,8 @@ If savefile is terminated in '/', another folder for the data year (~./2019/EC_)
 the}
 
 \item{output}{is either 'html' or 'ftp'. If 'html', it will create html file into envistaweb
-             if 'ftp' then it will save into the Open Data Portal FTP page
-             if 'csv' it creates the csv file that populates the http://www.env.gov.bc.ca/epd/bcairquality/aqo/csv/VentingIndex.csv
-
-ventingBC_bulletin()}
+if 'ftp' then it will save into the Open Data Portal FTP page
+if 'csv' it creates the csv file that populates the http://www.env.gov.bc.ca/epd/bcairquality/aqo/csv/VentingIndex.csv}
 }
 \description{
 This function retrieves venting data from ECCC datamart
@@ -27,4 +25,8 @@ to generate the text bulletin
 function here was developed to run in the DAS server (PARTICULATE.dmz)
 which saves the resulting venting.html file into E:/WebSites/wwwroot/Web2016/aqo/files/bulletin/
 and will show up in
+}
+\examples{
+ventingBC_bulletin()
+
 }
