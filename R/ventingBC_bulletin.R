@@ -39,7 +39,9 @@ ventingBC_bulletin <- function(date.start=NULL,
   # date.start<-NULL
   #end debug
   # RUN_PACKAGE(c('lubridate','curl','dplyr'))
-  if (is.null(date.start)) {date.start <- as.character(now(),'%Y-%m-%d')}
+  if (is.null(date.start)) {
+    date.start <- as.character(format(Sys.Date(),tz='etc/GMT+2',format ='%Y-%m-%d'))
+    }
   #These are pre-defined based on intended output locations if running on DAS server
   #results are based on whether it is saving into ftp or file
   default_html <- 'E:/WebSites/wwwroot/Web2016/aqo/files/bulletin/venting.html'
@@ -60,7 +62,7 @@ ventingBC_bulletin <- function(date.start=NULL,
   venting.url='https://dd.weather.gc.ca/bulletins/alphanumeric/'    #ECCC venting index data
   #venting.metadata='ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/Air_Quality/VentingMetaData.csv'
   venting.template='https://envistaweb.env.gov.bc.ca/aqo/files/bulletin/venting_template.html'
-  RUN_PACKAGE(c('dplyr','curl'))
+  # RUN_PACKAGE(c('dplyr','curl'))
   if (is.null(date.start))
   {
     #get the latest venting files
