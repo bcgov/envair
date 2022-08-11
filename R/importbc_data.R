@@ -57,9 +57,9 @@ importBC_data<-function(parameter_or_station,
 
 
   #identify if parameter or station based on the list of parameters that are in unvalidated source
-  # temp_<-as.character(unlist(strsplit(getURL(data.unvalidated_source,dirlistonly=TRUE),split='\r\n')))
+  # temp_<-as.character(unlist(strsplit(RCurl::getURL(data.unvalidated_source,dirlistonly=TRUE),split='\r\n')))
 
-  temp_ <- as.character(unlist(stringi::stri_split_lines(getURL(data.unvalidated_source,dirlistonly=TRUE))))
+  temp_ <- as.character(unlist(stringi::stri_split_lines(RCurl::getURL(data.unvalidated_source,dirlistonly=TRUE))))
   temp_<-gsub('.csv','',temp_,ignore.case=TRUE)
 
   if (any(tolower(parameter_or_station) %in% tolower(temp_)))
@@ -75,7 +75,7 @@ importBC_data<-function(parameter_or_station,
 
 
   #identify the latest validation cycle data
-  temp_<-as.character(unlist(stringi::stri_split_lines(getURL(data.source,dirlistonly=TRUE))))
+  temp_<-as.character(unlist(stringi::stri_split_lines(RCurl::getURL(data.source,dirlistonly=TRUE))))
   temp_<-temp_[nchar(temp_)==4] #get only 4-digit folders
   valcycle<-max(as.numeric(temp_),na.rm = TRUE)
 
@@ -283,7 +283,7 @@ importBC_data<-function(parameter_or_station,
           }
 
           temp_<-NULL
-          temp_<-try(as.character(unlist(stringi::stri_split_lines(getURL(source_,dirlistonly=TRUE)))))
+          temp_<-try(as.character(unlist(stringi::stri_split_lines(RCurl::getURL(source_,dirlistonly=TRUE)))))
 
           sourcefile_<-unlist(strsplit(source_,split='/'))
           sourcefile_<-sourcefile_[length(sourcefile_)]
@@ -492,7 +492,7 @@ listBC_stations<-function(year=NULL)
   # dir.create(dir.temp,showWarnings = FALSE)
 
   #identify the latest validation cycle
-  temp_<-as.character(unlist(stringi::stri_split_lines(getURL("ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/AnnualSummary/",
+  temp_<-as.character(unlist(stringi::stri_split_lines(RCurl::getURL("ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/AnnualSummary/",
                                                      dirlistonly=TRUE))))
   temp_<-temp_[nchar(temp_)==4] #get only 4-digit folders
   valcycle<-max(as.numeric(temp_),na.rm = TRUE)
@@ -608,7 +608,7 @@ list_parameters <- function()
 {
   RUN_PACKAGE(c('RCurl','dplyr','stringi'))
   ftpsource_ <- 'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/Year_to_Date/'
-  temp_<-as.character(unlist(stringi::stri_split_lines(getURL(ftpsource_,dirlistonly=TRUE))))
+  temp_<-as.character(unlist(stringi::stri_split_lines(RCurl::getURL(ftpsource_,dirlistonly=TRUE))))
   temp_ <- temp_[!grepl('station',temp_,ignore.case=TRUE)]
   temp_ <- tolower(gsub('.csv','',temp_,ignore.case=TRUE))
   temp_ <- sort(temp_)

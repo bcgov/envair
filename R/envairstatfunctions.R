@@ -990,7 +990,7 @@ GET_DAILY_MAX<-function(data.input,column.name='ROUNDED_VALUE',column.date='DATE
 #' @param year is the year to check for negative and flat,
 #'             if NULL,
 #' @param file.result is the location where resulting file is to be saved
-#' @param exclude_MVRD will exclude MVRD stations
+#' @param exclude_MVRD
 GET_NEGATIVE_FLAT <- function(parameter = NULL, YEAR = NULL,
                               file.result = 'negative_flats.csv',
                               exclude_MVRD = TRUE)
@@ -1040,7 +1040,7 @@ GET_NEGATIVE_FLAT <- function(parameter = NULL, YEAR = NULL,
   {
     #identify the latest validation cycle data
     data.source<-'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/AnnualSummary/'
-    temp<-as.character(unlist(strsplit(getURL(data.source,dirlistonly=TRUE),split='\r\n')))
+    temp<-as.character(unlist(strsplit(RCurl::getURL(data.source,dirlistonly=TRUE),split='\r\n')))
     temp<-temp[nchar(temp)==4] #get only 4-digit folders
     validation.lastvalidationcycle<-max(as.numeric(temp),na.rm = TRUE)
     YEAR <- validation.lastvalidationcycle + 1

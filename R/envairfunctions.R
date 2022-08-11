@@ -927,7 +927,7 @@ GET_RECENT_STATION_DATA<-function(STATION='ALL',timebase=60)
   #retrieve data from ftp
   files_<-data.frame(FILENAME=as.character(unlist(strsplit(RCurl::getURL(
     data.ftpsource, dirlistonly=TRUE),split='\r\n'))),
-    ATTRIBUTES=as.character(unlist(strsplit(getURL(
+    ATTRIBUTES=as.character(unlist(strsplit(RCurl::getURL(
       data.ftpsource, dirlistonly=FALSE),split='\r\n')))
   )%>%
     dplyr::mutate(FULL_PATH=paste(data.ftpsource,FILENAME,sep=''))%>%

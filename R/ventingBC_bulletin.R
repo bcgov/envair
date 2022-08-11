@@ -824,7 +824,7 @@ GET_VENTING_ECCC<-function(date.start=NULL)
 
     ftp.url <- paste(venting.url2,year(ymd(date.start)),'/',sep='')
     print(paste('Retrieving data from:',ftp.url))
-    lst_ventfiles <- getURL(ftp.url,verbose=TRUE,
+    lst_ventfiles <- RCurl::getURL(ftp.url,verbose=TRUE,
                             ftp.use.epsv=TRUE, dirlistonly = TRUE
     )
 

@@ -66,7 +66,7 @@ GET_FILE_CSV_deprecated<-function(list.files,ftp.path,path.local=NULL,clean=TRUE
   #get details of files in FTP
   data.filedetails<-
     data.frame(FILEALL=unlist(strsplit(x=
-                                         getURL(url=ftp.path,verbose=FALSE,
+                                         RCurl::getURL(url=ftp.path,verbose=FALSE,
                                                 ftp.use.epsv=TRUE
                                          ),
                                        split='\r\n')))%>%
