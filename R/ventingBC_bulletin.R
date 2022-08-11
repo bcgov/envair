@@ -20,10 +20,11 @@
 #'              if 'ftp' then it will save into the Open Data Portal FTP page
 #'              if 'csv' it creates the csv file that populates the http://www.env.gov.bc.ca/epd/bcairquality/aqo/csv/VentingIndex.csv
 #'
+#' @example
 #' ventingBC_bulletin()
 #'
 #' @export
-ventingBC_bulletin<-function(date.start=NULL,
+ventingBC_bulletin <- function(date.start=NULL,
                              savefile=NULL,
                              output='html')
 {
