@@ -383,6 +383,7 @@ GET_STATION_DETAILS_FTP<-function(data.year=as.character(format(Sys.Date(),'%Y')
 
 #' Install and Load specific libraries that are useful for the envair package
 #'
+#' DEPRECATED
 #' This function isntalls and loads packages if needed
 #' @param packages vector string listing the packages
 #' @param lib.pack path of library, defaults to current lib paths
@@ -401,34 +402,40 @@ RUN_PACKAGE<-function(packages=c('dplyr','ggplot2','reshape',
   # 'raster','rgdal','shapefiles','xml2')
 
   #end of debug lines
-  if (is.null(lib.path)){
-    lib.path<-.libPaths()[1]
-  }
 
+  #commented all these out, deprecated
 
-
-  .libPaths(lib.path)
-  package_to_load<-packages
-
-
-  # packages[!packages %in% loadedNamespaces()]
-  package_to_install<-packages[(!packages %in% installed.packages(lib.loc = lib.path))]
-
-
-  for (package in package_to_install)
-  {
-    print(paste('Installing package:',package))
-    install.packages(package,dependencies = TRUE,lib=lib.path,repos="https://cran.r-project.org/")
-
-  }
-
-
-  for (package in package_to_load)
+  if (0)
   {
 
-    require(package,character.only=TRUE,lib.loc=lib.path)
-  }
+    if (is.null(lib.path)){
+      lib.path<-.libPaths()[1]
+    }
 
+
+
+    .libPaths(lib.path)
+    package_to_load<-packages
+
+
+    # packages[!packages %in% loadedNamespaces()]
+    package_to_install<-packages[(!packages %in% installed.packages(lib.loc = lib.path))]
+
+
+    for (package in package_to_install)
+    {
+      print(paste('Installing package:',package))
+      install.packages(package,dependencies = TRUE,lib=lib.path,repos="https://cran.r-project.org/")
+
+    }
+
+
+    for (package in package_to_load)
+    {
+
+      require(package,character.only=TRUE,lib.loc=lib.path)
+    }
+  }
   return(TRUE)
 }
 
