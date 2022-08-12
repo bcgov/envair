@@ -42,6 +42,7 @@ importBC_data<-function(parameter_or_station,
   }
 
   #load packages
+  require(dplyr)
   # RUN_PACKAGE(c('plyr','dplyr','RCurl','readr','lubridate','tidyr','stringi'))  #,'feather'
   if (is.null(years))
   {
@@ -128,11 +129,11 @@ importBC_data<-function(parameter_or_station,
         if (!is.null(df_data))
         {
           df_data <- df_data %>%
-            dplyr::mutate(year_= year(DATE_PST - 3600)) %>%
+            dplyr::mutate(year_= lubridate::year(DATE_PST - hours(1))) %>%
             dplyr::filter(year_ %in% years) %>%
             select(-year_)
 
-          data.result <- plyr::rbind.fill(data.result, df_data)
+          data.result <- dplyr::bind_rows(data.result, df_data)
 
         }
 
@@ -239,7 +240,7 @@ importBC_data<-function(parameter_or_station,
             dplyr::select(key,STATION_NAME_FULL,INSTRUMENT)
         )
 
-      data.result <- plyr::rbind.fill(df_result_noduplicate,df_result_duplicate) %>%
+      data.result <- dplyr::bind_rows(df_result_noduplicate,df_result_duplicate) %>%
         RENAME_COLUMN(c('year_','key'))%>%
         dplyr::arrange(STATION_NAME,DATE_PST)
 
@@ -292,7 +293,7 @@ importBC_data<-function(parameter_or_station,
 
             print(paste('Downloading data from:',source_))
             data.result<-data.result%>%
-              plyr::rbind.fill(readr::read_csv(source_,
+              dplyr::bind_rows(readr::read_csv(source_,
                                                col_types = readr::cols(
                                                  DATE_PST = readr::col_datetime(),
                                                  NAPS_ID = readr::col_character(),
@@ -480,6 +481,7 @@ listBC_stations<-function(year=NULL)
   {
     year<-NULL
   }
+  require(dplyr)
 
   if (is.null(year))
   {year<- as.numeric(format(Sys.Date(),'%Y'))}
@@ -512,10 +514,12 @@ listBC_stations<-function(year=NULL)
   # download.file(ftp.station,destfile=file.temp,quiet=FALSE)
   #updated 2020-06-10 fix for ON,1 for active, OFF, 0 for inactive
   station.details<-readr::read_csv(ftp.station)%>%
-    dplyr::mutate(STATUS=ifelse(STATUS=='ON',1,STATUS)) %>%
-    dplyr::mutate(STATUS=ifelse(STATUS=='OFF',0,STATUS)) %>%
-    dplyr::mutate(STATUS=ifelse(STATUS==1,'ACTIVE',STATUS)) %>%
-    dplyr::mutate(STATUS=ifelse(STATUS==0,'INACTIVE',STATUS))
+    dplyr::mutate(STATUS = as.character(STATUS)) %>%
+    dplyr::mutate(STATUS=dplyr::recode(STATUS,"ON"="ACTIVE",
+                                       "OFF"="INACTIVE",
+                                       "1" = "ACTIVE",
+                                       "0" = "INACTIVE")
+    )
 
   #fix if there are no NOTES column
   if (!any('NOTES' %in% colnames(station.details)))
@@ -550,7 +554,7 @@ listBC_stations<-function(year=NULL)
       temp<-temp.station%>%
         dplyr::mutate(CGNDB=temp.CGNDB)
       station.details.aqhi.CGNDB<-station.details.aqhi.CGNDB%>%
-        rbind(temp)
+        dplyr::bind_rows(temp)
     }
   }
 
@@ -562,7 +566,7 @@ listBC_stations<-function(year=NULL)
   station.details<-station.details%>%
     dplyr::filter(!SERIAL_CODE %in% station.details.aqhi.CGNDB$SERIAL_CODE)%>%
     dplyr::mutate(CGNDB="N/A")%>%
-    rbind(station.details.aqhi)
+    dplyr::bind_rows(station.details.aqhi)
 
   #add station_name_full is not there yet
   if (!any('STATION_NAME_FULL' %in% colnames(station.details)))
@@ -605,7 +609,7 @@ listBC_stations<-function(year=NULL)
 #' @export
 list_parameters <- function()
 {
-  RUN_PACKAGE(c('RCurl','dplyr','stringi'))
+  # RUN_PACKAGE(c('RCurl','dplyr','stringi'))
   ftpsource_ <- 'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/Year_to_Date/'
   temp_<-as.character(unlist(stringi::stri_split_lines(RCurl::getURL(ftpsource_,dirlistonly=TRUE))))
   temp_ <- temp_[!grepl('station',temp_,ignore.case=TRUE)]
