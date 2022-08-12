@@ -129,7 +129,7 @@ importBC_data<-function(parameter_or_station,
         if (!is.null(df_data))
         {
           df_data <- df_data %>%
-            dplyr::mutate(year_= lubridate::year(DATE_PST - hours(1))) %>%
+            dplyr::mutate(year_= lubridate::year(DATE_PST - lubridate::hours(1))) %>%
             dplyr::filter(year_ %in% years) %>%
             select(-year_)
 
