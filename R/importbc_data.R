@@ -35,17 +35,17 @@ importBC_data<-function(parameter_or_station,
   {
 
     parameter_or_station <- 'no2'
-    years <- 2020
+    years <- NULL
     pad = FALSE
     use_openairformat <- FALSE
     use_ws_vector <- FALSE
   }
 
   #load packages
-  RUN_PACKAGE(c('plyr','dplyr','RCurl','readr','lubridate','tidyr','stringi'))  #,'feather'
+  # RUN_PACKAGE(c('plyr','dplyr','RCurl','readr','lubridate','tidyr','stringi'))  #,'feather'
   if (is.null(years))
   {
-    years=as.numeric(format(Sys.Date(),'%Y'))
+    years=as.numeric(format(Sys.Date(),tz='etc/GMT+8',format = '%Y'))
   }
 
 
@@ -107,12 +107,12 @@ importBC_data<-function(parameter_or_station,
 
         df_data <- NULL
         try(df_data <-readr::read_csv(list.data,
-                                      col_types = cols(
-                                        DATE_PST = col_datetime(),
-                                        NAPS_ID = col_character(),
-                                        EMS_ID = col_character(),
-                                        RAW_VALUE = col_double(),
-                                        ROUNDED_VALUE = col_double()
+                                      col_types = readr::cols(
+                                        DATE_PST = readr::col_datetime(),
+                                        NAPS_ID = readr::col_character(),
+                                        EMS_ID = readr::col_character(),
+                                        RAW_VALUE = readr::col_double(),
+                                        ROUNDED_VALUE = readr::col_double()
                                       )) %>%
               dplyr::mutate(VALIDATION_STATUS=ifelse(data.year<= valcycle,
                                                      'VALID','UNVERIFIED')
@@ -130,7 +130,7 @@ importBC_data<-function(parameter_or_station,
           df_data <- df_data %>%
             dplyr::mutate(year_= year(DATE_PST - 3600)) %>%
             dplyr::filter(year_ %in% years) %>%
-            RENAME_COLUMN('year_')
+            select(-year_)
 
           data.result <- plyr::rbind.fill(data.result, df_data)
 
@@ -293,12 +293,12 @@ importBC_data<-function(parameter_or_station,
             print(paste('Downloading data from:',source_))
             data.result<-data.result%>%
               plyr::rbind.fill(readr::read_csv(source_,
-                                               col_types = cols(
-                                                 DATE_PST = col_datetime(),
-                                                 NAPS_ID = col_character(),
-                                                 EMS_ID = col_character(),
-                                                 RAW_VALUE = col_double(),
-                                                 ROUNDED_VALUE = col_double()
+                                               col_types = readr::cols(
+                                                 DATE_PST = readr::col_datetime(),
+                                                 NAPS_ID = readr::col_character(),
+                                                 EMS_ID = readr::col_character(),
+                                                 RAW_VALUE = readr::col_double(),
+                                                 ROUNDED_VALUE = readr::col_double()
                                                )))
           }
         }
