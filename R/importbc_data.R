@@ -15,9 +15,9 @@
 #' @param years the years that will be retrieved. For sequence, use 2009:2015. For non
 #' sequential years, use c(2010,2015,2018)
 #' If not declared, the current year will be used
-#' @param use_openairformat is boolean,if TRUE, output is compatible with openair
+#' @param use_openairformat is boolean,if TRUE, output is compatible with openair. Apples only to station queries
 #' @param use_ws_vector default is FALSE, if TRUE and use_openairformat is TRUE, ws is the vector wind speed
-#' @param pad, default is FALSE. if true, it will pad missing dates. This requires greater memory
+#' @param pad default is TRUE. if FALSE, it removes all NaNs
 #'
 #'@examples
 #' importBC_data('Prince George Plaza 400')
@@ -27,7 +27,7 @@
 #' @export
 importBC_data<-function(parameter_or_station,
                         years=NULL,use_openairformat=TRUE,
-                        use_ws_vector = FALSE,pad = FALSE)
+                        use_ws_vector = FALSE,pad = NULL)
 
 {
   #debug
@@ -49,7 +49,9 @@ importBC_data<-function(parameter_or_station,
     years=as.numeric(format(Sys.Date(),tz='etc/GMT+8',format = '%Y'))
   }
 
-
+  if (is.null(pad)) {
+    pad <- TRUE
+  }
 
   #primary data location
   data.source<-'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/AnnualSummary/'
@@ -84,7 +86,7 @@ importBC_data<-function(parameter_or_station,
   #data retrieval-----
   if (!is.null(parameters))
   {
-    #user wanted to look for parameters, not stations----
+    # retrieval based on parameters (not stations)----
     # scan one parameter at a time
     use_openairformat = FALSE #it will not be openair format
     for (parameter in parameters)
@@ -102,22 +104,25 @@ importBC_data<-function(parameter_or_station,
           source_<-paste(data.source,data.year,'/',sep='')
         }
 
-        list.data<-paste(source_,'/',parameter,".csv",sep='')
+        list.data<-paste(source_,parameter,".csv",sep='')
 
         print(paste('Retrieving data from:',list.data))
 
         df_data <- NULL
         try(df_data <-readr::read_csv(list.data,
                                       col_types = readr::cols(
-                                        DATE_PST = readr::col_datetime(),
+                                        DATE_PST = readr::col_character(),
                                         NAPS_ID = readr::col_character(),
                                         EMS_ID = readr::col_character(),
                                         RAW_VALUE = readr::col_double(),
                                         ROUNDED_VALUE = readr::col_double()
                                       )) %>%
               dplyr::mutate(VALIDATION_STATUS=ifelse(data.year<= valcycle,
-                                                     'VALID','UNVERIFIED')
-              ))
+                                                     'VALID','UNVERIFIED')) %>%
+              dplyr::mutate(DATE_PST = lubridate::ymd_hm(DATE_PST,tz='etc/GMT+8'))
+            )
+
+
         #filter data to specified year
         #dplyr::filter year----
         if (0)
@@ -126,8 +131,12 @@ importBC_data<-function(parameter_or_station,
             dplyr::filter(STATION_NAME == 'Prince George Plaza 400')
         }
 
+
+
+
         if (!is.null(df_data))
         {
+          #also remove duplicates
           df_data <- df_data %>%
             dplyr::mutate(year_= lubridate::year(DATE_PST - lubridate::hours(1))) %>%
             dplyr::filter(year_ %in% years) %>%
@@ -168,84 +177,25 @@ importBC_data<-function(parameter_or_station,
         dplyr::mutate(STATION_NAME_FULL = STATION_NAME)
     }
 
-    #remove duplicates in parameter data----
-    data.result <- data.result%>%
-      RENAME_COLUMN(c('DATE','TIME'))  #remove these columns
-    #convert DATE_PST to POSIXct date
-    tz(data.result$DATE_PST) <- 'Etc/GMT+8'
+    # remove duplicates (added 2022-08-18)
+    rows_rawdata <- nrow(data.result)   #rows before removing duplicates
 
-    #DISABLED feature----
-    #remove duplicates
-
-    #check if there are duplicate entries
-    # duplicates will have the instrument name index
-    duplicate <- data.result%>%
-      dplyr::mutate(year_= year(DATE_PST - 3600)) %>%
-      dplyr::mutate(key = paste(STATION_NAME,year_,INSTRUMENT,sep='-')) %>%
-      dplyr::select(EMS_ID,STATION_NAME,NAPS_ID,STATION_NAME_FULL,INSTRUMENT,year_,key)%>%
-      unique()%>%
-      dplyr::group_by(STATION_NAME)%>%
-      dplyr::mutate(newNAPS = max(NAPS_ID,na.rm=TRUE), newems = max(EMS_ID,na.rm = TRUE)) %>%
+    data.result <- data.result %>%
       ungroup() %>%
-      #unify NAPS ID, EMS ID for the station represented by multiple loggers
-      RENAME_COLUMN(c('NAPS_ID','EMS_ID')) %>%
-      RENAME_COLUMN(c('newNAPS','newems'),c('NAPS_ID','EMS_ID'))%>%
-      unique() %>%
-      dplyr::group_by(key)%>%
-      dplyr::mutate(number =n())%>%
-      dplyr::ungroup()
+      filter(!is.na(RAW_VALUE)) %>%
+      arrange(STATION_NAME,DATE_PST) %>%
+      group_by(DATE_PST,STATION_NAME,PARAMETER,INSTRUMENT) %>%
+      dplyr::mutate(index = 1:n(),count=n()) %>%
+      filter(index==1) %>%
+      select(-index,-count) %>%
+      ungroup()
 
-
-    if (max(duplicate$number,na.rm = TRUE)>1)
-    {
-      #fix for duplicate station entries
-      print('Station has duplicate entries, might take longer than usual')
-
-      #list of the actual duplicates
-      #index the instrument if it is a duplicate
-
-      duplicate <- duplicate %>%
-        dplyr::filter(number>1) %>%
-        group_by(key) %>%
-        dplyr::mutate(index = 1:n(),
-                      INSTRUMENT = ifelse(is.na(INSTRUMENT),'UNKNOWN',as.character(INSTRUMENT))) %>%
-        dplyr::mutate(newINST = ifelse(index>1,
-                                       paste(INSTRUMENT,index,sep='_'),
-                                       INSTRUMENT)) %>%
-        ungroup() %>%
-        RENAME_COLUMN('INSTRUMENT') %>%
-        RENAME_COLUMN('newINST','INSTRUMENT') %>%
-        COLUMN_REORDER(colnames(data.result))
-
-
-      #combine with data.result
-      #split the data.result first
-      data.result <- data.result %>%
-        dplyr::mutate(year_= year(DATE_PST - 3600)) %>%
-        dplyr::mutate(key = paste(STATION_NAME,year_,INSTRUMENT,sep='-'))
-
-      #these contain the station without duplicates
-      df_result_noduplicate <- data.result %>%
-        dplyr::filter(!key %in% duplicate$key)
-
-      #these contain station with duplicates, perform counts
-      df_result_duplicate <- data.result %>%
-        dplyr::filter(key %in% duplicate$key)
-
-      df_result_duplicate <- df_result_duplicate %>%
-        #replace instrument with those re-defined in duplicate
-        RENAME_COLUMN('INSTRUMENT') %>%
-        left_join(
-          duplicate%>%
-            dplyr::select(key,STATION_NAME_FULL,INSTRUMENT)
-        )
-
-      data.result <- dplyr::bind_rows(df_result_noduplicate,df_result_duplicate) %>%
-        RENAME_COLUMN(c('year_','key'))%>%
-        dplyr::arrange(STATION_NAME,DATE_PST)
-
-
+    if (pad) {
+      data.result <- pad_data(data.result,add_DATETIME = TRUE)
     }
+
+    return(data.result)  #returns the value, and ends function
+
 
   } else
   {
@@ -329,37 +279,7 @@ importBC_data<-function(parameter_or_station,
     return(NULL)
   }
 
-  if (pad)
-  {
-    #pad data, add missing data entries as NA
-
-    col_ <- colnames(data.result)
-    col_instrument <- col_[grepl('instrument',col_,ignore.case = TRUE)]
-
-    tz(data.result$DATE_PST) <- 'etc/GMT+8'
-
-    df_padding <- data.result%>%
-      select(STATION_NAME,EMS_ID,INSTRUMENT)%>%
-      unique()%>%
-      group_by(STATION_NAME)%>%
-      merge(tidyr::tibble(DATE_PST= seq.POSIXt(from = as.POSIXct(paste(
-        year(min(data.result$DATE_PST,na.rm = TRUE)),'-01-01 01:00',
-        sep=''
-      ), tz='etc/GMT+8'),
-      to = as.POSIXct(as.character(max(data.result$DATE_PST,na.rm = TRUE)),tz='etc/GMT+8'),
-      by='hour')))
-
-    print(paste(nrow(df_padding) - nrow(data.result),'rows padded' ))
-
-    # print('Padding',as.character(nrow(df_padding) - nrow(data.result)),
-    #       'rows')
-    data.result <- data.result%>%
-      right_join(df_padding)
-  }
-
-
-
-  if (use_openairformat & !is.null(data.result))
+  if (use_openairformat)
   {
     #rename all columns, change them to lower case to match openair requirements
     column_<-colnames(data.result)

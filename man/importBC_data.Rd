@@ -9,7 +9,7 @@ importBC_data(
   years = NULL,
   use_openairformat = TRUE,
   use_ws_vector = FALSE,
-  pad = FALSE
+  pad = NULL
 )
 }
 \arguments{
@@ -26,10 +26,11 @@ Mutliple stations can be specified}
 sequential years, use c(2010,2015,2018)
 If not declared, the current year will be used}
 
-\item{use_openairformat}{is boolean,if TRUE, output is compatible with openair
-#'@param use_ws_vector default is FALSE, if TRUE and use_openairformat is TRUE, ws is the vector wind speed}
+\item{use_openairformat}{is boolean,if TRUE, output is compatible with openair. Apples only to station queries}
 
-\item{pad, }{default is FALSE. if true, it will pad missing dates. This requires greater memory}
+\item{use_ws_vector}{default is FALSE, if TRUE and use_openairformat is TRUE, ws is the vector wind speed}
+
+\item{pad}{default is TRUE. if FALSE, it removes all NaNs}
 }
 \description{
 This function retrieves station or parameter hourly data from the BC open data portal

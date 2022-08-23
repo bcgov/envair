@@ -3,7 +3,7 @@
 \name{round2}
 \alias{round2}
 \title{rounding off function
-#
+
 This function makes a simple rounding off}
 \usage{
 round2(x, n = 0)
@@ -16,6 +16,6 @@ round2()}
 }
 \description{
 rounding off function
-#
+
 This function makes a simple rounding off
 }

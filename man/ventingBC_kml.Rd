@@ -15,8 +15,8 @@ If false, this will use simplified map (0.0002 degrees) of <10MB file size}
 \item{isCOVID}{is boolean; if TRUE, it applies HSSZ fireban due to COVID 19}
 
 \item{fireban}{is vector containg the sensitivity zones where a fireban is applied
-                DOES NOT WORK
- @examples
+DOES NOT WORK
+@examples
 ventingBC_kml(HD=FALSE)}
 }
 \description{
