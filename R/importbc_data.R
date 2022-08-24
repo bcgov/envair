@@ -266,10 +266,6 @@ importBC_data<-function(parameter_or_station,
 
             print(paste('Downloading data from:',source_))
 
-            if (0) (
-              source_ <- 'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/AnnualSummary/2019/STATION_DATA/E315110.csv'
-            )
-
             data.result_ <- NULL
             try(
               data.result_ <- readr::read_csv(source_,
@@ -292,10 +288,13 @@ importBC_data<-function(parameter_or_station,
               data.result_ <- data.result_ %>% dplyr::select(-year)
             })
 
+
             #remove some columns, make it consistent with data from other years
             try({
-              data.result_ <- data.result_[,!grepl('_units',colnames(data.result_))]
-              data.result_ <- data.result_[,!(colnames(data.result_) %in% c('naps_id','latitude','longitude'))]
+
+              data.result_ <- data.result_[,!grepl('_UNITS',colnames(data.result_),)]
+              data.result_ <- data.result_[,!(colnames(data.result_) %in% c('NAPS_ID','LATITUDE','LONGITUDE'))]
+
 
             })
 
@@ -446,7 +445,7 @@ importBC_data<-function(parameter_or_station,
        cols_instrument <- cols_[grepl('_instrument',cols_,ignore.case=TRUE)]
        cols_unit <- cols_[grepl('_units',cols_,ignore.case=TRUE)]
        cols_vals <- cols_[grepl('_raw',cols_,ignore.case=TRUE)]
-       cols_vals <- unique(c('ws','wd',cols_vals,gsub('_raw','',cols_vals,ignore.case =TRUE)))
+       cols_vals <- unique(c('validation_status','VALIDATION_STATUS','WS','WD','ws','wd',cols_vals,gsub('_raw','',cols_vals,ignore.case =TRUE)))
 
 
        data.result <- data.result %>%
