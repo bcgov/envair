@@ -25,8 +25,10 @@ pad_data <- function(df, date_time = NULL,values = NULL,time_ending = TRUE,add_D
 {
   if (0)  {
     df <- readRDS('./test_data/raw_data.Rds')
+
+     # saveRDS(test,'./test_data/raw_data.Rds')
     # df <- envair::importBC_data('no2',2020)
-    df <- data.result
+    # df <- data.result
     date_time <- NULL
     values <- NULL
     time_ending <- TRUE
@@ -79,7 +81,7 @@ pad_data <- function(df, date_time = NULL,values = NULL,time_ending = TRUE,add_D
   }
 
   if (is.null(values)) {
-    values <- cols_[cols_ %in% c('RAW_VALUE','ROUNDED_VALUE','metric_value')]
+    values <- cols_[cols_ %in% c('RAW_VALUE','ROUNDED_VALUE','metric_value','VALIDATION_STATUS','validation_status')]
   }
 
 
@@ -124,8 +126,8 @@ pad_data <- function(df, date_time = NULL,values = NULL,time_ending = TRUE,add_D
         dplyr::select(cols_selection) %>%
         unique()
     ) %>%
-    dplyr::left_join(df) %>%
-    arrange(date_time)
+    dplyr::left_join(df)
+
 
   #convert back the time if time ending
   if (time_ending) {
