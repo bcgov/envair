@@ -283,6 +283,8 @@ importBC_data<-function(parameter_or_station,
                                    dplyr::mutate(VALIDATION_STATUS=ifelse(data.year<= valcycle,
                                                                           'VALID','UNVERIFIED'))
             )
+
+            #process date, filter by year
             try(data.result_$DATE_PST <- lubridate::force_tz(data.result_$DATE_PST,tz='etc/GMT+8'))
             try({
               data.result_$year <- lubridate::year(data.result_$DATE_PST - lubridate::hours(1))
@@ -290,10 +292,18 @@ importBC_data<-function(parameter_or_station,
               data.result_ <- data.result_ %>% dplyr::select(-year)
             })
 
-          try(
-            data.result <- dplyr::bind_rows(data.result,data.result_)
-          )
+            #remove some columns, make it consistent with data from other years
+            try({
+              data.result_ <- data.result_[,!grepl('_units',colnames(data.result_))]
+              data.result_ <- data.result_[,!(colnames(data.result_) %in% c('naps_id','latitude','longitude'))]
+
+            })
+
+            try(
+              data.result <- dplyr::bind_rows(data.result,data.result_)
+            )
           }
+
         }
       }
     }
@@ -436,7 +446,7 @@ importBC_data<-function(parameter_or_station,
        cols_instrument <- cols_[grepl('_instrument',cols_,ignore.case=TRUE)]
        cols_unit <- cols_[grepl('_units',cols_,ignore.case=TRUE)]
        cols_vals <- cols_[grepl('_raw',cols_,ignore.case=TRUE)]
-       cols_vals <- unique(c(cols_vals,gsub('_raw','',cols_vals,ignore.case =TRUE)))
+       cols_vals <- unique(c('ws','wd',cols_vals,gsub('_raw','',cols_vals,ignore.case =TRUE)))
 
 
        data.result <- data.result %>%

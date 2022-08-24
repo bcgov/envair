@@ -68,7 +68,7 @@ pad_data <- function(df, date_time = NULL,values = NULL,time_ending = TRUE,add_D
   if (date_time == 'date') {
     special_openairformat <- TRUE
     date_time <- 'date_pst'
-    values <- c(values,'ws','wd')
+
     add_DATETIME <- FALSE
     separate_DATETIME <- FALSE
     df <- df %>%
