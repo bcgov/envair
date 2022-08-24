@@ -1,3 +1,15 @@
+# Copyright 2022 Province of British Columbia
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and limitations under the License.
+
 
 #' Import Hourly BC Data from station or parameter
 #'
@@ -16,7 +28,7 @@
 #' sequential years, use c(2010,2015,2018)
 #' If not declared, the current year will be used
 #' @param use_openairformat is boolean,if TRUE, output is compatible with openair. Apples only to station queries
-#' @param use_ws_vector default is FALSE, if TRUE and use_openairformat is TRUE, ws is the vector wind speed
+#' @param use_ws_vector use vector wind speed? default is FALSE, if TRUE and use_openairformat is TRUE, ws is the vector wind speed
 #' @param pad default is TRUE. if FALSE, it removes all NaNs
 #'
 #'@examples
@@ -27,7 +39,7 @@
 #' @export
 importBC_data<-function(parameter_or_station,
                         years=NULL,use_openairformat=TRUE,
-                        use_ws_vector = FALSE,pad = NULL)
+                        use_ws_vector = FALSE,pad = TRUE)
 
 {
   #debug
@@ -35,9 +47,11 @@ importBC_data<-function(parameter_or_station,
   {
 
     parameter_or_station <- 'no2'
-    years <- NULL
+    parameter_or_station <- 'smithers'
+    years <- 2019
     pad = FALSE
-    use_openairformat <- FALSE
+    use_openairformat <- TRUE
+
     use_ws_vector <- FALSE
   }
 
@@ -111,17 +125,23 @@ importBC_data<-function(parameter_or_station,
         df_data <- NULL
         try(df_data <-readr::read_csv(list.data,
                                       col_types = readr::cols(
-                                        DATE_PST = readr::col_character(),
+                                        DATE_PST = readr::col_datetime(),
                                         NAPS_ID = readr::col_character(),
                                         EMS_ID = readr::col_character(),
                                         RAW_VALUE = readr::col_double(),
                                         ROUNDED_VALUE = readr::col_double()
                                       )) %>%
               dplyr::mutate(VALIDATION_STATUS=ifelse(data.year<= valcycle,
-                                                     'VALID','UNVERIFIED')) %>%
-              dplyr::mutate(DATE_PST = lubridate::ymd_hm(DATE_PST,tz='etc/GMT+8'))
-            )
+                                                     'VALID','UNVERIFIED'))
+        )
 
+        try(df_data$DATE_PST <- lubridate::force_tz(df_data$DATE_PST,tz='etc/GMT+8'))
+        #remove DATE,TIME column if it is there
+        try(
+          df_data <- df_data %>%
+            dplyr::select(-DATE,-TIME),
+          silent = TRUE
+        )
 
         #filter data to specified year
         #dplyr::filter year----
@@ -136,12 +156,11 @@ importBC_data<-function(parameter_or_station,
 
         if (!is.null(df_data))
         {
-          #also remove duplicates
-          df_data <- df_data %>%
-            dplyr::mutate(year_= lubridate::year(DATE_PST - lubridate::hours(1))) %>%
-            dplyr::filter(year_ %in% years) %>%
-            select(-year_)
+          print('adding the file to retrieved data')
 
+          df_data$year_ <-  lubridate::year(df_data$DATE_PST - lubridate::hours(1))
+          df_data <- df_data[df_data$year_ == data.year,]
+          df_data <- subset(df_data,select=-year_)
           data.result <- dplyr::bind_rows(data.result, df_data)
 
         }
@@ -179,22 +198,21 @@ importBC_data<-function(parameter_or_station,
 
     # remove duplicates (added 2022-08-18)
     rows_rawdata <- nrow(data.result)   #rows before removing duplicates
-
+    print('checking for duplicates')
     data.result <- data.result %>%
-      ungroup() %>%
-      filter(!is.na(RAW_VALUE)) %>%
+      dplyr::ungroup() %>%
+      dplyr::filter(!is.na(RAW_VALUE)) %>%
       arrange(STATION_NAME,DATE_PST) %>%
-      group_by(DATE_PST,STATION_NAME,PARAMETER,INSTRUMENT) %>%
+      dplyr::group_by(DATE_PST,STATION_NAME,PARAMETER,INSTRUMENT) %>%
       dplyr::mutate(index = 1:n(),count=n()) %>%
-      filter(index==1) %>%
-      select(-index,-count) %>%
-      ungroup()
+      dplyr::filter(index==1) %>%
+      dplyr::select(-index,-count) %>%
+      dplyr::ungroup()
 
     if (pad) {
       data.result <- pad_data(data.result,add_DATETIME = TRUE)
     }
 
-    return(data.result)  #returns the value, and ends function
 
 
   } else
@@ -219,17 +237,22 @@ importBC_data<-function(parameter_or_station,
       #retrieve data from each station
       for (ems_ in unique(list.stations$EMS_ID))
       {
+        if (0) {
+          ems_ <- 'E315110'
+          data.year <- 2018
+          data.year <- 2019
+        }
         #retrieve data from each year for that specified station
-        for (year_ in years)
+        for (data.year in years)
         {
-          print(paste('Retrieving data from: EMS=',ems_,'Year=',year_))
+          print(paste('Retrieving data from: EMS=',ems_,'Year=',data.year))
           #determine the source of data
-          if (year_> valcycle)
+          if (data.year> valcycle)
           {
             source_<-paste(data.unvalidated_source,'STATION_DATA/',ems_,'.csv',sep='')
           } else
           {
-            source_<-paste(data.source,year_,'/STATION_DATA/',ems_,'.csv',sep='')
+            source_<-paste(data.source,data.year,'/STATION_DATA/',ems_,'.csv',sep='')
           }
 
           temp_<-NULL
@@ -242,15 +265,34 @@ importBC_data<-function(parameter_or_station,
           {
 
             print(paste('Downloading data from:',source_))
-            data.result<-data.result%>%
-              dplyr::bind_rows(readr::read_csv(source_,
-                                               col_types = readr::cols(
-                                                 DATE_PST = readr::col_datetime(),
-                                                 NAPS_ID = readr::col_character(),
-                                                 EMS_ID = readr::col_character(),
-                                                 RAW_VALUE = readr::col_double(),
-                                                 ROUNDED_VALUE = readr::col_double()
-                                               )))
+
+            if (0) (
+              source_ <- 'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/AnnualSummary/2019/STATION_DATA/E315110.csv'
+            )
+
+            data.result_ <- NULL
+            try(
+              data.result_ <- readr::read_csv(source_,
+                                                 col_types = readr::cols(
+                                                   DATE_PST = readr::col_datetime(),
+                                                   NAPS_ID = readr::col_character(),
+                                                   EMS_ID = readr::col_character(),
+                                                   RAW_VALUE = readr::col_double(),
+                                                   ROUNDED_VALUE = readr::col_double()
+                                                 )) %>%
+                                   dplyr::mutate(VALIDATION_STATUS=ifelse(data.year<= valcycle,
+                                                                          'VALID','UNVERIFIED'))
+            )
+            try(data.result_$DATE_PST <- lubridate::force_tz(data.result_$DATE_PST,tz='etc/GMT+8'))
+            try({
+              data.result_$year <- lubridate::year(data.result_$DATE_PST - lubridate::hours(1))
+              data.result_ <- data.result_[data.result_$year == data.year,]
+              data.result_ <- data.result_ %>% dplyr::select(-year)
+            })
+
+          try(
+            data.result <- dplyr::bind_rows(data.result,data.result_)
+          )
           }
         }
       }
@@ -264,12 +306,146 @@ importBC_data<-function(parameter_or_station,
     }
 
 
-    data.result <- data.result%>%
-      RENAME_COLUMN(c('DATE','TIME'))  #remove these columns
-    #covert DATE_PST to POSIXct date
-    tz(data.result$DATE_PST) <- 'Etc/GMT+8'
-  }
+    try(
+      data.result <- data.result%>%
+        select(-DATE,-TIME),
+      silent = TRUE
+    )
 
+    #debug pre-load data
+    if (0)
+    {
+      data.result <- readRDS('./test_data/data_station.Rds')
+      use_openairformat <- TRUE
+      pad <- TRUE
+      use_ws_vector <- TRUE
+    }
+
+
+    if (use_openairformat)
+    {
+
+      #subtract one hour from time
+      #switch to time-beginning
+      data.result <-  data.result%>%
+        dplyr::mutate(DATE_PST = DATE_PST - lubridate::hours(1))
+
+      #change column names to lower case
+      colnames(data.result) <- tolower(colnames(data.result))
+
+      #remove date, time column
+      try(
+        data.result <- data.result %>%
+          select(-date,-time),
+        silent = TRUE
+      )
+
+      #date becomes the date_time column
+      data.result <- data.result %>%
+        dplyr::rename(date = date_pst)
+
+      if (use_ws_vector)
+      {
+        #ws is vector wind speed (not default)
+        # data.result<-
+
+        try(data.result <- data.result%>%
+              dplyr::rename(ws = wspd_vect)
+        )
+
+        try(data.result <- data.result%>%
+              dplyr::rename(wd = wdir_vect)
+        )
+
+        #use wspd_scalar as ws if ws is not available
+        #use wdir_uvec as wd if wd is  not available
+
+        column_<-colnames(data.result)
+        if (!('ws' %in% column_))
+        {
+          try(
+            data.result<-data.result%>%
+              dplyr::rename(ws = wspd_vect)
+          )
+        }
+        if (!('wd' %in% column_))
+        {
+          try(
+            data.result<-data.result%>%
+              dplyr::rename(wd = wdir_uvec)
+          )
+
+        }
+
+
+      } else
+      {
+        #ws is scalar wind speed #default
+        try(
+          data.result<-data.result%>%
+            dplyr::rename(ws = wspd_sclr)
+        )
+
+        try(
+          data.result<-data.result%>%
+            dplyr::rename(wd = wdir_vect)
+        )
+
+
+        #use wspd_scalar as ws if not available
+        #use wdir_uvec as wd if not available
+
+        column_<-colnames(data.result)
+        if (!('ws' %in% column_))
+        {
+          try(
+            data.result<-data.result%>%
+              dplyr::rename(ws = wspd_sclr)
+          )
+        }
+        if (!('wd' %in% column_))
+        {
+          try(
+            data.result<-data.result%>%
+              dplyr::rename(wd = wdir_uvec)
+          )
+        }
+      }
+
+
+      #check again if there is now wind speed/direction, if not, just create ws, wd columns
+      column_<-colnames(data.result)
+      if (!('ws' %in% column_))
+      {
+        data.result<-data.result%>%
+          dplyr::mutate(ws=NA)
+      }
+      if (!('wd' %in% column_))
+      {
+        data.result<-data.result%>%
+          dplyr::mutate(wd=NA)
+      }
+
+
+    }
+
+
+    if (pad)
+    {
+       cols_ <- colnames(data.result)
+       cols_instrument <- cols_[grepl('_instrument',cols_,ignore.case=TRUE)]
+       cols_unit <- cols_[grepl('_units',cols_,ignore.case=TRUE)]
+       cols_vals <- cols_[grepl('_raw',cols_,ignore.case=TRUE)]
+       cols_vals <- unique(c(cols_vals,gsub('_raw','',cols_vals,ignore.case =TRUE)))
+
+
+       data.result <- data.result %>%
+         pad_data(date_time= c('date','DATE_PST')[c('date','DATE_PST') %in% cols_],
+                  values = c(cols_vals,cols_instrument,cols_unit),
+                  add_DATETIME = !use_openairformat)
+    }
+
+  }
 
 
   #stop if there are no result
@@ -279,262 +455,8 @@ importBC_data<-function(parameter_or_station,
     return(NULL)
   }
 
-  if (use_openairformat)
-  {
-    #rename all columns, change them to lower case to match openair requirements
-    column_<-colnames(data.result)
-
-    #subtract one hour from time
-    data.result <- data.result%>%
-      dplyr::mutate(DATE_PST = as.POSIXct(as.character(DATE_PST),tz='etc/GMT+8')-3600)
-
-    if (use_ws_vector)
-    {
-      #ws is vector wind speed (not default)
-      data.result<-data.result%>%
-        RENAME_COLUMN(column_,tolower(column_))%>%
-        RENAME_COLUMN('date_pst','date')%>%
-        RENAME_COLUMN(c('wspd_vect','wdir_vect'),
-                      c('ws','wd'))
-
-      #use wspd_scalar as ws if not available
-      #use wdir_uvec as wd if not available
-
-      column_<-colnames(data.result)
-      if (!('ws' %in% column_))
-      {
-        data.result<-data.result%>%
-          RENAME_COLUMN('wspd_vect','ws')
-      }
-      if (!('wd' %in% column_))
-      {
-        data.result<-data.result%>%
-          RENAME_COLUMN('wdir_uvec','wd')
-      }
-
-
-    } else
-    {
-      #ws is scalar wind speed #default
-      data.result<-data.result%>%
-        RENAME_COLUMN(column_,tolower(column_))%>%
-        RENAME_COLUMN(c('date','time'))%>%
-        RENAME_COLUMN('date_pst','date')%>%
-        RENAME_COLUMN(c('wspd_sclr','wdir_vect'),
-                      c('ws','wd'))
-
-      #use wspd_scalar as ws if not available
-      #use wdir_uvec as wd if not available
-
-      column_<-colnames(data.result)
-      if (!('ws' %in% column_))
-      {
-        data.result<-data.result%>%
-          RENAME_COLUMN('wspd_sclr','ws')
-      }
-      if (!('wd' %in% column_))
-      {
-        data.result<-data.result%>%
-          RENAME_COLUMN('wdir_uvec','wd')
-      }
-    }
-
-
-    #check again if there is now wind speed/direction, if not, just create ws, wd columns
-    column_<-colnames(data.result)
-    if (!('ws' %in% column_))
-    {
-      data.result<-data.result%>%
-        dplyr::mutate(ws=NA)
-    }
-    if (!('wd' %in% column_))
-    {
-      data.result<-data.result%>%
-        dplyr::mutate(wd=NA)
-    }
-
-
-  } else
-  {
-    #add DATE and TIME columns
-    data.result <- data.result%>%
-
-      #GET_DATEPADDED_DATA()%>%
-      dplyr::mutate(date_=as.POSIXct(DATE_PST,tz='Etc/GMT+8')-3600)%>%
-      dplyr::mutate(DATE=as.character(format(date_,'%Y-%m-%d')),
-                    TIME=as.character(format(as.POSIXct(DATE_PST,tz='Etc/GMT+8'),'%H:%M')))%>%
-      dplyr::mutate(TIME=ifelse(TIME=='00:00','24:00',TIME))%>%
-      COLUMN_REORDER(columns=c('DATE_PST','DATE','TIME'))%>%
-      dplyr::select(-`date_`)
-
-  }
-
-
   print(paste('Done.',nrow(data.result),'rows'))
   return(data.result)
 }
 
 
-
-#' List BC Air Quality Monitoring Stations
-#'
-#' This function retrieves latest station details or deteails during specific year from the ftp feed
-#'
-#' @param year the year where station details are retrieved from. Defaults to current year if undefined
-#' This is not a vector
-#'
-#' @examples
-#' listBC_stations()
-#' listBC_stations(2015)
-#'
-#' @export
-listBC_stations<-function(year=NULL)
-{
-  #2019-05-13
-  #retrieves the station details from the BC ftp link
-  #if useLATEST, it will retrieve from the web BC station details
-  #contains CGNDB information
-
-
-  #debug
-  if (0)
-  {
-    year<-NULL
-  }
-  require(dplyr)
-
-  if (is.null(year))
-  {year<- as.numeric(format(Sys.Date(),'%Y'))}
-
-  #RUN_PACKAGE(c('dplyr','RCurl','readr','tibble','stringi'))
-
-  # dir.temp<-paste(getwd(),'/TEMP',sep="")
-  # file.temp<-paste(dir.temp,'/stationdetails.csv',sep="")
-  # dir.create(dir.temp,showWarnings = FALSE)
-
-  #identify the latest validation cycle
-  temp_<-as.character(unlist(stringi::stri_split_lines(RCurl::getURL("ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/AnnualSummary/",
-                                                     dirlistonly=TRUE))))
-  temp_<-temp_[nchar(temp_)==4] #get only 4-digit folders
-  valcycle<-max(as.numeric(temp_),na.rm = TRUE)
-
-
-  if (year> valcycle)
-  {ftp.station<-'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Air_Monitoring_Stations/bc_air_monitoring_stations.csv'
-  } else
-  { ftp.station<-paste("ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/AnnualSummary/",
-                       year,"/bc_air_monitoring_stations.csv",sep="")
-  }
-
-  print('Retrieving station details from FTP...')
-  #  dir.temp<-paste(getwd(),'/TEMP',sep="")
-  # file.temp<-paste(dir.temp,'/stationdetails.csv',sep="")
-  #temp<-RCurl::getURL(ftp.station,ftp.use.epsv=FALSE,header=TRUE)
-
-  # download.file(ftp.station,destfile=file.temp,quiet=FALSE)
-  #updated 2020-06-10 fix for ON,1 for active, OFF, 0 for inactive
-  station.details<-readr::read_csv(ftp.station)%>%
-    dplyr::mutate(STATUS = as.character(STATUS)) %>%
-    dplyr::mutate(STATUS=dplyr::recode(STATUS,"ON"="ACTIVE",
-                                       "OFF"="INACTIVE",
-                                       "1" = "ACTIVE",
-                                       "0" = "INACTIVE")
-    )
-
-  #fix if there are no NOTES column
-  if (!any('NOTES' %in% colnames(station.details)))
-  {
-    station.details<-station.details%>%
-      dplyr::mutate(NOTES='N/A')
-  }
-  if (!any('SERIAL_CODE' %in% colnames(station.details)))
-  {
-    station.details<-station.details%>%
-      dplyr::mutate(SERIAL_CODE='UNKNOWN')
-  }
-
-  station.details.aqhi<-station.details%>%
-    dplyr::filter(grepl("CGNDB=",NOTES))%>%
-    dplyr::select(SERIAL_CODE,STATION_NAME,NOTES)
-
-  station.details.aqhi.CGNDB<-NULL
-  for (i in 1:nrow(station.details.aqhi))
-  {
-    #extract CGNDB
-
-    temp.station<-station.details.aqhi[i,]
-    temp.NOTES<-as.character(temp.station$NOTES[1])
-    temp.NOTES.CGNDB<-as.vector(unlist(strsplit(temp.NOTES,";")))
-
-    temp.CGNDB<-as.character(temp.NOTES.CGNDB[grepl('CGNDB=',temp.NOTES.CGNDB)][1])
-    temp.CGNDB<-unlist(strsplit(temp.CGNDB,"="))[2]
-
-    if (!is.null(temp.CGNDB))
-    {
-      temp<-temp.station%>%
-        dplyr::mutate(CGNDB=temp.CGNDB)
-      station.details.aqhi.CGNDB<-station.details.aqhi.CGNDB%>%
-        dplyr::bind_rows(temp)
-    }
-  }
-
-  #Create detailed list of AQHI stations with CGNDB
-  station.details.aqhi<-station.details%>%
-    dplyr::filter(SERIAL_CODE %in% station.details.aqhi.CGNDB$SERIAL_CODE)%>%
-    merge(station.details.aqhi.CGNDB,all.y=TRUE)
-
-  station.details<-station.details%>%
-    dplyr::filter(!SERIAL_CODE %in% station.details.aqhi.CGNDB$SERIAL_CODE)%>%
-    dplyr::mutate(CGNDB="N/A")%>%
-    dplyr::bind_rows(station.details.aqhi)
-
-  #add station_name_full is not there yet
-  if (!any('STATION_NAME_FULL' %in% colnames(station.details)))
-  {
-    #this makes column called STATION_NAME that has no suffix
-    #and also creates a column called STATION_NAME_FULL
-    station.details<-station.details%>%
-      dplyr::mutate(STATION_NAME_FULL=STATION_NAME)%>%
-      dplyr::mutate(STATION_NAME=gsub(' Met_60$','',STATION_NAME_FULL,ignore.case=TRUE))%>%
-      dplyr::mutate(STATION_NAME=gsub('_60$','',STATION_NAME,ignore.case=TRUE))%>%
-      dplyr::mutate(STATION_NAME=gsub(' Met_15$','',STATION_NAME,ignore.case=TRUE))%>%
-      dplyr::mutate(STATION_NAME=gsub('_15$','',STATION_NAME,ignore.case=TRUE))%>%
-      dplyr::mutate(STATION_NAME=gsub(' Met_1$','',STATION_NAME,ignore.case=TRUE))%>%
-      dplyr::mutate(STATION_NAME=gsub('_1$','',STATION_NAME,ignore.case=TRUE))%>%
-      dplyr::mutate(STATION_NAME=gsub('_OLD$','',STATION_NAME,ignore.case=TRUE))%>%
-      dplyr::mutate(STATION_NAME=gsub(' Met$','',STATION_NAME,ignore.case=TRUE))%>%
-      dplyr::mutate(STATION_NAME=gsub('_Met$','',STATION_NAME,ignore.case=TRUE))%>%
-      dplyr::mutate(STATION_NAME=gsub('_Amb$','',STATION_NAME,ignore.case=TRUE))%>%
-      COLUMN_REORDER(columns=c("SERIAL_CODE","EMS_ID","STATION_NAME",'STATION_NAME_FULL'))
-
-
-
-  }
-
-  station.details <- data.frame(lapply(station.details, as.character), stringsAsFactors=FALSE)
-
-  # file.remove(file.temp)   #delete the temporary file
-  station.details <- tibble::as_tibble(station.details)
-  return(station.details)
-
-}
-
-#' List available parameters
-#'
-#' This function lists the parameters that are available for retrieval
-#'
-#' @examples
-#' list_parameters()
-#'
-#' @export
-list_parameters <- function()
-{
-  # RUN_PACKAGE(c('RCurl','dplyr','stringi'))
-  ftpsource_ <- 'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/Year_to_Date/'
-  temp_<-as.character(unlist(stringi::stri_split_lines(RCurl::getURL(ftpsource_,dirlistonly=TRUE))))
-  temp_ <- temp_[!grepl('station',temp_,ignore.case=TRUE)]
-  temp_ <- tolower(gsub('.csv','',temp_,ignore.case=TRUE))
-  temp_ <- sort(temp_)
-  temp_ <- temp_[temp_ !=""]
-  return(temp_)
-}

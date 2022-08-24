@@ -1,3 +1,15 @@
+# Copyright 2022 Province of British Columbia
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and limitations under the License.
+
 #' Pad data to completely represent entire years
 #'
 #' This function inserts fillers to data set. The function can identify separate columns of DATE and TIME
@@ -19,9 +31,17 @@ pad_data <- function(df, date_time = NULL,values = NULL,time_ending = TRUE,add_D
     values <- NULL
     time_ending <- TRUE
     add_DATETIME = TRUE
+
+    df <- data.result
+    date_time <-  c('date','DATE_PST')[c('date','DATE_PST') %in% cols_]
+    values = c(cols_vals,cols_instrument,cols_unit)
+    time_ending = !use_openairformat
+    add_DATETIME = FALSE
   }
 
   require(dplyr)
+
+  print('padding the data')
 
   df <- ungroup(df)
   cols_ <- colnames(df)
@@ -33,11 +53,29 @@ pad_data <- function(df, date_time = NULL,values = NULL,time_ending = TRUE,add_D
     separate_DATETIME <- add_DATETIME
   }
 
+
+
   # assign values for default entries
   if (is.null(date_time)){
     date_time <- cols_[cols_ %in% c('DATE_PST','datetime','date_time',
                                     'date_pst','DATEPST')]
     date_time <- date_time[1]
+  }
+  #check if special condition for importBC_data, where use_openair
+  #need to rename away from "date" as date_time column
+  if (date_time == 'date') {
+    special_openairformat <- TRUE
+    date_time <- 'date_pst'
+    values <- c(values,'ws','wd')
+    add_DATETIME <- FALSE
+    separate_DATETIME <- FALSE
+    df <- df %>%
+      dplyr::rename(date_pst = date)
+    cols_ <- colnames(df)
+    time_ending <- FALSE
+
+  } else {
+    special_openairformat <- FALSE
   }
 
   if (is.null(values)) {
@@ -45,10 +83,10 @@ pad_data <- function(df, date_time = NULL,values = NULL,time_ending = TRUE,add_D
   }
 
 
-  cols_select <- c(cols_[!cols_ %in% c(values,date_time)])
+  cols_selection <- c(cols_[!cols_ %in% c(values,date_time)])
 
   if (separate_DATETIME) {
-    cols_select <- cols_select[!cols_select %in% c('DATE','TIME')]
+    cols_selection <- cols_selection[!cols_selection %in% c('DATE','TIME')]
     try(df <- df %>%
       dplyr::select(-DATE,-TIME), silent = TRUE)
   }
@@ -58,6 +96,8 @@ pad_data <- function(df, date_time = NULL,values = NULL,time_ending = TRUE,add_D
     df[[date_time]] <- df[[date_time]] - lubridate::hours(1)
 
   }
+
+  #special cse for use_openairformat
 
   lst_datetime <- df %>%
     pull(date_time)
@@ -81,7 +121,7 @@ pad_data <- function(df, date_time = NULL,values = NULL,time_ending = TRUE,add_D
   df_result <- df_datetime %>%
     merge(
       df %>%
-        dplyr::select(`cols_select`) %>%
+        dplyr::select(cols_selection) %>%
         unique()
     ) %>%
     dplyr::left_join(df) %>%
@@ -91,6 +131,14 @@ pad_data <- function(df, date_time = NULL,values = NULL,time_ending = TRUE,add_D
   if (time_ending) {
     df_result[[date_time]] <- df_result[[date_time]] + lubridate::hours(1)
 
+  }
+
+  #fix back for the special case scenario
+
+  if (special_openairformat) {
+
+    df_result <- df_result %>%
+      dplyr::rename(date = date_pst)
   }
 
   print(paste('Added/padded rows:',nrow(df_result) - nrow(df)))

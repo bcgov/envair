@@ -9,7 +9,7 @@ importBC_data(
   years = NULL,
   use_openairformat = TRUE,
   use_ws_vector = FALSE,
-  pad = NULL
+  pad = TRUE
 )
 }
 \arguments{
@@ -28,7 +28,7 @@ If not declared, the current year will be used}
 
 \item{use_openairformat}{is boolean,if TRUE, output is compatible with openair. Apples only to station queries}
 
-\item{use_ws_vector}{default is FALSE, if TRUE and use_openairformat is TRUE, ws is the vector wind speed}
+\item{use_ws_vector}{use vector wind speed? default is FALSE, if TRUE and use_openairformat is TRUE, ws is the vector wind speed}
 
 \item{pad}{default is TRUE. if FALSE, it removes all NaNs}
 }
