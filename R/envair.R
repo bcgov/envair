@@ -15,15 +15,13 @@
 #' The envair packages provides functions for the retrieval and processing of B.C.'s air quality monitoring data
 #'
 #' @section envair functions:
-#'
-#'     \itemize{
-#'     \item General functions for retrieving air quality monitoring data such as fine particulate matter (PM2.5), ground-level
-#'     ozone (O3), nitrogen dioxide (NO2), sulphur dioxide (SO2), total reduced sulphur (TRS) along with related meteorological
-#'     data such as wind speed (wspd), wind direction (wdir), temperature
-#'     \item Functions for retrieving ventillation index data and ventillation index map
-#'     \item Functions for calculating metrics for air quality such as daily 1-hour maximums, daily 8-hour maximums,
-#'     rolling 8-hour average, daily average concentrations
-#'     }
+#'     * General functions for retrieving air quality monitoring data such as fine particulate matter (PM2.5), ground-level
+#'           ozone (O3), nitrogen dioxide (NO2), sulphur dioxide (SO2), total reduced sulphur (TRS) along with related meteorological
+#'           data such as wind speed (wspd), wind direction (wdir), temperature
+#'     * Functions for retrieving ventillation index data and ventillation index map
+#'     * Functions for calculating metrics for air quality such as daily 1-hour maximums, daily 8-hour maximums,
+#'            rolling 8-hour average, daily average concentrations
+#' @md
 #'
 #' @import dplyr
 #'
