@@ -18,13 +18,15 @@ importBC_data_avg(
 
 \item{averaging_type}{is the sub-annual values of either "1-hour", "24-hour", "8-hour","d1hm", "d8hm". If NULL, it applies the parameter default}
 
-\item{data_threshold}{value between 0 to 1. This the data capture requirements before reporting the average. Enter 0 if you want to include all values.}
+\item{data_threshold}{value between 0 to 1. This refers to the data capture requirements.
+Data will less than that data_threshold are excluded from the output.
+If data_threshold=0, it will include ALL values of that averaging type and will include}
 }
 \description{
 This function averages the imported data
 }
 \examples{
 importBC_data_avg('o3')   #retrieves the daily 8-hour maximum for current year
-importBC_data_avg('o3')
+importBC_data_avg('o3',years = 2015, averaging_type = 'd1hm',data_threshold = 0)   #displays the daily 1-hour maximum for ozone in 2015. It will display all data even if less than 75\% of the day are not available.
 
 }
