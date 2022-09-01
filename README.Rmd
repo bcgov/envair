@@ -1,10 +1,13 @@
-
 ---
 output: 
   github_document: 
     toc: TRUE
+editor_options: 
+  markdown: 
+    wrap: sentence
 ---
 
+```{=html}
 <!--
 Copyright 2022 Province of British Columbia
 
@@ -18,14 +21,10 @@ Unless required by applicable law or agreed to in writing, software distributed 
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and limitations under the License.
 -->
-
-
-
+```
 <!-- Edit the README.Rmd only!!! The README.md is generated automatically from README.Rmd. -->
 
-bcgov/envair: BC air quality data retrieval and analysis tool
-==========================================================================
-
+# bcgov/envair: BC air quality data retrieval and analysis tool
 
 ```{r, echo = FALSE}
 knitr::opts_chunk$set(
@@ -34,18 +33,20 @@ knitr::opts_chunk$set(
 )
 ```
 
-# bcgovr 
-[![img](https://img.shields.io/badge/Lifecycle-Maturing-007EC6)](https://github.com/bcgov/repomountie/blob/master/doc/lifecycle-badges.md)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+# bcgovr
 
+[![img](https://img.shields.io/badge/Lifecycle-Maturing-007EC6)](https://github.com/bcgov/repomountie/blob/master/doc/lifecycle-badges.md) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 ## Overview
 
-bcgov/envair is an R package developed by the BC Ministry of Environment and Climate Change Strategy  Knowledge Management Branch/Environmental and Climate Monitoring Section (ENV/KMB/ECMS) air quality monitoring unit. Package enables R-based retrieval and processing of [air quality monitoring data](https://envistaweb.env.gov.bc.ca/). Output is now compatible with the popular [openair package](https://cran.r-project.org/web/packages/openair/openair.pdf).
+bcgov/envair is an R package developed by the BC Ministry of Environment and Climate Change Strategy Knowledge Management Branch/Environmental and Climate Monitoring Section (ENV/KMB/ECMS) air quality monitoring unit.
+Package enables R-based retrieval and processing of [air quality monitoring data](https://envistaweb.env.gov.bc.ca/).
+Output is now compatible with the popular [openair package](https://cran.r-project.org/web/packages/openair/openair.pdf).
 
-## Installation 
+## Installation
 
-You can install `envair` directly from this GitHub repository. To proceed, you will need the [remotes](https://cran.r-project.org/package=remotes) package:
+You can install `envair` directly from this GitHub repository.
+To proceed, you will need the [remotes](https://cran.r-project.org/package=remotes) package:
 
 ```{r, eval=FALSE}
 install.packages("remotes")
@@ -60,38 +61,40 @@ library(envair)
 
 ## Functions
 
-* `importBC_data()` Retrieves station or parameter data from specified year/s between 1980 and yesterday.
+-   `importBC_data()` Retrieves station or parameter data from specified year/s between 1980 and yesterday.
 
-    + if station is specified, output includes all parameters from that station. Output is also a compatible input to the openair package functions with _scalar wind speed_ and _vector wind direction_ as default ws, wd openair feed. The date is also shifted to the time-beginning format.
-    + if parameter is specified, output displays data from all air quality monitoring stations that reported this data.
-    + set _pad = TRUE_ to pad missing dates, set _use_ws_vector = TRUE_ to use vector wind speed instead of scalar, and 
-      set _use_openairformat = FALSE_ to produce  the original *non-openair* output. 
-    
+    -   if station is specified, output includes all parameters from that station. Output is also a compatible input to the openair package functions with *scalar wind speed* and *vector wind direction* as default ws, wd openair feed. The date is also shifted to the time-beginning format.
+    -   if parameter is specified, output displays data from all air quality monitoring stations that reported this data.
+    -   set *pad = TRUE* to pad missing dates, set *use_ws_vector = TRUE* to use vector wind speed instead of scalar, and set *use_openairformat = FALSE* to produce the original *non-openair* output.
 
-* `listBC_stations()` Lists details of all air quality monitoring stations (active or inactive)
+-   `importBC_data_avg()` Retrieves pollutant (parameter) data and performs statistical averaging based on default for the pollutant
 
-* `list_parameters()` Lists the parameters that can be imported by `importBC_data()`
+    -   function can retrieve 24-hour averages (24-hr), daily 1-hour maximum (d1hm), daily 8-hour maximum (d8hm), and rolling 8-hour values (8-hr)
 
-* `importECCC_forecast()` Retrieves AQHI, PM2.5, PM10, O3, and NO2 forecasts from the ECCC datamart
+-   `listBC_stations()` Lists details of all air quality monitoring stations (active or inactive)
 
-* `GET_VENTING_ECCC()` Retrieve the venting index FLCN39 from Environment and Climate Change Canada datamart
+-   `list_parameters()` Lists the parameters that can be imported by `importBC_data()`
 
-* `ventingBC_kml()` Creates a kml or shape file based on the 2019 OBSCR rules. This incorporates venting index and sensitivity zones.
+-   `importECCC_forecast()` Retrieves AQHI, PM2.5, PM10, O3, and NO2 forecasts from the ECCC datamart
 
+-   `GET_VENTING_ECCC()` Retrieve the venting index FLCN39 from Environment and Climate Change Canada datamart
 
+-   `ventingBC_kml()` Creates a kml or shape file based on the 2019 OBSCR rules.
+    This incorporates venting index and sensitivity zones.
 
 ## Usage and Examples
 
-
 #### `importBC_data()`
 
-****************
+------------------------------------------------------------------------
 
-##### Using *openair* package function on BC ENV data. 
->By default, this function produces openair-compatible dataframe output. This renames *WSPD_VECT*,*WDIR_VECT* into *ws* and *wd*, changes pollutant names to lower case characters (e.g., *pm25*,*no2*,*so2*), and shifts the date from time-ending to time-beginning format. 
->To use, specify station name and year/s. 
->For a list of stations, use *listBC_stations()* function. 
->If no year is specified, function retrieves latest data, typically the unverfied data from start of year to current date.
+##### Using *openair* package function on BC ENV data.
+
+> By default, this function produces openair-compatible dataframe output.
+> This renames *WSPD_VECT*,*WDIR_VECT* into *ws* and *wd*, changes pollutant names to lower case characters (e.g., *pm25*,*no2*,*so2*), and shifts the date from time-ending to time-beginning format.
+> To use, specify station name and year/s.
+> For a list of stations, use *listBC_stations()* function.
+> If no year is specified, function retrieves latest data, typically the unverfied data from start of year to current date.
 
 ```{r, eval=FALSE}
 library(openair)
@@ -104,13 +107,14 @@ knitr::include_graphics('importBC_data.png')
 ```
 
 ##### Other features for station data retrieval
-* To import without renaming column names, specify *use_openairformat = FALSE*. This also keeps date in time-ending format
-* By default, _vector wind direction_ and _scalar wind speeds_ are used
-* To use vector wind speed, use _use_ws_vector = TRUE_
-* To pad missing dates, set _pad = TRUE_
-* Station name is not case sensitive, and works on partial text match
-* Multiple stations can be specified _c('Prince George','Kamloops')_
-* For non-continuous multiple years, use _c(2010,2011:2014)_
+
+-   To import without renaming column names, specify *use_openairformat = FALSE*. This also keeps date in time-ending format
+-   By default, *vector wind direction* and *scalar wind speeds* are used
+-   To use vector wind speed, use *use_ws_vector = TRUE*
+-   To pad missing dates, set *pad = TRUE*
+-   Station name is not case sensitive, and works on partial text match
+-   Multiple stations can be specified *c('Prince George','Kamloops')*
+-   For non-continuous multiple years, use *c(2010,2011:2014)*
 
 ```{r, eval =  FALSE}
 importBC_data('Prince George Plaza 400',2010:2012,use_openairformat = FALSE)
@@ -120,7 +124,10 @@ importBC_data('Trail',2015,pad = TRUE)
 ```
 
 ##### Retrieve parameter data
->Specify parameter name to retrieve data. Note that these are very large files and may use up your computer's resources. List of parameters can be found using the *list_parameters()* function. 
+
+> Specify parameter name to retrieve data.
+> Note that these are very large files and may use up your computer's resources.
+> List of parameters can be found using the *list_parameters()* function.
 
 ```{r,eval=FALSE}
 pm25_3year <- importBC_data('PM25',2010:2012)
@@ -128,17 +135,16 @@ pm25_3year <- importBC_data('PM25',2010:2012)
 
 #### `listBC_stations()`
 
-****************
+------------------------------------------------------------------------
 
->produces a dataframe that lists all air quality monitoring station details. 
->if year is specified, it retrieves the station details from that year. Note that this entry may not be accurate since system has not been in place to generate these station details.
+> produces a dataframe that lists all air quality monitoring station details.
+> if year is specified, it retrieves the station details from that year.
+> Note that this entry may not be accurate since system has not been in place to generate these station details.
 
 ```{r, eval = FALSE}
 listBC_stations()
 listBC_stations(2016)
 ```
-
-
 
 ```{r, echo = FALSE}
 table_ <- read.csv('listbc_stations.csv',sep=',')
@@ -147,17 +153,17 @@ knitr::kable(table_[1:4,])
 
 #### `list_parameters()`
 
-****************
+------------------------------------------------------------------------
 
->produce a vector string of available parameters that can be retrieved with *importBC_data()*
+> produce a vector string of available parameters that can be retrieved with *importBC_data()*
 
 #### `GET_VENTING_ECCC()`
 
-***************
+------------------------------------------------------------------------
 
->produces a dataframe containing the recent venting index. 
->Optional entry of date string retrieves venting from a particular date.
->Archived data is dependent on ECCC's data availability
+> produces a dataframe containing the recent venting index.
+> Optional entry of date string retrieves venting from a particular date.
+> Archived data is dependent on ECCC's data availability
 
 ```{r, eval = FALSE}
 GET_VENTING_ECCC()
@@ -171,10 +177,10 @@ knitr::kable(table_[1:4,])
 
 #### `importECCC_forecast()`
 
-******************
+------------------------------------------------------------------------
 
-* Retrieves forecasts and model data from ECCC
-* parameters include AQHI, PM25, NO2, O3, PM10
+-   Retrieves forecasts and model data from ECCC
+-   parameters include AQHI, PM25, NO2, O3, PM10
 
 ```{r, eval = FALSE}
 importECCC_forecast('no2')
@@ -182,11 +188,10 @@ importECCC_forecast('no2')
 
 #### `ventingBC_kml()`
 
-******************
+------------------------------------------------------------------------
 
-* creates a kml object based on the 2019 OBSCR rules
-* directory to save kml file can be specified. File will be saved in that directory as _Venting_Index_HD.kml_.
-
+-   creates a kml object based on the 2019 OBSCR rules
+-   directory to save kml file can be specified. File will be saved in that directory as *Venting_Index_HD.kml*.
 
 ```{r, eval = FALSE}
 ventingBC_kml()
