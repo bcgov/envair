@@ -2,7 +2,9 @@
 
 export(GET_STATISTICS_PARAMETER)
 export(GET_VENTING_ECCC)
+export(get_stats)
 export(importBC_data)
+export(importBC_data_avg)
 export(importECCC_forecast)
 export(listBC_stations)
 export(list_parameters)

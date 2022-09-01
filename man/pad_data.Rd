@@ -7,6 +7,7 @@
 pad_data(
   df,
   date_time = NULL,
+  padby = "hour",
   values = NULL,
   time_ending = TRUE,
   add_DATETIME = NULL
@@ -15,7 +16,9 @@ pad_data(
 \arguments{
 \item{df}{is the dataframe containing date_time parameters, and values columns}
 
-\item{date_time}{defines the date_time column. Default is DATE_PST}
+\item{date_time}{defines the date_time column. Default is DATE_PST. It can also be just dates if padby = 'day'}
+
+\item{padby}{is either "hour" or "day". This defines the increment of date_time column}
 
 \item{values}{defines the columns with the reported measurements. If NULL, it wil use RAW_VALUE and ROUNDED_VALUE}
 
