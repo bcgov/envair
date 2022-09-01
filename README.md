@@ -76,6 +76,13 @@ library(envair)
         *use_openairformat = FALSE* to produce the original
         *non-openair* output.
 
+-   `importBC_data_avg()` Retrieves pollutant (parameter) data and
+    performs statistical averaging based on default for the pollutant
+
+    -   function can retrieve 24-hour averages (24-hr), daily 1-hour
+        maximum (d1hm), daily 8-hour maximum (d8hm), and rolling 8-hour
+        values (8-hr)
+
 -   `listBC_stations()` Lists details of all air quality monitoring
     stations (active or inactive)
 

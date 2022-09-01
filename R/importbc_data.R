@@ -488,7 +488,7 @@ importBC_data<-function(parameter_or_station,
 #'
 #' @examples
 #' importBC_data_avg('o3')   #retrieves the daily 8-hour maximum for current year
-#' importBC_data_avg('o3')
+#' importBC_data_avg('o3',years = 2015, averaging_type = 'd1hm',data_threshold = 0)   #displays the daily 1-hour maximum for ozone in 2015. It will display all data even if less than 75% of the day are not available.
 #'
 #' @export
 importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, data_threshold = 0.75)
