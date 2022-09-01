@@ -484,7 +484,9 @@ importBC_data<-function(parameter_or_station,
 #' @param parameter is the parameter to average.use list_parameters() for list of parameters
 #' @param years specifies the years to include. Use vector for multiple years. If NULL, it uses the current year.
 #' @param averaging_type is the sub-annual values of either "1-hour", "24-hour", "8-hour","d1hm", "d8hm". If NULL, it applies the parameter default
-#' @param data_threshold  value between 0 to 1. This the data capture requirements before reporting the average. Enter 0 if you want to include all values.
+#' @param data_threshold  value between 0 to 1. This refers to the data capture requirements.
+#' Data will less than that data_threshold are excluded from the output.
+#' If data_threshold=0, it will include ALL values of that averaging type and will include
 #'
 #' @examples
 #' importBC_data_avg('o3')   #retrieves the daily 8-hour maximum for current year
