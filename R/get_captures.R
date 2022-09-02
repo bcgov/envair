@@ -51,7 +51,7 @@ get_captures <- function(param,years=NULL,adjust=FALSE,stop_at_present = TRUE) {
   df_24h <- importBC_data_avg(df,averaging_type = '24h')
 
   #check if limited to current date
-  if (stop_at_present) {
+  if (stop_at_present & (lubridate::year(Sys.Date()) %in% years)) {
     #retrieve current date
     current_date <- importBC_data('pm25') %>%
       filter(!is.na(RAW_VALUE)) %>%
