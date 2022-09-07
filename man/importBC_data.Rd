@@ -9,7 +9,9 @@ importBC_data(
   years = NULL,
   use_openairformat = TRUE,
   use_ws_vector = FALSE,
-  pad = TRUE
+  pad = TRUE,
+  flag_TFEE = FALSE,
+  merge_Stations = FALSE
 )
 }
 \arguments{
@@ -31,6 +33,13 @@ If not declared, the current year will be used}
 \item{use_ws_vector}{use vector wind speed? default is FALSE, if TRUE and use_openairformat is TRUE, ws is the vector wind speed}
 
 \item{pad}{default is TRUE. if FALSE, it removes all NaNs}
+
+\item{flag_TFEE}{default is FALSE. If TRUE,}
+
+\item{merge_Stations}{}
+
+\item{caaqs}{default is FALSE. If TRUE, it adds fields for TFEE, \n
+and merges station names}
 }
 \description{
 This function retrieves station or parameter hourly data from the BC open data portal

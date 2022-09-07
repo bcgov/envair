@@ -4,12 +4,15 @@
 \alias{COLUMN_REORDER}
 \title{REORDER COLUMNS}
 \usage{
-COLUMN_REORDER(data.input, columns = c(""))
+COLUMN_REORDER(data.input, columns = c(""), align = "left")
 }
 \arguments{
 \item{data.input}{the input data frame}
 
 \item{columns}{the vector of strings listing the column names in desired order. Columns not listed are added at the end}
+
+\item{align}{specifies where the specified columns are inserted at
+beginning ("left") or end ("right")}
 }
 \description{
 This function reorders the columns of a dataframe based on the order it is specified in columns

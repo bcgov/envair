@@ -4,7 +4,9 @@
 \alias{GET_URL_FOLDERS}
 \title{Get Folders in URL}
 \usage{
-GET_URL_FOLDERS(source.url = "http://dd.weather.gc.ca/bulletins/alphanumeric/")
+GET_URL_FOLDERS(
+  source.url = "https://dd.weather.gc.ca/bulletins/alphanumeric/"
+)
 }
 \arguments{
 \item{source.url}{is the URL containing the data folders, default is ECCC datamart}

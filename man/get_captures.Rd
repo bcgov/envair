@@ -9,7 +9,7 @@ get_captures(param, years = NULL, adjust = FALSE, stop_at_present = TRUE)
 \arguments{
 \item{param}{is the pollutant(param). Use list_parameters() to list availble parameters.
 You can use vector for multi-pollutant query.
-and you can also use the data itself. Data must be retrieved form an importBC_data()}
+param can also be a dataframe retrieved from an importBC_data() function.}
 
 \item{years}{is the year or years. You can use vectors to query multiple years. If NULL, it will be the current year}
 

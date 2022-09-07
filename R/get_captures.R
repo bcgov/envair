@@ -17,7 +17,7 @@
 #'
 #' @param param is the pollutant(param). Use list_parameters() to list availble parameters.
 #' You can use vector for multi-pollutant query.
-#' and you can also use the data itself. Data must be retrieved form an importBC_data()
+#' param can also be a dataframe retrieved from an importBC_data() function.
 #' @param years is the year or years. You can use vectors to query multiple years. If NULL, it will be the current year
 #' @param adjust default is FALSE. if TRUE (not working), it will combine some stations/instruments
 #' based on the merging requirement applies in CAAQS

@@ -37,6 +37,7 @@ if NULL, it will include each parameters in averaging}
 the averaging result is NA}
 }
 \description{
+deprecated, use importBC_data_avg()
 Gets the running average of specific parameters
 requires a pivot_longer format
 }

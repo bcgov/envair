@@ -238,8 +238,9 @@ RENAME_COLUMN_untidy<-function(data.station,colname.orig,colname.new=NULL,quiet=
 }
 
 #' rounding off function
-#' #
-#' This function makes a simple rounding off
+#'
+#' This function makes a simple rounding off based on ISO17025
+#'
 #' @param x the as.numeric input
 #' @param n the number of decimal places for resulting output
 #' round2()
@@ -259,6 +260,7 @@ round2 = function(x,n=0)
 #' GET STATION DETAILS FUNCTION
 #'
 #' This function retrieves latest station details or deteails during specific year from the ftp feed
+#'
 #' @param data.year the year where station details are retrieved from. Defaults to current year
 #' GET_STATION_DETAILS_FTP()
 #'
@@ -445,15 +447,26 @@ RUN_PACKAGE<-function(packages=c('dplyr','ggplot2','reshape',
 #' This function reorders the columns of a dataframe based on the order it is specified in columns
 #' @param data.input the input data frame
 #' @param columns the vector of strings listing the column names in desired order. Columns not listed are added at the end
-COLUMN_REORDER<-function(data.input,columns=c(''))
+#' @param align specifies where the specified columns are inserted at
+#' beginning ("left") or end ("right")
+COLUMN_REORDER<-function(data.input,columns=c(''),align = 'left')
 {
   #reorders column based on the defined vlaue in columns
   #note that unlisted columns will be added as is, in the end
   columns<-columns[columns %in% colnames(data.input)]   #removes those columns not in data
   column.nonsort<-colnames(data.input)[!colnames(data.input) %in% columns]
-  data.input%>%
-    dplyr::select(c(columns,column.nonsort))%>%
-    return()
+
+  if (tolower(align) == 'right') {
+    #align at right (insert at end)
+    data.input%>%
+      dplyr::select(c(column.nonsort,columns))%>%
+      return()
+  } else {
+    #align left (insert at beginning)
+    data.input%>%
+      dplyr::select(c(columns,column.nonsort))%>%
+      return()
+  }
 }
 
 IsDate <- function(mydate) {
@@ -1209,7 +1222,7 @@ GET_DATEPADDED_DATA<-function(data.unpadded,column.datefield='DATE_PST',
 #'
 #' This function retrieves the list of folders that are in the specified URL
 #' @param source.url is the URL containing the data folders, default is ECCC datamart
-GET_URL_FOLDERS<-function(source.url='http://dd.weather.gc.ca/bulletins/alphanumeric/' )
+GET_URL_FOLDERS<-function(source.url='https://dd.weather.gc.ca/bulletins/alphanumeric/' )
 {
   if (0)
   {
@@ -1221,7 +1234,7 @@ GET_URL_FOLDERS<-function(source.url='http://dd.weather.gc.ca/bulletins/alphanum
   RUN_PACKAGE(c('dplyr','tidyr','httr','curl'))
 
   #note: Do not use the RCurl version of reading https, there is an SSL
-  set_config(config( ssl_verifypeer = 0L ) )
+  httr::set_config(config( ssl_verifypeer = 0L ) )
 
   result <- NULL
 
@@ -1230,11 +1243,11 @@ GET_URL_FOLDERS<-function(source.url='http://dd.weather.gc.ca/bulletins/alphanum
     print(paste('Attempt',j,'in GETURLFolder for',source.url))
     #we'll try http and https
     source.url <- gsub('https://','http://',source.url)
-    temp_<-curl(source.url)
+    temp_<-curl::curl(source.url)
     try(result<-unlist(strsplit(readLines(temp_),split='/n')),silent = TRUE)
 
     source.url <- gsub('http://','https://',source.url)
-    temp_<-curl(source.url)
+    temp_<-curl::curl(source.url)
     try(result<-unlist(strsplit(readLines(temp_),split='/n')),silent = TRUE)
 
     if (!is.null(result)) {break}
@@ -1263,158 +1276,6 @@ GET_URL_FOLDERS<-function(source.url='http://dd.weather.gc.ca/bulletins/alphanum
   return(result)
 }
 
-#' Save dataframe to a file in a specified location
-#'
-#' This function saves the dataframe into a file
-#' @param data_to_save is the dataframe to save into a file, or
-#'                     for file_only, it is the file to transfer
-#' @param filename is string defining the name of the file,
-#'                if NULL, it keeps the namefrom data_to_save, works only if file_only = TRUE
-#' @param path.target is string defining the path where the file will be saved
-#' @param path.temp default NULL, is where the file is temporarily saved. if null, file is saved in working directory
-#' @param file_only is true, it performs a file transfer to FTP
-SAVE_TO_FILE<-function(data_to_save,filename=NULL,path.target,
-                       path.temp=NULL,file_only = FALSE)
-{
-
-  #updated: 2019-04-10
-  #PURPOSE: Saves the dataframe into a file
-  #creates a temporary file first, copy file into target
-  #   directory using a pseudoname, then renames to replace existing file
-  #debug initialization
-  # data_to_save<-GET_STATION_DETAILS_DAS()
-  # filename<-'stations.csv'
-  # path.target<-'C:/R_Library/abind/'
-  # path.temp<-NULL
-  #end of debug initialization
-
-  #NOTE: The md5 function is not accurate, it seems to change with the file
-
-  #fix path.target, remove the last / if it's there
-  if (0)
-  {
-    data_to_save <- 'rmd_calms.html'
-    filename <- 'Valemount_met.html'
-    path.target <- 'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/CaptureStatistics/'
-    path.temp=NULL
-    path.target <- 'C:/Temp/'
-    file_only = FALSE
-
-  }
-  RUN_PACKAGE(c('data.table','RCurl'))
-  if (substr(path.target,nchar(path.target),nchar(path.target))=='/')
-  {
-    path.target<-substr(path.target,1,nchar(path.target)-1)
-  }
-
-  if (is.null(filename))
-  {
-    filename <- basename(data_to_save)
-    file_only <- TRUE
-  }
-  function1_ok<-FALSE
-  function2_ok<-FALSE
-  RUN_PACKAGE(c('dplyr'))
-  if (is.null(path.temp))
-  {
-    path.temp<-paste(getwd(),'/filetemp_',sep='')
-    dir.create(path.temp,showWarnings = FALSE)
-  }
-
-  if (!file_only)
-  {
-    #data is saved into a file
-    if (!is.null(data_to_save) && nrow(data_to_save)>0)
-    {
-
-      filename.final<-paste(path.target,filename,sep='/')
-      filename.final.pseudo<-paste(path.target,'/',filename,'_',sep='')
-      #fix names in  case the paste resulted in '//'
-      filename.final <- gsub('//','/',filename.final)
-      filename.final <- gsub(':/','://',filename.final)
-
-      #save file into temporary folder, get the md5 hash sum of file
-      #note that for md5 to work, the filename must be the same as final
-      #so in temporary folder, the filename is the same as final name, and then renamed to temp
-      #for copying into the target folder
-      # file.md5.content<-NULL
-      # filename.md5.value<-NULL
-      #try(write.table(data_to_save,file=filename.temp.full,row.names=FALSE,sep=','),silent=TRUE)
-      if (grepl('ftp://',path.target,ignore.case = TRUE))
-      {
-        print(paste('Saving to FTP',path.target))
-
-
-        filename.final<-paste(path.target,filename,sep='/')
-
-        key<-ENVAIR_CONNECTION_CHECK()
-        key.ftpuser<-as.character(key$VALUE[key$ITEM=='FTP_USER'])
-        key.ftppwd<-as.character(key$VALUE[key$ITEM=='FTP_PASSWORD'])
-        data.table::fwrite(data_to_save,
-                           file=paste(path.temp,'/',filename,sep=''),
-                           dateTimeAs = 'write.csv')
-        # print(paste('from:',paste(path.temp,'/',filename,sep=''),
-        #             'to:',filename.final))
-        try(RCurl::ftpUpload(paste(path.temp,'/',filename,sep=''),
-                             filename.final,
-                             userpwd=paste(safer::decrypt_string(key.ftpuser,key=Sys.info()['nodename']),
-                                           safer::decrypt_string(key.ftppwd,key=Sys.info()['nodename'])
-                                           ,sep=':'
-                             )
-        )
-        )
-        unlink(path.temp,recursive = TRUE) #delete the temporary file
-      } else
-      {
-        filename.temp<-paste(filename,'_',sep='')
-        filename.temp.full<-paste(path.temp,'/',filename.temp,sep='')
-        filename.final<-paste(path.target,filename,sep='/')
-        filename.final.pseudo<-paste(path.target,'/',filename,'_',sep='')
-        try(data.table::fwrite(data_to_save,file=filename.final.pseudo,dateTimeAs = 'write.csv'))
-        try(function2_ok<-file.rename(from=filename.final.pseudo,to=filename.final),silent=TRUE)
-      }
-    }
-  } else
-  {
-    #file is copied into the ftp file
-    if (file.exists(data_to_save))
-    {
-      filename.final<-paste(path.target,filename,sep='/')
-      filename.final.pseudo<-paste(path.target,'/',filename,'_',sep='')
-      #fix names in  case the paste resulted in '//'
-      filename.final <- gsub('//','/',filename.final)
-      filename.final <- gsub(':/','://',filename.final)
-
-      if (grepl('ftp://',path.target, ignore.case = TRUE))
-      {
-        key<-ENVAIR_CONNECTION_CHECK()
-        key.ftpuser<-as.character(key$VALUE[key$ITEM=='FTP_USER'])
-        key.ftppwd<-as.character(key$VALUE[key$ITEM=='FTP_PASSWORD'])
-        print(paste('saving file to',filename.final))
-        #copy file into FTP
-        try(RCurl::ftpUpload(data_to_save,
-                             filename.final,
-                             userpwd=paste(safer::decrypt_string(key.ftpuser,key=Sys.info()['nodename']),
-                                           safer::decrypt_string(key.ftppwd,key=Sys.info()['nodename'])
-                                           ,sep=':'
-                                           )
-                              )
-        )
-
-      } else
-      {
-        #simply copy the file
-        file.copy(from=data_to_save,
-                  to=filename.final,
-                  overwrite = TRUE,
-                  copy.date = TRUE)
-      }
-
-    }
-  }
-
-  return(TRUE)
-}
 
 
 
@@ -1562,13 +1423,14 @@ direction <- function(angle)
 }
 
 #' Fix tooltip in rmarkdown kable
+#'
 #' This fixes tooltip issue by creating new lines
 #' by inserting spaces
 #'
 #' @param txt is a string containing the tooltip
 #'             lines are separated by sep_string
 #' @param sep_string is the string separator for the lines
-#'            default is <br>
+#'            default is br
 FIX_tooltip <- function(txt,sep_string='<br>')
 {
   if (0)
@@ -1621,6 +1483,7 @@ FIX_tooltip <- function(txt,sep_string='<br>')
 
 #' Calculate the running average
 #'
+#' deprecated, use importBC_data_avg()
 #' Gets the running average of specific parameters
 #' requires a pivot_longer format
 #'

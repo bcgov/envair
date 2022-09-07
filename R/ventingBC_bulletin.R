@@ -6,9 +6,6 @@
 #'
 #' This function retrieves venting data from ECCC datamart
 #' to generate the text bulletin
-#' function here was developed to run in the DAS server (PARTICULATE.dmz)
-#' which saves the resulting venting.html file into E:/WebSites/wwwroot/Web2016/aqo/files/bulletin/
-#' and will show up in
 #'
 #' @param date.start is the date of the venting data. if NULL, it retrieves the latest available
 #' @param savefile is the location where the file will be saved. If null it will default to locations
@@ -16,7 +13,7 @@
 #' If an ftp link is defined, envair.key with write access details to FTP server is needed
 #' If savefile is terminated in '/', another folder for the data year (~./2019/EC_) will be generated and
 #' the
-#' @param output is either 'html' or 'ftp'. If 'html', it will create html file into envistaweb
+#' @param output is either 'html' or 'ftp'. If 'html', it will create html file
 #'              if 'ftp' then it will save into the Open Data Portal FTP page
 #'              if 'csv' it creates the csv file that populates the http://www.env.gov.bc.ca/epd/bcairquality/aqo/csv/VentingIndex.csv
 #'
@@ -727,7 +724,7 @@ GET_VENTING_ECCC<-function(date.start=NULL)
   RUN_PACKAGE(c('dplyr','data.table','readr','RCurl','tibble','lubridate','tidyr'))
   #PURPOSE: Retrieves venting data from the specified URL
   #venting.metadata='ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/Air_Quality/VentingMetaData.csv'
-  venting.url='http://dd.weather.gc.ca/bulletins/alphanumeric/'    #ECCC venting index data
+  venting.url='https://dd.weather.gc.ca/bulletins/alphanumeric/'    #ECCC venting index data
   #venting.metadata='ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/Air_Quality/VentingMetaData.csv'
   venting.metadata='https://envistaweb.env.gov.bc.ca/aqo/files/VentingMetaData.csv'
   venting.url2 <- 'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/VentingBulletins/'

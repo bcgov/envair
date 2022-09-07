@@ -2,9 +2,7 @@
 % Please edit documentation in R/envairfunctions.R
 \name{round2}
 \alias{round2}
-\title{rounding off function
-
-This function makes a simple rounding off}
+\title{rounding off function}
 \usage{
 round2(x, n = 0)
 }
@@ -15,7 +13,5 @@ round2(x, n = 0)
 round2()}
 }
 \description{
-rounding off function
-
-This function makes a simple rounding off
+This function makes a simple rounding off based on ISO17025
 }

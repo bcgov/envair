@@ -30,6 +30,10 @@
 #' @param use_openairformat is boolean,if TRUE, output is compatible with openair. Apples only to station queries
 #' @param use_ws_vector use vector wind speed? default is FALSE, if TRUE and use_openairformat is TRUE, ws is the vector wind speed
 #' @param pad default is TRUE. if FALSE, it removes all NaNs
+#' @param caaqs default is FALSE. If TRUE, it adds fields for TFEE, \n
+#' and merges station names
+#' @param flag_TFEE default is FALSE. If TRUE,
+#' @param merge_Stations
 #'
 #'@examples
 #' importBC_data('Prince George Plaza 400')
@@ -37,7 +41,91 @@
 #' importBC_data(c('Prince George','Kamloops'),c(2010,2015))
 #'
 #' @export
-importBC_data<-function(parameter_or_station,
+importBC_data <- function(parameter_or_station,
+                         years=NULL,use_openairformat=TRUE,
+                         use_ws_vector = FALSE,pad = TRUE,
+                         flag_TFEE = FALSE, merge_Stations = FALSE) {
+
+  #debug
+  if (0)
+  {
+
+    source('./r/paddatafunction.R')
+    source('./r/listBC_stations.R')
+    source('./r/envairfunctions.R')
+    source('./r/get_caaqs_stn_history.R')
+    source('./r/importbc_data.R')
+    parameter_or_station <- 'pm25'
+    parameter_or_station <- 'smithers'
+    years <- 2019
+    pad = TRUE
+    use_openairformat <- TRUE
+    use_ws_vector <- FALSE
+    flag_TFEE = TRUE
+    merge_Stations = TRUE
+
+  }
+
+  #no padding, quick query if flag_TFEE or merge_station
+  if (flag_TFEE | merge_Stations){
+    #better remove duplicates, and fix names
+    pad <- TRUE
+  }
+  #use original function to retrieve data
+  df <- importBC_data_(parameter_or_station = parameter_or_station,
+                 years=years,
+                 use_openairformat=use_openairformat,
+                 use_ws_vector = use_ws_vector,
+                 pad = pad
+                 )
+
+  #return with original query if no TFEE flags or merging are needed
+
+  if (flag_TFEE) {
+
+    #if there is no paramter column, it means it is a station data listing
+    if (!'PARAMETER' %in% colnames(df)) {
+      print('flag_TFEE=TRUE option is currently not available with Station Data query')
+      return(NULL)
+    }
+
+    print('Adding TFEE flags')
+    df <- df %>%
+     add_TFEE(station_column = 'STATION_NAME',date_column = 'DATE',param_column = 'PARAMETER')
+  print('Done. TFEE flags added.')
+
+  }
+
+  if (merge_Stations) {
+    #if there is no paramter column, it means it is a station data listing
+    if (!'PARAMETER' %in% colnames(df)) {
+      print('merge_Stations=TRUE option is currently not available with Station Data query.
+            Please use parameter (PM2.5, O3, NO2, SO2,etc)')
+      return(NULL)
+    }
+    #merge station names
+    print('Merging Stations based on CAAQS/station history.....')
+    df <- merge_STATIONS(df)
+    print('Done. Stations merged')
+  }
+  return(df)
+}
+
+#' Main data retrieval function
+#'
+#' Deprecated since envair 0.2.1.000. use importBC_data() instead
+#' This was original function since envair 0.1.0.000
+#' It is still the back-end to retrieving data
+#'
+#' @param years the years that will be retrieved. For sequence, use 2009:2015. For non
+#' sequential years, use c(2010,2015,2018)
+#' If not declared, the current year will be used
+#' @param use_openairformat is boolean,if TRUE, output is compatible with openair. Apples only to station queries
+#' @param use_ws_vector use vector wind speed? default is FALSE, if TRUE and use_openairformat is TRUE, ws is the vector wind speed
+#' @param pad default is TRUE. if FALSE, it removes all NaNs
+#' @param caaqs default is FALSE. If TRUE, it adds fields for TFEE, \n
+#' and merges station names
+importBC_data_<-function(parameter_or_station,
                         years=NULL,use_openairformat=TRUE,
                         use_ws_vector = FALSE,pad = TRUE)
 
@@ -91,6 +179,7 @@ importBC_data<-function(parameter_or_station,
   {
     parameters <- parameter_or_station
     stations <- NULL
+    use_openairformat <- FALSE
 
   } else
   {
@@ -205,6 +294,7 @@ importBC_data<-function(parameter_or_station,
         dplyr::mutate(STATION_NAME_FULL = STATION_NAME)
     }
 
+
     # remove duplicates (added 2022-08-18)
     rows_rawdata <- nrow(data.result)   #rows before removing duplicates
     print('checking for duplicates')
@@ -217,8 +307,8 @@ importBC_data<-function(parameter_or_station,
       dplyr::filter(index==1) %>%
       dplyr::select(-index,-count) %>%
       dplyr::ungroup()
-
     if (pad) {
+
       data.result <- pad_data(data.result,add_DATETIME = TRUE)
     }
 
@@ -474,7 +564,26 @@ importBC_data<-function(parameter_or_station,
   }
 
   print(paste('Done.',nrow(data.result),'rows'))
-  return(data.result)
+
+  #add DATE, and TIME columns if not included (sometimes it is not)
+  cols <- colnames(data.result)
+  if (!all(c('DATE','TIME') %in% cols) & !use_openairformat)
+  {
+    print('adding DATE,TIME columns')
+    data.result <- data.result %>%
+      dplyr::mutate(datetime_ = DATE_PST - lubridate::hours(1)) %>%
+      dplyr::mutate(DATE = lubridate::date(datetime_),
+                    TIME = as.character(DATE_PST,format = '%H:%M')) %>%
+      dplyr::mutate(TIME = ifelse(TIME == '00:00','24:00',TIME)) %>%
+      COLUMN_REORDER(c('DATE_PST','DATE','TIME')) %>%
+      dplyr::select(-datetime_)
+  }
+
+  data.result %>%
+    ungroup() %>%
+    as.data.frame() %>%
+  return()
 }
+
 
 

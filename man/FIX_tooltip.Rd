@@ -2,9 +2,7 @@
 % Please edit documentation in R/envairfunctions.R
 \name{FIX_tooltip}
 \alias{FIX_tooltip}
-\title{Fix tooltip in rmarkdown kable
-This fixes tooltip issue by creating new lines
-by inserting spaces}
+\title{Fix tooltip in rmarkdown kable}
 \usage{
 FIX_tooltip(txt, sep_string = "<br>")
 }
@@ -13,10 +11,9 @@ FIX_tooltip(txt, sep_string = "<br>")
 lines are separated by sep_string}
 
 \item{sep_string}{is the string separator for the lines
-default is <br>}
+default is br}
 }
 \description{
-Fix tooltip in rmarkdown kable
 This fixes tooltip issue by creating new lines
 by inserting spaces
 }
