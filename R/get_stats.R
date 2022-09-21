@@ -17,13 +17,13 @@
 #'
 #' @param param is the parameter or vector of parameters.
 #' @param datetime is a string defining the datetime field. This field shoule be in time-ending format.
-#' @param include_TFEE default FALSE. If TRUE, it will also calculate on data without TFEE
+#' @param add_TFEE default FALSE. If TRUE, it will also calculate on data without TFEE
 #' @param merge_Stations default FALSE. If TRUE, it will combine stations as practiced in air zone reporting
 #' @examples
 #'
 #' @export
 #'
-get_stats <- function(param, years=NULL,include_TFEE = FALSE, merge_Stations = FALSE)
+get_stats <- function(param, years=NULL,add_TFEE = FALSE, merge_Stations = FALSE)
 {
   if (0) {
 
@@ -40,6 +40,9 @@ get_stats <- function(param, years=NULL,include_TFEE = FALSE, merge_Stations = F
     merge_Stations <- TRUE
 
   }
+
+  #re-defined, added only to stay consistent, use add_TFEE
+  include_TFEE <- add_TFEE
 
 
   #list of stats for different parameter

@@ -23,7 +23,43 @@
 #' listBC_stations(2015)
 #'
 #' @export
-listBC_stations<-function(year=NULL)
+#'
+listBC_stations <- function(year=NULL)
+{
+  if (0) {
+    year <- 2005
+  }
+
+
+  result_now <- listBC_stations_()
+
+  if (!is.null(year)) {
+    result_prev <- NULL
+    try(
+      {
+        result_prev <- listBC_stations_(year=year)
+        cols_now <- colnames(result_now)
+        cols_prev <- colnames(result_prev)
+        cols_add <- cols_prev[!cols_now %in% cols_prev]
+        cols_add <- c(cols_add,'STATION_NAME_FULL')
+        result_prev <- result_prev %>%
+          dplyr::left_join(result_now %>%
+                             select(cols_add))
+        return(result_prev)
+      }
+    )
+
+
+   }
+  return(result_now)
+}
+
+
+#' Main listBC_stations() function
+#'
+#' this was created to ensure output is up-to-date
+#' when user specifies a year
+listBC_stations_<-function(year=NULL)
 {
   #2019-05-13
   #retrieves the station details from the BC ftp link

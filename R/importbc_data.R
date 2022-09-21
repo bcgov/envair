@@ -30,10 +30,12 @@
 #' @param use_openairformat is boolean,if TRUE, output is compatible with openair. Apples only to station queries
 #' @param use_ws_vector use vector wind speed? default is FALSE, if TRUE and use_openairformat is TRUE, ws is the vector wind speed
 #' @param pad default is TRUE. if FALSE, it removes all NaNs
-#' @param caaqs default is FALSE. If TRUE, it adds fields for TFEE, \n
-#' and merges station names
-#' @param flag_TFEE default is FALSE. If TRUE,
-#' @param merge_Stations
+#' @param flag_TFEE default is FALSE. If TRUE, it will add TFEE flags on days TFEE were verified
+#' This function retrieves TFEE from the CAAQS station history excel file
+#' ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/
+#' @param merge_Stations default is FALSE. it will combine data from stations and alternative stations
+#' This function retrieves thsoe details from the CAAQS station history excel file
+#'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/
 #'
 #'@examples
 #' importBC_data('Prince George Plaza 400')

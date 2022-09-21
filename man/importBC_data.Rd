@@ -34,12 +34,13 @@ If not declared, the current year will be used}
 
 \item{pad}{default is TRUE. if FALSE, it removes all NaNs}
 
-\item{flag_TFEE}{default is FALSE. If TRUE,}
+\item{flag_TFEE}{default is FALSE. If TRUE, it will add TFEE flags on days TFEE were verified
+This function retrieves TFEE from the CAAQS station history excel file
+ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/}
 
-\item{merge_Stations}{}
-
-\item{caaqs}{default is FALSE. If TRUE, it adds fields for TFEE, \n
-and merges station names}
+\item{merge_Stations}{default is FALSE. it will combine data from stations and alternative stations
+This function retrieves thsoe details from the CAAQS station history excel file
+ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/}
 }
 \description{
 This function retrieves station or parameter hourly data from the BC open data portal

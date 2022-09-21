@@ -5,6 +5,7 @@
 -   <a href="#bcgovr" id="toc-bcgovr">bcgovr</a>
     -   <a href="#overview" id="toc-overview">Overview</a>
     -   <a href="#installation" id="toc-installation">Installation</a>
+    -   <a href="#features" id="toc-features">Features</a>
     -   <a href="#functions" id="toc-functions">Functions</a>
     -   <a href="#usage-and-examples" id="toc-usage-and-examples">Usage and
         Examples</a>
@@ -59,29 +60,153 @@ remotes::install_github("bcgov/envair")
 library(envair)
 ```
 
+## Features
+
+-   Retrieve data from the Air Quality Data Archive by specifying
+    parameter (pollutant) or station. Functions have the option to add
+    Transboundary Flow Exceptional Event (TFEE) flags. Data archive is
+    located in the ENV’s FTP server:
+    <ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/>
+
+-   Generate annual metrics, data captures and statistical summaries
+    following the Guidance Document on Achievement Determination and the
+    Canadian Ambient Air Quality Standards
+
+-   Most of data processing functions can automatically process a
+    parameter as input, or a dataframe of air quality data.
+
+-   Retrieve archived and current ventilation index data with options to
+    generate a kml map.
+
 ## Functions
 
 -   `importBC_data()` Retrieves station or parameter data from specified
     year/s between 1980 and yesterday.
 
-    -   if station is specified, output includes all parameters from
-        that station. Output is also a compatible input to the openair
-        package functions with *scalar wind speed* and *vector wind
-        direction* as default ws, wd openair feed. The date is also
-        shifted to the time-beginning format.
+    -   for you can specify one or several parameters, or name of one or
+        several stations
+    -   if station is specified, output returns a wide table following
+        the format of the openair package. It also renames all columns
+        into lowercase letters, changes scalar wind speed to ws, and
+        vector wind direction to wd. It also shifts the datetime to the
+        time-beginning format
     -   if parameter is specified, output displays data from all air
         quality monitoring stations that reported this data.
+    -   use *flag_TFEE = TRUE* to add a new boolean (TRUE/FALSE) column
+        called *flag_tfee*. This option only works when you enter
+        parameter (not station) in the parameter_or_station.
+    -   use merge_Stations = TRUE to merge data from monitoring stations
+        and corresponding alternative stations, especially in locations
+        where the monitoring station was relocated. This function may
+        also change the name of the air quality monitoring station.
     -   set *pad = TRUE* to pad missing dates, set *use_ws_vector =
         TRUE* to use vector wind speed instead of scalar, and set
         *use_openairformat = FALSE* to produce the original
         *non-openair* output.
 
 -   `importBC_data_avg()` Retrieves pollutant (parameter) data and
-    performs statistical averaging based on default for the pollutant
+    performs statistical averaging based on the specified averaging_type
 
     -   function can retrieve 24-hour averages (24-hr), daily 1-hour
-        maximum (d1hm), daily 8-hour maximum (d8hm), and rolling 8-hour
+        maximum (d1hm), daily 8-hour maximum (d8hm), rolling 8-hour
         values (8-hr)
+    -   it can also make annual summaries such as 98th percentile of
+        daily 1-hour maximum, annual mean of 24-hour values. To perform
+        annual summaries, the averaging_type should include “annual
+        \<averaging/percentile\> \<1-hour or 24-hour or dxhm\>”
+        -   function can calculate the number of times a certain value
+            has been exceeded
+
+            <table>
+            <caption>List of possible values for the
+            <em>averaging_type</em>.</caption>
+            <colgroup>
+            <col style="width: 29%" />
+            <col style="width: 20%" />
+            <col style="width: 50%" />
+            </colgroup>
+            <thead>
+            <tr class="header">
+            <th>Type of averaging</th>
+            <th><em>averaging_type=</em> Syntax</th>
+            <th>Output description</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr class="odd">
+            <td>1-hr</td>
+            <td>“1-hr”</td>
+            <td>Outputs hourly data. No averaging done.</td>
+            </tr>
+            <tr class="even">
+            <td>Daily Average</td>
+            <td>“24-hr”</td>
+            <td>Outputs the daily (24-hour) values.</td>
+            </tr>
+            <tr class="odd">
+            <td>Rolling 8-hour</td>
+            <td>“8-hr”</td>
+            <td>Outputs hourly values that were calculated from rolling 8-hour
+            average.</td>
+            </tr>
+            <tr class="even">
+            <td>Daily 1-hour maximum</td>
+            <td>“d1hm”</td>
+            <td>Outputs daily values of the highest 1-hour concentration</td>
+            </tr>
+            <tr class="odd">
+            <td>Daily 8-hour maximum</td>
+            <td>“d8hm”</td>
+            <td>Outputs the daily 8-hour maximum for each day</td>
+            </tr>
+            <tr class="even">
+            <td>Annual mean of 1-hour values</td>
+            <td>“annual mean 1-hr”</td>
+            <td>Outputs the average of all hourly values</td>
+            </tr>
+            <tr class="odd">
+            <td>Annual mean of daily values</td>
+            <td><p>“annual mean 24-hr”</p>
+            <p>“annual mean &lt;avging&gt;”</p></td>
+            <td>Outputs average of all daily values.</td>
+            </tr>
+            <tr class="even">
+            <td>Annual 98th percentile of 1-hour values</td>
+            <td><p>“annual 98p 1-hr”</p>
+            <p>“annual &lt;xxp&gt; &lt;avging&gt;</p></td>
+            <td>Outputs the 98th percentile of the 1-hour values.</td>
+            </tr>
+            <tr class="odd">
+            <td>4th Highest daily 8-hour maximum</td>
+            <td><p>“annual 4th d8hm”</p>
+            <p>“annual &lt;rank&gt; &lt;avging&gt;</p></td>
+            <td>Outputs the 4th highest daily 8-hour maximum.</td>
+            </tr>
+            <tr class="even">
+            <td>Number of daily values exceeding 28 µg/m3</td>
+            <td><p>“exceed 28 24-hr”</p>
+            <p>“exceed &lt;value&gt; &lt;avging&gt;</p></td>
+            <td>Outputs the number of days where the 28 µg/m3 is exceeded</td>
+            </tr>
+            <tr class="odd">
+            <td>Number of exceedance to d8hm of 62ppb</td>
+            <td><p>“exceed 62 d8hm”</p>
+            <p>“exceed &lt;value&gt; &lt;avging&gt;</p></td>
+            <td>Outputs the number of days where the daily 8-hour maximum exceeds 62
+            ppb</td>
+            </tr>
+            </tbody>
+            </table>
+
+            List of possible values for the *averaging_type*.
+
+-   `get_stats()` Retrieves a statistical summary based on the default
+    for the pollutant. Currently applies to PM2.5, O3, NO2, and SO2.
+    Output includes data captures, annual metrics, and exceedances.
+
+-   `get_captures()` Calculates the data captures for a specified
+    pollutant or dataframe. Output is a long list of capture statistics
+    such as hourly, daily, quarterly, and annual sumamaries.
 
 -   `listBC_stations()` Lists details of all air quality monitoring
     stations (active or inactive)
@@ -103,6 +228,20 @@ library(envair)
 #### `importBC_data()`
 
 ------------------------------------------------------------------------
+
+##### Retrieving air quality data, include TFEE adjustment and combine related stations
+
+> Use flag_TFEE = TRUE an merge_Stations = TRUE to produce a result that
+> defines the TFEE and merges station and instruments, as performed
+> during the CAAQS-reporting process.
+
+``` r
+
+library(envair)
+df_data <- importBC_data('pm25',years = 2015:2017, flag_TFEE = TRUE,merge_Stations = TRUE)
+
+knitr::kable(df_data[1:4,])
+```
 
 ##### Using *openair* package function on BC ENV data.
 
@@ -130,7 +269,6 @@ pollutionRose(PG_data,pollutant='pm25')
 -   By default, *vector wind direction* and *scalar wind speeds* are
     used
 -   To use vector wind speed, use *use_ws_vector = TRUE*
--   To pad missing dates, set *pad = TRUE*
 -   Station name is not case sensitive, and works on partial text match
 -   Multiple stations can be specified *c(‘Prince George’,‘Kamloops’)*
 -   For non-continuous multiple years, use *c(2010,2011:2014)*
@@ -151,6 +289,63 @@ importBC_data('Trail',2015,pad = TRUE)
 ``` r
 pm25_3year <- importBC_data('PM25',2010:2012)
 ```
+
+#### `importBC_data_avg()`
+
+------------------------------------------------------------------------
+
+##### Retrieving the annual average of daily values for multiple parameters
+
+> The function is capable of processing multiple parameters, and
+> multiple years, but it can only do one averaging type. The averaging
+> type can be a simple averaging (e.g., 24-hour, 8-hour, or combined
+> averaging (e.g., annual 98p d1hm, annual mean 24-hour). Check the
+> table above for a comprehensive list of averaging_type.
+>
+> ``` r
+> #user can specify the parameter, enter parameter name as input
+> annual_mean <- importBC_data_avg(c('pm25','o3'), years = 2015:2018, averaging_type = 'annual mean 24-hr')
+>
+> #or if you already have a dataframe, you can use the dataframe as input to for the statistical summary
+> df_input <- importBC_data(param = c('pm25','o3'), years = 2015:2018)
+> annual_mean <- importBC_data_avg(df_input,averaging_type = 'annual mean 24-hr')
+> ```
+
+#### `get_stats()`
+
+------------------------------------------------------------------------
+
+##### Calculate the annual metrics of PM2.5
+
+> The function will calculate statistical summaries , data captures, and
+> number of exceedances based on the CAAQS metrics and values. The
+> function will only perform a year-by-year calculation so the results
+> are not the actual CAAQS metrics, but can be used to derive it. For
+> ozone, it creates Q2 + Q3
+>
+> ``` r
+> #example retrieves stat summaries
+> stats_result <- get_stats(param = 'o3', years = 2016,add_TFEE = TRUE, merge_Stations = TRUE)
+> ```
+
+#### `get_captures()`
+
+------------------------------------------------------------------------
+
+##### Calculate the data captures of PM2.5
+
+> The function will create a summary of data captures for the parameter
+> or for dataframe. You can specify the parameter or, if available, use
+> an air quality dataframe as input.
+>
+> ``` r
+> #you can use the parameter as input
+> data_captures <- get_captures(param = c('pm25','o3'), years = 2015:2018,merge_Stations = TRUE)
+>
+> #or you can use a dataframe 
+> air_data <- importBC_data(c('pm25','o3'), years = 2015:201,merge_Stations = TRUE)
+> data_captures <- get_captures(param = air_data, years = 2015:2018)
+> ```
 
 #### `listBC_stations()`
 

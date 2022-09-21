@@ -40,7 +40,7 @@
 #' that specified if 24hour, and if adjusted for tfee
 #' @export
 importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, data_threshold = 0.75,
-                              flag_tfee = FALSE,merge_Stations = FALSE)
+                              flag_TFEE = FALSE,merge_Stations = FALSE)
 {
   if (0) {
     source('./r/importBC_data.R')
@@ -58,6 +58,7 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
 
   }
 
+  flag_tfee <- flag_TFEE #added to stay consistent
   require(dplyr)
 
 
