@@ -4,7 +4,12 @@
 \alias{get_captures}
 \title{Calculate the data capture for the station and parameter}
 \usage{
-get_captures(param, years = NULL, adjust = FALSE, stop_at_present = TRUE)
+get_captures(
+  param,
+  years = NULL,
+  merge_Stations = FALSE,
+  stop_at_present = TRUE
+)
 }
 \arguments{
 \item{param}{is the pollutant(param). Use list_parameters() to list availble parameters.
@@ -13,11 +18,11 @@ param can also be a dataframe retrieved from an importBC_data() function.}
 
 \item{years}{is the year or years. You can use vectors to query multiple years. If NULL, it will be the current year}
 
-\item{adjust}{default is FALSE. if TRUE (not working), it will combine some stations/instruments
-based on the merging requirement applies in CAAQS}
-
 \item{stop_at_present}{default is TRUE. It will remove values after the present date/time
 The present date/time is determined from the latest PM2.5 data}
+
+\item{adjust}{default is FALSE. if TRUE, it will combine some stations/instruments
+based on the merging requirement applies in CAAQS}
 }
 \description{
 NOTE: This will output the valid days, valid days in quarter, valid

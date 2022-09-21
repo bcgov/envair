@@ -4,10 +4,14 @@
 \alias{get_stats}
 \title{Calculate the statistucs for the pollutants based on CAAQS}
 \usage{
-get_stats(param, years = NULL)
+get_stats(param, years = NULL, include_TFEE = FALSE, merge_Stations = FALSE)
 }
 \arguments{
-\item{param}{is the}
+\item{param}{is the parameter or vector of parameters.}
+
+\item{include_TFEE}{default FALSE. If TRUE, it will also calculate on data without TFEE}
+
+\item{merge_Stations}{default FALSE. If TRUE, it will combine stations as practiced in air zone reporting}
 
 \item{datetime}{is a string defining the datetime field. This field shoule be in time-ending format.}
 }

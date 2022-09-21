@@ -8,7 +8,9 @@ importBC_data_avg(
   parameter,
   years = NULL,
   averaging_type = NULL,
-  data_threshold = 0.75
+  data_threshold = 0.75,
+  flag_tfee = FALSE,
+  merge_Stations = FALSE
 )
 }
 \arguments{
@@ -17,11 +19,26 @@ parameter can also be a dataframe from  importBC_data(). If dataframe, it will p
 
 \item{years}{specifies the years to include. Use vector for multiple years. If NULL, it uses the current year.}
 
-\item{averaging_type}{is the sub-annual values of either "1-hour", "24-hour", "8-hour","d1hm", "d8hm". If NULL, it applies the parameter default}
+\item{averaging_type}{is the sub-annual values of either "1-hour", "24-hour", "8-hour","d1hm", "d8hm"
+You can also request annual summaries, percentiles. Add "annual <annual stat> <on what data>": 'annual 98p 24h','annual 99p d1hm','annual xxp 1hr';'annual mean 1-hr';
+'annual mean 24-hr';'annual 4th d1hm'
+It can also calculate the number of exceedance to a specified value "exceedance 25.00 d1hm".
+Function will round off based on the precision of the number entered after exceedance
+If NULL, it applies either the 1-hour, 8-hour, or 24-hour, depending on typical default for}
 
 \item{data_threshold}{value between 0 to 1. This refers to the data capture requirements.
 Data will less than that data_threshold are excluded from the output.
 If data_threshold=0, it will include ALL values of that averaging type and will include}
+
+\item{flag_tfee}{default is FALSE. If TRUE, it will evaluate data with TFEE adjustment and include it in the result.
+The resultig column will have _TFEE for the TFEE-adjusted result}
+
+\item{merge_Stations}{default is FALSE. If TRUE, data from stations and their alternatives are merged. Alternative stations
+are defined when station has relocated to a nearby area}
+}
+\value{
+A wide dataframe listting the date, station name, instrument, parameter, and then the raw and rounded values with underscore
+that specified if 24hour, and if adjusted for tfee
 }
 \description{
 This function averages the imported data

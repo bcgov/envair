@@ -19,7 +19,7 @@
 #' You can use vector for multi-pollutant query.
 #' param can also be a dataframe retrieved from an importBC_data() function.
 #' @param years is the year or years. You can use vectors to query multiple years. If NULL, it will be the current year
-#' @param adjust default is FALSE. if TRUE (not working), it will combine some stations/instruments
+#' @param adjust default is FALSE. if TRUE, it will combine some stations/instruments
 #' based on the merging requirement applies in CAAQS
 #' @param stop_at_present default is TRUE. It will remove values after the present date/time
 #' The present date/time is determined from the latest PM2.5 data
@@ -30,20 +30,21 @@
 #'
 #' @export
 #'
-get_captures <- function(param,years=NULL,adjust=FALSE,stop_at_present = TRUE) {
+get_captures <- function(param,years=NULL,merge_Stations=FALSE,stop_at_present = TRUE) {
 
   if (0) {
-    param <- 'pm2.5'
+    param <- 'o3'
     source('./r/importbc_data.R')
     source('./r/paddatafunction.R')
     source('./r/listBC_stations.R')
     years <- 2022
     stop_at_present <- TRUE
+    merge_Stations <- TRUE
   }
 
   require(dplyr)
   if (!is.data.frame(param)) {
-  df <- importBC_data(param,years=years)
+  df <- importBC_data(param,years=years,merge_Stations = merge_Stations)
   } else {
     df <- param
   }
@@ -72,28 +73,29 @@ get_captures <- function(param,years=NULL,adjust=FALSE,stop_at_present = TRUE) {
     pad_data(add_DATETIME = TRUE) %>%
     filter(DATE_PST<=current_date) %>%
     dplyr::mutate(year = lubridate::year(DATE),
-                  month = as.character(DATE,format='%Y-%b')) %>%
-    dplyr::mutate(quarter = paste(year,'-Q',lubridate::quarter(DATE),sep=''))%>%
+                  month = as.character(DATE,format='%b')) %>%
+    dplyr::mutate(quarter = paste('Q',lubridate::quarter(DATE),sep=''))%>%
     arrange(DATE_PST)
 
-  # #factorized to sort month and quarter chronologically
-  df_full$month <- factor(df_full$month,levels = unique(df_full$month))
-  df_full$quarter <- factor(df_full$quarter,levels = unique(df_full$quarter))
+  #factorized to sort month and quarter chronologically
+  df_full$month <- factor(df_full$month,levels = month.abb)
+  df_full$quarter <- factor(df_full$quarter,levels = paste('Q',1:4,sep=''))
 
 
   captures_hrs <-  df %>%
     ungroup() %>%
     dplyr::filter(!is.na(RAW_VALUE)) %>%
     select(DATE_PST,DATE,STATION_NAME,INSTRUMENT,PARAMETER) %>%
+
     #insert station "TOTAL"
     dplyr::bind_rows(df_full %>% select(DATE_PST,DATE,STATION_NAME,INSTRUMENT,PARAMETER)) %>%
     dplyr::mutate(datetime = DATE_PST - lubridate::hours(1)) %>%
     dplyr::mutate(year = lubridate::year(datetime),
-                  month = as.character(datetime,format='%Y-%b')) %>%
-    dplyr::mutate(quarter = paste(year,'-Q',lubridate::quarter(datetime),sep='')) %>%
+                  month = as.character(datetime,format='%b')) %>%
+    dplyr::mutate(quarter = paste('Q',lubridate::quarter(datetime),sep='')) %>%
     #factorize month and quarter, to add chronological order
-    dplyr::mutate(month = factor(month,levels = levels(df_full$month)),
-                  quarter = factor(quarter,levels = levels(df_full$quarter))) %>%
+    dplyr::mutate(month = factor(month,levels = month.abb),
+                  quarter = factor(quarter,levels = paste('Q',1:4,sep=''))) %>%
     group_by(STATION_NAME,INSTRUMENT,PARAMETER,year,quarter,month) %>%
     dplyr::mutate(valid_hrs_month= n()) %>%
     ungroup() %>%
@@ -108,14 +110,13 @@ get_captures <- function(param,years=NULL,adjust=FALSE,stop_at_present = TRUE) {
   #categorize the entries into years, quarter, months
   df_captures <- captures_hrs %>%
     select(STATION_NAME,INSTRUMENT,PARAMETER,year,valid_hrs_year) %>% unique() %>%
-    dplyr::rename(value = valid_hrs_year,
-                  date_value = year) %>%
-    dplyr::mutate(unit = 'hours',date_category = 'year',
+    dplyr::rename(value = valid_hrs_year) %>%
+    dplyr::mutate(date_value = 'year',unit = 'hours',date_category = 'year',
                   date_value = as.character(date_value)) %>%
     dplyr::bind_rows(
 
       captures_hrs %>%
-        select(STATION_NAME,INSTRUMENT,PARAMETER,quarter,valid_hrs_quarter) %>% unique() %>%
+        select(STATION_NAME,INSTRUMENT,PARAMETER,quarter,year,valid_hrs_quarter) %>% unique() %>%
         dplyr::rename(value = valid_hrs_quarter,
                       date_value = quarter) %>%
         dplyr::mutate(unit = 'hours',date_category = 'quarter',
@@ -123,7 +124,7 @@ get_captures <- function(param,years=NULL,adjust=FALSE,stop_at_present = TRUE) {
     ) %>%
     dplyr::bind_rows(
       captures_hrs %>%
-        select(STATION_NAME,INSTRUMENT,PARAMETER,month,valid_hrs_month) %>% unique() %>%
+        select(STATION_NAME,INSTRUMENT,PARAMETER,year,month,valid_hrs_month) %>% unique() %>%
         dplyr::rename(value = valid_hrs_month,
                       date_value = month) %>%
         dplyr::mutate(unit = 'hours',date_category = 'month',
@@ -134,17 +135,22 @@ get_captures <- function(param,years=NULL,adjust=FALSE,stop_at_present = TRUE) {
   #calculate days of data captured----
 
   captures_days <-  df_24h %>%
+    # dplyr::mutate(year = lubridate::year(DATE)) %>%
     ungroup() %>%
     dplyr::filter(!is.na(RAW_VALUE_24h)) %>%
     select(DATE,STATION_NAME,INSTRUMENT,PARAMETER) %>%
     #insert station "TOTAL"
-    dplyr::bind_rows(df_full %>% select(DATE,STATION_NAME,INSTRUMENT,PARAMETER) %>% unique()) %>%
+    dplyr::bind_rows(
+      df_full %>%
+        select(DATE,STATION_NAME,INSTRUMENT,PARAMETER,year) %>%
+        unique()
+      ) %>%
     dplyr::mutate(year = lubridate::year(DATE),
-                  month = as.character(DATE,format='%Y-%b')) %>%
-    dplyr::mutate(quarter = paste(year,'-Q',lubridate::quarter(DATE),sep='')) %>%
+                  month = as.character(DATE,format='%b')) %>%
+    dplyr::mutate(quarter = paste('Q',lubridate::quarter(DATE),sep='')) %>%
     #factorize month and quarter, to add chronological order
-    dplyr::mutate(month = factor(month,levels = levels(df_full$month)),
-                  quarter = factor(quarter,levels = levels(df_full$quarter))) %>%
+    dplyr::mutate(month = factor(month,levels =month.abb),
+                  quarter = factor(quarter,levels = paste('Q',1:4,sep=''))) %>%
     group_by(STATION_NAME,INSTRUMENT,PARAMETER,year,quarter,month) %>%
     dplyr::mutate(valid_days_month= n()) %>%
     ungroup() %>%
@@ -161,15 +167,14 @@ get_captures <- function(param,years=NULL,adjust=FALSE,stop_at_present = TRUE) {
     dplyr::bind_rows(
     captures_days %>%
     select(STATION_NAME,INSTRUMENT,PARAMETER,year,valid_days_year) %>% unique() %>%
-    dplyr::rename(value = valid_days_year,
-                  date_value = year) %>%
+    dplyr::rename(value = valid_days_year) %>%
     dplyr::mutate(unit = 'days',date_category = 'year',
-                  date_value = as.character(date_value))
+                  date_value = 'year')
     )%>%
     dplyr::bind_rows(
 
       captures_days %>%
-        select(STATION_NAME,INSTRUMENT,PARAMETER,quarter,valid_days_quarter) %>% unique() %>%
+        select(STATION_NAME,INSTRUMENT,PARAMETER,year,quarter,valid_days_quarter) %>% unique() %>%
         dplyr::rename(value = valid_days_quarter,
                       date_value = quarter) %>%
         dplyr::mutate(unit = 'days',date_category = 'quarter',
@@ -177,7 +182,7 @@ get_captures <- function(param,years=NULL,adjust=FALSE,stop_at_present = TRUE) {
     ) %>%
     dplyr::bind_rows(
       captures_days %>%
-        select(STATION_NAME,INSTRUMENT,PARAMETER,month,valid_days_month) %>% unique() %>%
+        select(STATION_NAME,INSTRUMENT,PARAMETER,year,month,valid_days_month) %>% unique() %>%
         dplyr::rename(value = valid_days_month,
                       date_value = month) %>%
         dplyr::mutate(unit = 'days',date_category = 'month',
@@ -187,7 +192,7 @@ get_captures <- function(param,years=NULL,adjust=FALSE,stop_at_present = TRUE) {
   #add total valid column-----
   df_TOTAL <- df_captures %>%
     filter(STATION_NAME == 'TOTAL') %>%
-    select(date_value,value,unit,date_category) %>% unique() %>%
+    select(date_value,value,unit,date_category,year) %>% unique() %>%
     dplyr::rename(total = value) %>%
     merge(
       df_captures%>%
@@ -198,14 +203,43 @@ get_captures <- function(param,years=NULL,adjust=FALSE,stop_at_present = TRUE) {
   df_captures <- df_TOTAL %>%
     left_join(df_captures) %>%
     filter(STATION_NAME != 'TOTAL') %>%
-    select(STATION_NAME,INSTRUMENT,PARAMETER,date_category,date_value,value,total,unit) %>%
+    select(STATION_NAME,INSTRUMENT,PARAMETER,year,date_category,date_value,value,total,unit) %>%
     arrange(STATION_NAME,INSTRUMENT,PARAMETER) %>%
     dplyr::mutate(value = ifelse(is.na(value),0,value)) %>%
     tidyr::pivot_wider(names_from = unit, values_from = c(value,total))
 
+
+  # add Q2 + Q3 for ozone
+  if ('O3' %in% df_captures$PARAMETER) {
+    df_captures_ <- df_captures %>%
+      filter(date_value %in% c('Q2','Q3')) %>%
+      tidyr::pivot_longer(cols = c('value_hours','value_days','total_hours','total_days')) %>%
+      group_by(STATION_NAME,INSTRUMENT,PARAMETER,year,date_category,name) %>%
+      dplyr::summarise(`Q2+Q3` = sum(value,na.rm = TRUE)) %>%
+      tidyr::pivot_wider(names_from = name, values_from = `Q2+Q3`) %>%
+      ungroup() %>%
+      mutate(date_value = 'Q2+Q3')
+
+
+    df_captures <- df_captures %>%
+      dplyr::bind_rows(df_captures_)
+  }
+
+
   #change data_value to factor
   df_captures$date_value <- factor(df_captures$date_value,
-                                      levels = unique(df_TOTAL$date_value))
-    # View()
+                                      levels = c(unique(df_TOTAL$date_value),'Q2+Q3'))
+
+  #rename columns
+
+  colnames(df_captures) <- gsub('value_','valid_',colnames(df_captures),ignore.case = TRUE)
+  #add percentage
+  df_captures <- df_captures %>%
+    dplyr::mutate(perc_hours = 100*(valid_hours)/total_hours,
+                  perc_days = 100*(valid_days)/total_days) %>%
+    dplyr::mutate(perc_hours = round2(perc_hours,2),
+                  perc_days = round2(perc_days,2))
+
+
     return(df_captures)
 }

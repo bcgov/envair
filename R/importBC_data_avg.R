@@ -18,30 +18,52 @@
 #' @param parameter is the parameter to average.use list_parameters() for list of parameters.
 #' parameter can also be a dataframe from  importBC_data(). If dataframe, it will process and retrieve average.
 #' @param years specifies the years to include. Use vector for multiple years. If NULL, it uses the current year.
-#' @param averaging_type is the sub-annual values of either "1-hour", "24-hour", "8-hour","d1hm", "d8hm". If NULL, it applies the parameter default
+#' @param averaging_type is the sub-annual values of either "1-hour", "24-hour", "8-hour","d1hm", "d8hm"
+#' You can also request annual summaries, percentiles. Add "annual <annual stat> <on what data>": 'annual 98p 24h','annual 99p d1hm','annual xxp 1hr';'annual mean 1-hr';
+#' 'annual mean 24-hr';'annual 4th d1hm'
+#' It can also calculate the number of exceedance to a specified value "exceedance 25.00 d1hm".
+#' Function will round off based on the precision of the number entered after exceedance
+#'  If NULL, it applies either the 1-hour, 8-hour, or 24-hour, depending on typical default for
 #' @param data_threshold  value between 0 to 1. This refers to the data capture requirements.
 #' Data will less than that data_threshold are excluded from the output.
 #' If data_threshold=0, it will include ALL values of that averaging type and will include
+#' @param flag_tfee default is FALSE. If TRUE, it will evaluate data with TFEE adjustment and include it in the result.
+#' The resultig column will have _TFEE for the TFEE-adjusted result
+#' @param merge_Stations default is FALSE. If TRUE, data from stations and their alternatives are merged. Alternative stations
+#' are defined when station has relocated to a nearby area
 #'
 #' @examples
 #' importBC_data_avg('o3')   #retrieves the daily 8-hour maximum for current year
 #' importBC_data_avg('o3',years = 2015, averaging_type = 'd1hm',data_threshold = 0)   #displays the daily 1-hour maximum for ozone in 2015. It will display all data even if less than 75% of the day are not available.
 #'
+#' @return A wide dataframe listting the date, station name, instrument, parameter, and then the raw and rounded values with underscore
+#' that specified if 24hour, and if adjusted for tfee
 #' @export
-importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, data_threshold = 0.75)
+importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, data_threshold = 0.75,
+                              flag_tfee = FALSE,merge_Stations = FALSE)
 {
   if (0) {
     source('./r/importBC_data.R')
     source('./r/listBC_stations.R')
     source('./r/paddatafunction.R')
-    parameter <- 'OZONE'
-    years <- NULL
-    averaging_type <- NULL
+    source('./r/get_caaqs_stn_history.R')
+    source('./r/envairfunctions.R')
+    parameter <- 'pm25'
+    parameter <- df
+    years <- 2018
+    averaging_type <- '1hr'
     data_threshold <- 0.75
+    merge_Stations <- TRUE
+    flag_tfee = TRUE
+
   }
 
   require(dplyr)
 
+
+
+  # Determine if user entered dataframe or specified a parameter
+  #
   if (!is.data.frame(parameter)) {
     #rename the parameter entries
     parameter <- tolower(parameter)
@@ -61,12 +83,7 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
       'pm10','24-hour'
     )
 
-    lst_averaging_types <- c(
-      'd1hm','d8hm',
-      '24-hour','24hr','24-hr','24','day','24h','24 hr','24 h',
-      '1-hour','1hr','1-hr','1','hr','1h','hour',
-      '8hr','8-hr','8h','8-hour','8 hr','8 h'
-    )
+
 
     #assigning default values
     if (is.null(years)){
@@ -89,11 +106,18 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
     }
     #retrieve data
     df <- importBC_data(parameter = parameter,
-                        years = years_ )
+                        years = years_,
+                        flag_TFEE = flag_tfee,
+                        merge_Stations = merge_Stations)
   } else {
 
     print('Dataframe entered')
     df <- parameter
+
+    #get years based on the dataframe
+    years <- df %>%
+      mutate(year=lubridate::year(DATE)) %>%
+      pull(year) %>% unique()
     #check if averaging_type is null
     if (is.null(averaging_type)) {
       print('Dataframe entry, please specify averaging_type')
@@ -101,18 +125,242 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
     }
   }
 
+  #identify if there is TFEE flag in the data
+  #then redefine add_TFEE
+  flag_tfee <- 'flag_tfee' %in% colnames(df)
+
+#identify if it is annual summary, exceedance, or regular data query
+#re-define averaging_type based on the
+averaging_type <- gsub('excess','EXCEED',averaging_type,ignore.case = TRUE)
+averaging_type <- gsub('over','EXCEED',averaging_type,ignore.case = TRUE)
+averaging_type <- gsub('more','EXCEED',averaging_type,ignore.case = TRUE)
+  #rename the averaging type
+  if (grepl('annual',averaging_type,ignore.case = TRUE) | grepl('exceed',averaging_type,ignore.case = TRUE))
+  {
+     is_annual <- TRUE
+     is_exceedance <- grepl('exceed',averaging_type,ignore.case = TRUE)
+     #splits the averaging _type, separated by space
+     str_avg <- unlist(stringr::str_split(averaging_type,' '))
+     if (length(str_avg) !=3)
+     {
+       print('Please check averaging_type= value. Type ?importBC_data_avg for details')
+       return(NULL)
+     }
+     averaging_type <- str_avg[3]
+     annual_summary <- str_avg[2]
+
+
+  } else
+  {
+    is_annual <- FALSE
+  }
+
+
+  df_result <- NULL
+
+  #retrieve data without TFEE
+  df_no_tfee <- df %>%
+    importBC_data_avg_(years = years, averaging_type =  averaging_type, data_threshold = data_threshold)
+
+  if (!flag_tfee) {
+    print('sending result with no TFEE')
+    df_result <- df_no_tfee
+  } else {
+
+    df_tfee <- df %>%
+      filter(!flag_tfee) %>% #remove data with TFEE Flags
+      # View()
+      importBC_data_avg_(years = years, averaging_type =  averaging_type, data_threshold = data_threshold)
+
+    colnames(df_tfee)[grepl('_VALUE',colnames(df_tfee))] <- paste(colnames(df_tfee)[grepl('_VALUE',colnames(df_tfee))],
+                                                                 '_TFEE',sep='')
+    print('sending result with TFEE')
+    # print(colnames(df_tfee))
+    df_result <- df_no_tfee %>%
+      dplyr::left_join(df_tfee)
+  }
+
+  #exit if null
+  if (is.null(df_result)) {return(NULL)}
+
+  #re-define the averaging_type based on data output
+  cols <- colnames(df_no_tfee)
+  averaging_type <- cols[grepl('RAW_VALUE',cols,ignore.case = TRUE)][1]
+  averaging_type <- gsub('RAW_VALUE_','',averaging_type,ignore.case = TRUE)
+
+  if (is_annual) {
+    print('processing annual statistics')
+    df_result <- ungroup(df_result) %>%
+      dplyr::mutate(YEAR = lubridate::year(DATE))
+
+    cols <- colnames(df_result)
+    cols_values <- cols[grepl('value',cols,ignore.case = TRUE)]
+
+    if (is_exceedance) {
+
+
+      #if this is calculation of exceedances
+      #obtain the precision based on the entered value
+      #check if user entered a period on the value
+      annual_summary <- as.character(annual_summary)
+      if (grepl('.',annual_summary)) {
+          precision <- unlist(stringr::str_split(annual_summary,pattern = '\\.'))[2]
+          precision <- length(precision)
+      } else {
+        #take only whole numbers
+        precision <- 0
+      }
+
+      print(paste('Calculating the number of times above',annual_summary,'with precision of',precision))
+      cols_widen <- cols[grepl('value',cols,ignore.case = TRUE)]
+      annual_summary <- as.numeric(annual_summary)
+      df_result <- df_result %>%
+        tidyr::pivot_longer(cols = cols_widen) %>%
+        filter(!grepl('ROUNDED',name,ignore.case = TRUE)) %>%
+        mutate(value = round2(value,n=precision)) %>%
+        dplyr::mutate(excess_count = ifelse(value>annual_summary,1,0)) %>%
+        group_by(YEAR,STATION_NAME,INSTRUMENT,PARAMETER,name) %>%
+        dplyr::summarise(exceed = sum(excess_count,na.rm = TRUE)) %>%
+        dplyr::mutate(name = gsub('value',
+                                  paste('(>',annual_summary,')',sep=''),
+                                  name,ignore.case = TRUE)) %>%
+        dplyr::mutate(name = gsub('raw_','EXCEED',name,ignore.case = TRUE)) %>%
+        tidyr::pivot_wider(names_from = name,values_from = exceed)
+
+    } else {
+      #if this is NOT calculation of exceedances
+      #for percentiles
+      if (grepl('p',annual_summary,ignore.case = TRUE)) {
+        print('Calculating the percentiles of the year')
+        quantile <- as.numeric(gsub('p','',annual_summary,ignore.case = TRUE))/100
+
+        df_result <- df_result %>%
+          tidyr::pivot_longer(cols =cols_values) %>%
+          group_by(PARAMETER,YEAR,STATION_NAME,INSTRUMENT,name) %>%
+          dplyr::summarise(value = stats::quantile(value,probs = quantile,na.rm = TRUE,type = 2)) %>%
+          dplyr::mutate(name = gsub('VALUE','ANNUAL',name,ignore.case = TRUE)) %>%
+          dplyr::mutate(name = gsub(averaging_type,
+                                    paste(toupper(annual_summary),averaging_type,sep='_'),
+                                    name,ignore.case = TRUE)) %>%
+          tidyr::pivot_wider()
+      }
+
+      #for mean
+      annual_summary <- gsub('avg','mean',annual_summary)
+      annual_summary <- gsub('average','mean',annual_summary)
+      if (grepl('mean',annual_summary,ignore.case = TRUE)) {
+        print('Calculating the average values of the year')
+        df_result <- df_result %>%
+          tidyr::pivot_longer(cols =cols_values) %>%
+          group_by(PARAMETER,YEAR,STATION_NAME,INSTRUMENT,name) %>%
+          dplyr::summarise(value = mean(value,na.rm = TRUE)) %>%
+          dplyr::mutate(name = gsub('VALUE','ANNUAL',name,ignore.case = TRUE)) %>%
+          dplyr::mutate(name = gsub(averaging_type,
+                                    paste(toupper(annual_summary),averaging_type,sep='_'),
+                                    name,ignore.case = TRUE)) %>%
+          tidyr::pivot_wider()
+      }
+
+      #for nth highest,standardize number suffix (-rd,-th,-st)
+      if (gsub('[0-9]+', '', annual_summary) %in% c('rd','th','st','nd')) {
+
+        print('Calculating the nth highest of the year')
+        nth <- stringr::str_extract(annual_summary,'\\d+')
+        cols_remove <- cols[!cols %in% c('STATION_NAME','INSTRUMENT','PARAMETER','YEAR',cols_values)]
+
+        df_result <-   df_result %>%
+          tidyr::pivot_longer(cols =cols_values) %>%
+          filter(!is.na(value)) %>%
+          arrange(desc(value)) %>%
+          dplyr::select(-cols_remove) %>%
+          group_by(PARAMETER,YEAR,STATION_NAME,INSTRUMENT,name) %>%
+          dplyr::mutate(index = 1:n()) %>%
+          filter(index == nth) %>%
+          dplyr::select(-index) %>%
+          unique() %>%
+          dplyr::mutate(name = gsub('VALUE','ANNUAL',name,ignore.case = TRUE)) %>%
+          dplyr::mutate(name = gsub(averaging_type,
+                                    paste(toupper(annual_summary),averaging_type,sep='_'),
+                                    name,ignore.case = TRUE)) %>%
+          arrange(name,YEAR,STATION_NAME) %>%
+          tidyr::pivot_wider()
+      }
+
+    }
+  }
+
+return(ungroup(df_result))
+}
+
+
+#' Backend function of importBC_data_avg_
+#' These will calculate the daily 1-hour maximum values
+#' Note that averaging_type here is the simple (not compounded) format
+importBC_data_avg_ <- function(parameter, years = NULL, averaging_type =  NULL, data_threshold = 0.75) {
+
+  if (0) {
+    paramter <- df
+    years = 2018
+    averaging_type =  '1hr'
+    data_threshold = 0.75
+  }
   #add datetime_ columns for time-beginning processing
 
+  df <- parameter
 
-  if (averaging_type %in% c('1-hour','1hr','1-hr','1','hr','1h','hour'))
+  #list of alias names for the averaging_type
+  #should be in order of significance
+  df_avg_types <- tidyr::tribble(
+    ~averaging_type_std,~alias,
+    '8hr','8hr',
+    '8hr','8hour',
+    '8hr','8-hr',
+    '8hr','8h',
+    '8hr','8-hour',
+    '8hr','8 hr',
+    '8hr','8 h',
+    'd1hm','d1hm',
+    'd1hm','daily1hr',
+    'd1hm','daily1hrmax',
+    'd8hm','daily8hr',
+    'd8hm','daily8hrmax',
+    '24hr','24hr',
+    '24hr','24-hour',
+    '24hr','24 h',
+    '24hr','24h',
+    '24hr','day',
+    '24hr','days',
+    '24hr','24hour',
+    '1hr','1hr',
+    '1hr','1-hour',
+    '1hr','1-hr',
+    '1hr','1',
+    '1hr','hr',
+    '1hr','1h',
+    '1hr','hour'
+  )
+
+  #convert averaging_type to standard format
+
+  for (i in 1:nrow(df_avg_types)) {
+    if (grepl(df_avg_types$alias[i],averaging_type,ignore.case=TRUE)) {
+      averaging_type <- df_avg_types$averaging_type_std[i]
+      break
+    }
+  }
+
+
+  if (averaging_type %in% c('1hr'))
   {
     print('Calculating 1-hour values')
     df <-   df %>%
-      pad_data()
+      pad_data() %>%
+      dplyr::rename(RAW_VALUE_1HR = RAW_VALUE,
+                    ROUNDED_VALUE_1HR = ROUNDED_VALUE)
     return(df)
   }
 
-  if (averaging_type %in% c('24-hour','24hr','24-hr','24','day','24h','24 hr','24 h'))
+  if (averaging_type %in% c('24hr'))
   {
 
     print('Calculating 24-hour values')
@@ -229,7 +477,7 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
 
   }
 
-  if (averaging_type %in% c('8hr','8-hr','8h','8-hour','8 hr','8 h')) {
+  if (averaging_type %in% c('8hr')) {
 
     print('Calculating 8-hour running average')
     cols <- colnames(df)
