@@ -47,7 +47,9 @@ listBC_stations <- function(year=NULL,use_CAAQS = FALSE)
       select(STATION_NAME,STATION_NAME_FULL) %>%
       left_join(result)
 
-    return(result_now %>% filter(!is.na(STATION_NAME)))
+    result_now <- dplyr::filter(result_now,!is.na(STATION_NAME))
+
+    return(result_now)
   }
 
 
@@ -63,13 +65,13 @@ listBC_stations <- function(year=NULL,use_CAAQS = FALSE)
         result_prev <- result_prev %>%
           dplyr::left_join(result_now %>%
                              select(cols_add))
-        return(result_prev %>% filter(!is.na(STATION_NAME)))
+        return(result_prev %>% dplyr::dplyr::filter(!is.na(STATION_NAME)))
       }
     )
 
 
    }
-  return(result_now %>% filter(!is.na(STATION_NAME)))
+  return(result_now %>% dplyr::filter(!is.na(STATION_NAME)))
 }
 
 
@@ -215,7 +217,7 @@ listBC_stations_<-function(year=NULL)
   airzone_details <-
     station.details %>%
     dplyr::mutate(lat = as.numeric(LAT), lon = as.numeric(LONG), ems_id = EMS_ID) %>%
-    filter(!is.na(lat),!is.na(lon),abs(lat)<=90) %>%
+    dplyr::filter(!is.na(lat),!is.na(lon),abs(lat)<=90) %>%
     rcaaqs::assign_airzone(bcmaps::airzones()) %>%
     dplyr::rename(AIRZONE = airzone) %>%
     dplyr::select(LAT,LONG,AIRZONE) %>%
