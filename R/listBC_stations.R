@@ -65,7 +65,7 @@ listBC_stations <- function(year=NULL,use_CAAQS = FALSE)
         result_prev <- result_prev %>%
           dplyr::left_join(result_now %>%
                              select(cols_add))
-        return(result_prev %>% dplyr::dplyr::filter(!is.na(STATION_NAME)))
+        return(result_prev %>% dplyr::filter(!is.na(STATION_NAME)))
       }
     )
 
