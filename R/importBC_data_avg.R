@@ -27,7 +27,7 @@
 #' @param data_threshold  value between 0 to 1. This refers to the data capture requirements.
 #' Data will less than that data_threshold are excluded from the output.
 #' If data_threshold=0, it will include ALL values of that averaging type and will include
-#' @param flag_tfee default is FALSE. If TRUE, it will evaluate data with TFEE adjustment and include it in the result.
+#' @param flag_TFEE default is FALSE. If TRUE, it will evaluate data with TFEE adjustment and include it in the result.
 #' The resultig column will have _TFEE for the TFEE-adjusted result
 #' @param merge_Stations default is FALSE. If TRUE, data from stations and their alternatives are merged. Alternative stations
 #' are defined when station has relocated to a nearby area

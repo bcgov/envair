@@ -30,11 +30,11 @@ If NULL, it applies either the 1-hour, 8-hour, or 24-hour, depending on typical 
 Data will less than that data_threshold are excluded from the output.
 If data_threshold=0, it will include ALL values of that averaging type and will include}
 
+\item{flag_TFEE}{default is FALSE. If TRUE, it will evaluate data with TFEE adjustment and include it in the result.
+The resultig column will have _TFEE for the TFEE-adjusted result}
+
 \item{merge_Stations}{default is FALSE. If TRUE, data from stations and their alternatives are merged. Alternative stations
 are defined when station has relocated to a nearby area}
-
-\item{flag_tfee}{default is FALSE. If TRUE, it will evaluate data with TFEE adjustment and include it in the result.
-The resultig column will have _TFEE for the TFEE-adjusted result}
 }
 \value{
 A wide dataframe listting the date, station name, instrument, parameter, and then the raw and rounded values with underscore

@@ -155,7 +155,7 @@ get_stats <- function(param, years=NULL,add_TFEE = FALSE, merge_Stations = FALSE
     param_i <- df_stats_list[i,]
     df_ <- df %>%
       filter(PARAMETER == param_i$PARAMETER) %>%
-      importBC_data_avg(years=years,averaging_type = param_i$averaging_type,flag_tfee = include_TFEE,merge_Stations = merge_Stations)
+      importBC_data_avg(years=years,averaging_type = param_i$averaging_type,flag_TFEE = include_TFEE,merge_Stations = merge_Stations)
 
     cols <- colnames(df_)
     cols_select <- c('STATION_NAME','STATION_NAME_FULL','INSTRUMENT','PARAMETER','DATE','YEAR','TIME','DATE_PST','DATETIME')
