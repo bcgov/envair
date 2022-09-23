@@ -17,20 +17,29 @@
 #'
 #' @param year the year where station details are retrieved from. Defaults to current year if undefined
 #' This is not a vector
+#' @param use_CAAQS default FALSE. If TRUE, it will return the station list that is
+#' used for air zone and other reporting purposes. This list is from the
+#' Excel file located in:'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/BC_CAAQS_station_history.xlsx'
 #'
 #' @examples
 #' listBC_stations()
 #' listBC_stations(2015)
+#' listBC_stations(use_CAAQS = TRUE)
 #'
 #' @export
 #'
-listBC_stations <- function(year=NULL)
+listBC_stations <- function(year=NULL,use_CAAQS = FALSE)
 {
   if (0) {
     year <- 2005
   }
 
 
+  if (use_CAAQS) {
+    get_excel_table('ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/BC_CAAQS_station_history.xlsx',
+                    sheet = 'Monitoring Station',header_row = 2) %>%
+      return()
+  }
   result_now <- listBC_stations_()
 
   if (!is.null(year)) {

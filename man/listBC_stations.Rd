@@ -4,11 +4,15 @@
 \alias{listBC_stations}
 \title{List BC Air Quality Monitoring Stations}
 \usage{
-listBC_stations(year = NULL)
+listBC_stations(year = NULL, use_CAAQS = FALSE)
 }
 \arguments{
 \item{year}{the year where station details are retrieved from. Defaults to current year if undefined
 This is not a vector}
+
+\item{use_CAAQS}{default FALSE. If TRUE, it will return the station list that is
+used for air zone and other reporting purposes. This list is from the
+Excel file located in:'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/BC_CAAQS_station_history.xlsx'}
 }
 \description{
 This function retrieves latest station details or deteails during specific year from the ftp feed
@@ -16,5 +20,6 @@ This function retrieves latest station details or deteails during specific year 
 \examples{
 listBC_stations()
 listBC_stations(2015)
+listBC_stations(use_CAAQS = TRUE)
 
 }
