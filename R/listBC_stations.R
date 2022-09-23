@@ -45,9 +45,9 @@ listBC_stations <- function(year=NULL,use_CAAQS = FALSE)
 
     result_now <- result_now %>%
       select(STATION_NAME,STATION_NAME_FULL) %>%
-      left_join(result) %>%
-      filter(!is.na(STATION_NAME))
-    return(result_now)
+      left_join(result)
+
+    return(result_now %>% filter(!is.na(STATION_NAME)))
   }
 
 
