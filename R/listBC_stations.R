@@ -45,7 +45,8 @@ listBC_stations <- function(year=NULL,use_CAAQS = FALSE)
 
     result_now <- result_now %>%
       select(STATION_NAME,STATION_NAME_FULL) %>%
-      left_join(result)
+      left_join(result) %>%
+      filter(!is.na(STATION_NAME))
     return(result_now)
   }
 
@@ -62,13 +63,13 @@ listBC_stations <- function(year=NULL,use_CAAQS = FALSE)
         result_prev <- result_prev %>%
           dplyr::left_join(result_now %>%
                              select(cols_add))
-        return(result_prev)
+        return(result_prev %>% filter(!is.na(STATION_NAME)))
       }
     )
 
 
    }
-  return(result_now)
+  return(result_now %>% filter(!is.na(STATION_NAME)))
 }
 
 
