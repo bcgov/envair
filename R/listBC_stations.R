@@ -31,16 +31,24 @@
 listBC_stations <- function(year=NULL,use_CAAQS = FALSE)
 {
   if (0) {
+    source('./r/get_caaqs_Stn_history.R')
     year <- 2005
   }
 
+  require(dplyr)
+  result_now <- listBC_stations_()
 
   if (use_CAAQS) {
-    get_excel_table('ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/BC_CAAQS_station_history.xlsx',
-                    sheet = 'Monitoring Station',header_row = 2) %>%
-      return()
+    print('Retrieving Station List from CAAQS History Table')
+    result <- get_excel_table('ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/BC_CAAQS_station_history.xlsx',
+                    sheet = 'Monitoring Station',header_row = 2)
+
+    result_now <- result_now %>%
+      select(STATION_NAME,STATION_NAME_FULL) %>%
+      left_join(result)
+    return(result_now)
   }
-  result_now <- listBC_stations_()
+
 
   if (!is.null(year)) {
     result_prev <- NULL
