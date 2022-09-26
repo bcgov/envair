@@ -32,10 +32,11 @@ get_stats <- function(param, years=NULL,add_TFEE = FALSE, merge_Stations = FALSE
     source('./r/listBC_stations.R')
     source('./r/get_caaqs_stn_history.R')
     source('./r/get_captures.R')
+    source('./r/envairfunctions.R')
     merge_Stations = TRUE
     # param <- c('pm25','no2')
     param <- 'o3'
-    years <- 2018
+    years <- 2021
     include_TFEE = TRUE
     merge_Stations <- TRUE
 

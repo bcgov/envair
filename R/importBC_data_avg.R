@@ -48,10 +48,10 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
     source('./r/paddatafunction.R')
     source('./r/get_caaqs_stn_history.R')
     source('./r/envairfunctions.R')
-    parameter <- 'pm25'
+    # parameter <- 'pm25'
     parameter <- df
     years <- 2018
-    averaging_type <- '1hr'
+    averaging_type <- 'd8hm'
     data_threshold <- 0.75
     merge_Stations <- TRUE
     flag_tfee = TRUE
@@ -60,8 +60,6 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
 
   flag_tfee <- flag_TFEE #added to stay consistent
   require(dplyr)
-
-
 
   # Determine if user entered dataframe or specified a parameter
   #
@@ -302,7 +300,7 @@ importBC_data_avg_ <- function(parameter, years = NULL, averaging_type =  NULL, 
   if (0) {
     paramter <- df
     years = 2018
-    averaging_type =  '1hr'
+    averaging_type =  'd8hm'
     data_threshold = 0.75
   }
   #add datetime_ columns for time-beginning processing
@@ -313,16 +311,10 @@ importBC_data_avg_ <- function(parameter, years = NULL, averaging_type =  NULL, 
   #should be in order of significance
   df_avg_types <- tidyr::tribble(
     ~averaging_type_std,~alias,
-    '8hr','8hr',
-    '8hr','8hour',
-    '8hr','8-hr',
-    '8hr','8h',
-    '8hr','8-hour',
-    '8hr','8 hr',
-    '8hr','8 h',
     'd1hm','d1hm',
     'd1hm','daily1hr',
     'd1hm','daily1hrmax',
+    'd8hm','d8hm',
     'd8hm','daily8hr',
     'd8hm','daily8hrmax',
     '24hr','24hr',
@@ -338,17 +330,25 @@ importBC_data_avg_ <- function(parameter, years = NULL, averaging_type =  NULL, 
     '1hr','1',
     '1hr','hr',
     '1hr','1h',
-    '1hr','hour'
+    '1hr','hour',
+    '8hr','8hr',
+    '8hr','8hour',
+    '8hr','8-hr',
+    '8hr','8h',
+    '8hr','8-hour',
+    '8hr','8 hr',
+    '8hr','8 h'
   )
 
   #convert averaging_type to standard format
 
+  if (!averaging_type %in% c('d1hm','d8hm','24hr','1hr','8hr')) {
   for (i in 1:nrow(df_avg_types)) {
     if (grepl(df_avg_types$alias[i],averaging_type,ignore.case=TRUE)) {
       averaging_type <- df_avg_types$averaging_type_std[i]
       break
     }
-  }
+  }}
 
 
   if (averaging_type %in% c('1hr'))
