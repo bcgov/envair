@@ -52,7 +52,7 @@ get_stats <- function(param, years=NULL,add_TFEE = FALSE, merge_Stations = FALSE
     ~PARAMETER, ~averaging_type,
     'PM25','annual mean 24hour',
     'PM25','annual 98p 24hour',
-    'PM25','excess 28 24hour',
+    'PM25','excess 27 24hour',
     'PM25','excess 25 24hour',
     'NO2','annual mean 1-hour',
     'NO2','annual 98p d1hm',
