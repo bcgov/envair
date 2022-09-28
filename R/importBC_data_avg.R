@@ -115,7 +115,7 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
                               flag_TFEE = flag_TFEE, merge_Stations = merge_Stations)
   }
 
-  return(df_)
+  return(df_result)
 }
 
 
