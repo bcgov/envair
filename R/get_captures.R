@@ -39,6 +39,9 @@ get_captures <- function(param,years=NULL,merge_Stations=FALSE,stop_at_present =
         get_captures0(param = param, years = year,merge_Stations=merge_Stations , stop_at_present = stop_at_present)
       )
   }
+
+  #make year column uppercase YEAR
+  colnames(df_result)[colnames(df_result) == 'year'] <- 'YEAR'
   return(df_result)
 
 }
