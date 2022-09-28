@@ -97,7 +97,7 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
       df_data <- importBC_data(parameter = parameter,years = year_,flag_TFEE = flag_TFEE,merge_Stations = merge_Stations)
 
       # auto-merge instrument, for stations that merged
-      if (any(!df_data$PARAMETER %in% group_instruments)) {
+      if (any(!df_data$PARAMETER %in% group_instruments) & merge_Stations) {
         df_instrument <- df_data %>%
           select(STATION_NAME,INSTRUMENT,PARAMETER) %>%
           unique() %>%
