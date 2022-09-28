@@ -48,18 +48,20 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
     source('./r/paddatafunction.R')
     source('./r/get_caaqs_stn_history.R')
     source('./r/envairfunctions.R')
-    parameter <- 'pm25'
+    source('./r/importBC_data_avg.R')
+    parameter <- 'no2'
     parameter <- df
     years <- 2018
-    averaging_type <- c('annual 98p 24h','annual mean 24h')
+    averaging_type <- c('annual mean 1hr','annual mean 24h')
     data_threshold <- 0.75
     merge_Stations <- TRUE
     flag_TFEE = TRUE
 
   }
 
+  #standardize the names of user entry
   averaging_type <- tolower(averaging_type)
-
+  averaging_type <- gsub('max','1st',averaging_type)
 
   #this main script was made to reduce memory usage when multiple year and averaging types are entered
   # applies where annual or exceedance are specified
