@@ -57,11 +57,14 @@ get_stats <- function(param, years=NULL,add_TFEE = FALSE, merge_Stations = FALSE
     'NO2','annual mean 1-hour',
     'NO2','annual 98p d1hm',
     'NO2','excess 60 d1hm',
+    'NO2','excess 42 d1hm',
     'SO2','annual mean 1-hour',
     'SO2','annual 99p d1hm',
     'SO2','excess 70 d1hm',
+    'SO2','excess 65 d1hm',
     'O3','annual 4th d8hm',
     'O3','excess 62 d8hm',
+    'O3','excess 60 d8hm',
   )
 
   #define the list of data captures

@@ -40,6 +40,89 @@
 #' that specified if 24hour, and if adjusted for tfee
 #' @export
 importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, data_threshold = 0.75,
+                               flag_TFEE = FALSE,merge_Stations = FALSE) {
+
+  if (0) {
+    source('./r/importBC_data.R')
+    source('./r/listBC_stations.R')
+    source('./r/paddatafunction.R')
+    source('./r/get_caaqs_stn_history.R')
+    source('./r/envairfunctions.R')
+    parameter <- 'pm25'
+    parameter <- df
+    years <- 2018
+    averaging_type <- c('annual 98p 24h','annual mean 24h')
+    data_threshold <- 0.75
+    merge_Stations <- TRUE
+    flag_TFEE = TRUE
+
+  }
+
+  averaging_type <- tolower(averaging_type)
+
+
+  #this main script was made to reduce memory usage when multiple year and averaging types are entered
+  # applies where annual or exceedance are specified
+
+  if (any(grepl('annual',averaging_type,ignore.case = TRUE)) |
+      any(grepl('exceed',averaging_type,ignore.case = TRUE))) {
+
+    averaging_type <- unique(averaging_type)
+
+    #non-value data (metadata)
+    cols_meta <- c('PARAMETER','YEAR','STATION_NAME','INSTRUMENT')
+
+
+    df_result <- NULL
+    for (year in years) {
+
+      #consideration for d8hm, and rolling 8-hours, need to include previous year data
+      if (any(grepl('8h',averaging_type,ignore.case = TRUE)) |
+          any(grepl('8 h',averaging_type,ignore.case = TRUE))) {
+        year_ <- (year-1):year
+
+      } else {
+        year_ <- year
+      }
+
+
+      df_data <- importBC_data(parameter = parameter,years = year_,flag_TFEE = flag_TFEE,merge_Stations = merge_Stations)
+
+
+      for (avg_ in averaging_type) {
+        print(paste('Calculating:',parameter,year,avg_))
+        df_ <- importBC_data_avg0(df_data,averaging_type = avg_,data_threshold = data_threshold,
+                                  flag_TFEE = flag_TFEE, merge_Stations = merge_Stations) %>%
+          filter(YEAR == year)
+
+        cols_meta_ <- cols_meta[cols_meta %in% colnames(df_)]
+
+        df_result <- df_result %>%
+          dplyr::bind_rows(
+            df_ %>%
+              tidyr::pivot_longer(cols = -c(cols_meta_))
+          )
+      }
+
+    }
+    df_result <- df_result %>%
+      tidyr::pivot_wider()
+
+  } else {
+    df_result <- importBC_data_avg0(parameter = parameter, years = years,averaging_type = averaging_type,data_threshold = data_threshold,
+                              flag_TFEE = flag_TFEE, merge_Stations = merge_Stations)
+  }
+
+  return(df_)
+}
+
+
+#' Back end function, see importBC_data_avg for main script
+#'
+#' This function is capable of compoung averaging_type (e.g., "annual 98p d1hm")
+#' But not ideal for multiple years or parameters
+#'
+importBC_data_avg0 <- function(parameter, years = NULL, averaging_type =  NULL, data_threshold = 0.75,
                               flag_TFEE = FALSE,merge_Stations = FALSE)
 {
   if (0) {
@@ -293,8 +376,8 @@ return(ungroup(df_result))
 
 
 #' Backend function of importBC_data_avg_
-#' These will calculate the daily 1-hour maximum values
-#' Note that averaging_type here is the simple (not compounded) format
+#'
+#' Note that averaging_type here is the simple (not compounded) format.
 importBC_data_avg_ <- function(parameter, years = NULL, averaging_type =  NULL, data_threshold = 0.75) {
 
   if (0) {
@@ -339,6 +422,9 @@ importBC_data_avg_ <- function(parameter, years = NULL, averaging_type =  NULL, 
     '8hr','8 hr',
     '8hr','8 h'
   )
+
+  #if user enter "max" change to 1st
+  averaging_type <- gsub('max','1st',averaging_type,ignore.case = TRUE)
 
   #convert averaging_type to standard format
 

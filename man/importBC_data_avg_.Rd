@@ -2,9 +2,7 @@
 % Please edit documentation in R/importBC_data_avg.R
 \name{importBC_data_avg_}
 \alias{importBC_data_avg_}
-\title{Backend function of importBC_data_avg_
-These will calculate the daily 1-hour maximum values
-Note that averaging_type here is the simple (not compounded) format}
+\title{Backend function of importBC_data_avg_}
 \usage{
 importBC_data_avg_(
   parameter,
@@ -14,7 +12,5 @@ importBC_data_avg_(
 )
 }
 \description{
-Backend function of importBC_data_avg_
-These will calculate the daily 1-hour maximum values
-Note that averaging_type here is the simple (not compounded) format
+Note that averaging_type here is the simple (not compounded) format.
 }
