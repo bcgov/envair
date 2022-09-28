@@ -29,22 +29,62 @@
 #' get_captures(df)
 #'
 #' @export
-#'
 get_captures <- function(param,years=NULL,merge_Stations=FALSE,stop_at_present = TRUE) {
+  #seperate years in order to save memory
+
+  df_result <- NULL
+  for (year in years) {
+    df_result <- df_result %>%
+      dplyr::bind_rows(
+        get_captures0(param = param, years = year,merge_Stations=merge_Stations , stop_at_present = stop_at_present)
+      )
+  }
+  return(df_result)
+
+}
+
+#' backend function
+#'
+#' This function makes all the needed calculations to generate the captures data
+get_captures0 <- function(param,years=NULL,merge_Stations=FALSE,stop_at_present = TRUE) {
 
   if (0) {
-    param <- 'o3'
+    param <- 'no2'
     source('./r/importbc_data.R')
     source('./r/paddatafunction.R')
     source('./r/listBC_stations.R')
-    years <- 2022
+    source('./r/get_caaqs_stn_history.R')
+    source('./r/envairfunctions.R')
+    source('./r/importBC_data_avg.R')
+
+    years <- 2021
     stop_at_present <- TRUE
     merge_Stations <- TRUE
   }
 
   require(dplyr)
+
+  #list of parameters where the instruments are NOT to be merged automatically
+  do_not_mergeauto <- c('PM25','PM10')
+
   if (!is.data.frame(param)) {
-  df <- importBC_data(param,years=years,merge_Stations = merge_Stations)
+    df <- importBC_data(param,years=years,merge_Stations = merge_Stations)
+    #auto-merge Instruments if the stations are merged for non-PM instruments
+    if (any(!df$PARAMETER %in% do_not_mergeauto) & merge_Stations) {
+      df_instrument <- df %>%
+        select(STATION_NAME,INSTRUMENT,PARAMETER) %>%
+        unique() %>%
+        group_by(STATION_NAME,PARAMETER) %>%
+        dplyr::mutate(new_INSTRUMENT = paste(INSTRUMENT,collapse ='/')) %>%
+        unique()
+
+      df <- df %>%
+        left_join(df_instrument) %>%
+        mutate(INSTRUMENT_ORIGINAL = ifelse(INSTRUMENT != new_INSTRUMENT,INSTRUMENT,INSTRUMENT_ORIGINAL),
+               INSTRUMENT = new_INSTRUMENT) %>%
+        select(-new_INSTRUMENT)
+    }
+
   } else {
     df <- param
   }
