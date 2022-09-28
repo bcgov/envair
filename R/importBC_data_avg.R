@@ -56,8 +56,14 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
     data_threshold <- 0.75
     merge_Stations <- TRUE
     flag_TFEE = TRUE
+    year_ <- 2018
 
   }
+
+  #include instrument in grouping
+  #for these parameters, the instruments are considered
+  group_instruments <- c('PM25','PM10')
+
 
   #standardize the names of user entry
   averaging_type <- tolower(averaging_type)
@@ -89,6 +95,22 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
 
 
       df_data <- importBC_data(parameter = parameter,years = year_,flag_TFEE = flag_TFEE,merge_Stations = merge_Stations)
+
+      # auto-merge instrument, for stations that merged
+      if (any(!df_data$PARAMETER %in% group_instruments)) {
+        df_instrument <- df_data %>%
+          select(STATION_NAME,INSTRUMENT,PARAMETER) %>%
+          unique() %>%
+          group_by(STATION_NAME,PARAMETER) %>%
+          dplyr::mutate(new_INSTRUMENT = paste(INSTRUMENT,collapse ='/')) %>%
+          unique()
+
+        df_data <- df_data %>%
+          left_join(df_instrument) %>%
+          mutate(INSTRUMENT_ORIGINAL = ifelse(INSTRUMENT != new_INSTRUMENT,INSTRUMENT,INSTRUMENT_ORIGINAL),
+                 INSTRUMENT = new_INSTRUMENT) %>%
+          select(-new_INSTRUMENT)
+      }
 
 
       for (avg_ in averaging_type) {

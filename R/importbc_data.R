@@ -57,9 +57,9 @@ importBC_data <- function(parameter_or_station,
     source('./r/envairfunctions.R')
     source('./r/get_caaqs_stn_history.R')
     source('./r/importbc_data.R')
-    parameter_or_station <- 'pm25'
+    parameter_or_station <- 'no2'
     parameter_or_station <- 'smithers'
-    years <- 2019
+    years <- 2021
     pad = TRUE
     use_openairformat <- TRUE
     use_ws_vector <- FALSE
