@@ -32,7 +32,18 @@
 get_captures <- function(param,years=NULL,merge_Stations=FALSE,stop_at_present = TRUE) {
   #seperate years in order to save memory
 
+  if (0) {
+    param <- df
+  }
+
+  if (is.data.frame(param)) {
+    get_captures0(param = param) %>%
+      return()
+  }
+
   df_result <- NULL
+
+
   for (year in years) {
     df_result <- df_result %>%
       dplyr::bind_rows(

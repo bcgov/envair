@@ -27,17 +27,15 @@ get_stats <- function(param, years=NULL,add_TFEE = FALSE, merge_Stations = FALSE
 {
   if (0) {
 
-    source('./r/importbc_data.R')
-    source('./r/paddatafunction.R')
-    source('./r/listBC_stations.R')
-    source('./r/get_caaqs_stn_history.R')
-    source('./r/get_captures.R')
-    source('./r/envairfunctions.R')
+    for (files in list.files('./r',full.names = TRUE)) {
+      try(source(files))
+    }
+
     merge_Stations = TRUE
     # param <- c('pm25','no2')
     param <- 'o3'
     years <- 2021
-    include_TFEE = TRUE
+    add_TFEE = TRUE
     merge_Stations <- TRUE
 
   }
@@ -112,7 +110,7 @@ get_stats <- function(param, years=NULL,add_TFEE = FALSE, merge_Stations = FALSE
 
 
   #retrieve data captures
-  df_captures <- get_captures(param=df)
+  df_captures <- get_captures0(param = df)
 
 
   cols <- colnames(df_captures)
