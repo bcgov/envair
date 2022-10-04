@@ -18,10 +18,16 @@
   ## this is the shell of an app.R scriptwith the bcgov style template
   ## ensure that the .css file and logo are in the www folder in your app directory.
   # Define UI ----
+  parameters <- c('PM\u2082.\u2085',
+                  'Ozone',
+                  'NO\u2082',
+                  'SO\u2082')
+
+
   ui <- fluidPage(
     titlePanel("Environmental Standards Branch"),
     navbarPage(title = "B.C. Air Zone Report", theme = "bcgov.css", # add yellow highlighted text to theme the navigation bar
-               tabPanel("Summary",
+               tabPanel("Station Summary",
                         ## add this chunk for the footer =================================
                         column(width = 12,
                                style = "background-color:#003366; border-top:2px solid #fcba19;",
@@ -38,30 +44,14 @@
                                                             tags$li(a(href="https://www2.gov.bc.ca/StaticWebResources/static/gov3/html/contact-us.html", "Contact", style="font-size:1em; font-weight:normal; color:white; padding-left:5px; padding-right:5px; border-right:1px solid #4b5e7e;")))  )))
                         ## end of footer chunk =========================================
                )),
-    sidebarLayout(
 
-      # Sidebar panel for inputs ----
-      sidebarPanel(
-
-        # Input: Slider for the number of bins ----
-        sliderInput(inputId = "bins",
-                    label = "Number of bins:",
-                    min = 1,
-                    max = 50,
-                    value = 30)
-
-      ),
-
-      # Main panel for displaying outputs ----
-      mainPanel(
-
-        # Output: Histogram ----
-        plotOutput(outputId = "distPlot")
-
-      ),
+    selectInput("Parameter", "Select Pollutant to Display:",
+                list(`Parameter` = parameters)
+    ),
+    uiOutput("stationSelect"), plotOutput("plot1"),plotOutput("plot2")
 
 
-    ))
+    )
 
 
 # }

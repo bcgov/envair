@@ -25,8 +25,10 @@ plot_npri <- function(pollutant,categorytype = 'Source',URL=NULL,output = 'basic
     pollutant <- c('pm25')
     categorytype <- 'Source'
     output = 'basic'
+    URL=NULL
   }
 
+  require(ggplot2)
   df_npri <- get_npri(pollutant = pollutant, categorytype = categorytype, URL = URL)%>%
     dplyr::rename(groupingcolumn= categorytype)
 
@@ -59,9 +61,10 @@ plot_npri <- function(pollutant,categorytype = 'Source',URL=NULL,output = 'basic
     pull(groupingcolumn) %>%
     unique()
 
-  if (output == 'basic') {
+  if (tolower(output) == 'basic') {
 
-    df_npri %>%
+
+    a <- df_npri %>%
       filter(!is.na(groupingcolumn)) %>%
       # filter(tolower(groupingcolumn) != 'dust') %>%
       dplyr::mutate(groupingcolumn = factor(groupingcolumn,levels = levels_grouping)) %>%
@@ -73,17 +76,18 @@ plot_npri <- function(pollutant,categorytype = 'Source',URL=NULL,output = 'basic
             panel.background = element_rect(fill=NA,colour = 'black')) +
       ylab(label) +
       scale_x_continuous(expand=c(0,0)) +
-      guides(fill=guide_legend(ncol=5,reverse = TRUE)) %>%
+      guides(fill=guide_legend(ncol=5,reverse = TRUE))
 
-      return()
+    return(a)
   }
 
-  if (output == 'plotly') {
-require(plotly)
-    plotly::renderPlotly({
+  if (tolower(output) == 'plotly') {
+    require(plotly)
+    a <- {
       plot_ly(df_npri,x=~Year, y= ~value, color = ~groupingcolumn, type = 'bar', source = 'scatter') %>%
         layout(barmode = 'stack')
-    })
+    }
+    return(a)
   }
 }
 

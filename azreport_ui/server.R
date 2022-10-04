@@ -1,24 +1,74 @@
-# Define server logic required to draw a histogram ----
-server <- function(input, output) {
+# Copyright 2022 Province of British Columbia
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and limitations under the License.
 
-  # Histogram of the Old Faithful Geyser Data ----
-  # with requested number of bins
-  # This expression that generates a histogram is wrapped in a call
-  # to renderPlot to indicate that:
-  #
-  # 1. It is "reactive" and therefore should be automatically
-  #    re-executed when inputs (input$bins) change
-  # 2. Its output type is a plot
-  output$distPlot <- renderPlot({
+library(DT)
+library(shiny)
+library(dplyr)
+library(lubridate)
+library(tidyverse)
+library(envair)
+library(leaflet)
+library(patchwork)
+library(ggpattern)
+library(scales)
 
-    x    <- faithful$waiting
-    bins <- seq(min(x), max(x), length.out = input$bins + 1)
+aq_summary <-  read_csv('C:/OneDrives/OneDrive - Government of BC/Documents/!Working/Air Zone Report Development Process/R_Scripts_Development/Data/air_data_summary.csv') %>%
+  mutate(metric = recode(metric,'o3' = 'ozone'  ,'o3_tfee' = 'ozone_tfee'))
 
-    hist(x, breaks = bins, col = "#75AADB", border = "white",
-         xlab = "Waiting time to next eruption (in mins)",
-         main = "Histogram of waiting times")
 
-  })
+stationlist <- aq_summary %>%
+  pull(site) %>%
+  unique() %>%
+  sort() %>%
+  list()
+
+yearlist <- aq_summary %>%
+  pull(year) %>%
+  unique() %>%
+  sort() %>%
+  list() %>%
+  unlist()
+
+parameterlist <- aq_summary %>%
+  pull(metric) %>%
+  unique() %>%
+  sort() %>%
+  list() %>%
+  unlist()
+
+
+parameters <- c('PM\u2082.\u2085',
+                'Ozone',
+                'NO\u2082',
+                'SO\u2082')
+server <-  function(input, output) {
+
+  # developer lines to create summary
+  if (0)
+  {
+    Parameter <- 'o3_tfee'
+    year <- 2020
+
+    aq_summary %>%
+      dplyr::filter(metric == Parameter,
+                    year == year) %>%
+      filter(site == 'Victoria Topaz') %>%
+      ggplot(aes(x=site, y=metric_value)) +
+      geom_col()
+  }
+
+
+
+
   #filter station list based on parameter
   output$stationSelect <- renderUI({
     param_ <- recode(input$Parameter,'PM\u2082.\u2085' = 'pm2.5',
@@ -44,7 +94,7 @@ server <- function(input, output) {
                      'Ozone' = 'ozone')
 
 
-    #customized graphing for pm2.5, no2, and so2
+    #customized graphing for pm2.5, ozone, no2, and so2
     if (param_ == 'pm2.5')
     {
 
@@ -622,4 +672,5 @@ server <- function(input, output) {
       print(p1_ann/p1_24h)
     }
   })
+
 }
