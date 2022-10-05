@@ -169,9 +169,10 @@ get_npri <- function(pollutant,categorytype = 'Source',URL=NULL) {
 #'
 #' @param years is vector listing the years for CAAQS calculation
 #' @param savedirectory is the directory where the saved files will be located
+#'
 create_metrics_annual <- function(years, savedirectory = NULL) {
   if (0) {
-    years <- 1980:2010
+    years <- 2000:2010
     savedirectory <- './test_data'
   }
 
@@ -180,9 +181,28 @@ create_metrics_annual <- function(years, savedirectory = NULL) {
   }
 
 
+  if (0)
+  {
+    #debug, to retrieve from previous wide version
+    #chose from these four
+    savefile <- paste(savedirectory,'pm25_annual.csv',sep='/')
+    savefile <- paste(savedirectory,'o3_annual.csv',sep='/')
+    savefile <- paste(savedirectory,'no2_annual.csv',sep='/')
+    savefile <- paste(savedirectory,'so2_annual.csv',sep='/')
+
+    #run both
+    df <- readr::read_csv(savefile)
+    savefile <- paste(savedirectory,'annual_results.csv',sep='/')
+  }
+
   # create annual metrics ----
+  savefile <- paste(savedirectory,'annual_results.csv',sep='/')
+  #define non-value columns
+  cols_static <- c('parameter','year','station_name','site','instrument','station','station_name_full')
+
+
   #pm2.5
-  savefile <- paste(savedirectory,'pm25_annual.csv',sep='/')
+  # savefile <- paste(savedirectory,'pm25_annual.csv',sep='/')
   for (year in years) {
 
     try({
@@ -190,6 +210,18 @@ create_metrics_annual <- function(years, savedirectory = NULL) {
                               averaging_type = c('annual 98p 24h','annual mean 24h'),
                               flag_TFEE = TRUE,
                               merge_Stations = TRUE)
+      cols_static_ <- colnames(df)[tolower(colnames(df)) %in% tolower(cols_static)]
+
+      df <- df %>%
+        tidyr::pivot_longer(cols = -cols_static_) %>%
+        dplyr::rename(metric = name,
+                      site = STATION_NAME,
+                      parameter = PARAMETER,
+                      year = YEAR,
+                      instrument = INSTRUMENT) %>%
+        mutate(tfee = grepl('_tfee',metric,ignore.case = TRUE)) %>%
+        mutate(metric = gsub('_tfee','',metric,ignore.case = TRUE)) %>%
+        select(parameter,site,instrument,year,metric,value)
 
       readr::write_csv(df,
                        file = savefile,
@@ -199,13 +231,27 @@ create_metrics_annual <- function(years, savedirectory = NULL) {
   }
 
   #ozone
-  savefile <- paste(savedirectory,'o3_annual.csv',sep='/')
+  # savefile <- paste(savedirectory,'o3_annual.csv',sep='/')
   for (year in years) {
     try({
       df <- importBC_data_avg(parameter = 'o3',years = year,
                               averaging_type = c('annual 4th d8hm'),
                               flag_TFEE = TRUE,
                               merge_Stations = TRUE)
+
+      cols_static_ <- colnames(df)[tolower(colnames(df)) %in% tolower(cols_static)]
+
+      #make the result long
+      df <- df %>%
+        tidyr::pivot_longer(cols = -cols_static_) %>%
+        dplyr::rename(metric = name,
+                      site = STATION_NAME,
+                      parameter = PARAMETER,
+                      year = YEAR,
+                      instrument = INSTRUMENT) %>%
+        mutate(tfee = grepl('_tfee',metric,ignore.case = TRUE)) %>%
+        mutate(metric = gsub('_tfee','',metric,ignore.case = TRUE)) %>%
+        select(parameter,site,instrument,year,metric,value)
 
       readr::write_csv(df,
                        file = savefile,
@@ -215,7 +261,7 @@ create_metrics_annual <- function(years, savedirectory = NULL) {
   }
 
   #no2
-  savefile <- paste(savedirectory,'no2_annual.csv',sep='/')
+  # savefile <- paste(savedirectory,'no2_annual.csv',sep='/')
   for (year in years) {
 
     try({
@@ -223,6 +269,21 @@ create_metrics_annual <- function(years, savedirectory = NULL) {
                               averaging_type = c('annual 98p d1hm', 'annual mean 1hr'),
                               flag_TFEE = TRUE,
                               merge_Stations = TRUE)
+
+      cols_static_ <- colnames(df)[tolower(colnames(df)) %in% tolower(cols_static)]
+
+      #make the result long
+      df <- df %>%
+        tidyr::pivot_longer(cols = -cols_static_) %>%
+        dplyr::rename(metric = name,
+                      site = STATION_NAME,
+                      parameter = PARAMETER,
+                      year = YEAR,
+                      instrument = INSTRUMENT) %>%
+        mutate(tfee = grepl('_tfee',metric,ignore.case = TRUE)) %>%
+        mutate(metric = gsub('_tfee','',metric,ignore.case = TRUE)) %>%
+        select(parameter,site,instrument,year,metric,value)
+
 
       readr::write_csv(df,
                        file = savefile,
@@ -232,7 +293,7 @@ create_metrics_annual <- function(years, savedirectory = NULL) {
   }
 
   #so2
-  savefile <- paste(savedirectory,'so2_annual.csv',sep='/')
+  # savefile <- paste(savedirectory,'so2_annual.csv',sep='/')
   for (year in years) {
 
     try({
@@ -241,12 +302,29 @@ create_metrics_annual <- function(years, savedirectory = NULL) {
                               flag_TFEE = TRUE,
                               merge_Stations = TRUE)
 
+      cols_static_ <- colnames(df)[tolower(colnames(df)) %in% tolower(cols_static)]
+
+      #make the result long
+      df <- df %>%
+        tidyr::pivot_longer(cols = -cols_static_) %>%
+        dplyr::rename(metric = name,
+                      site = STATION_NAME,
+                      parameter = PARAMETER,
+                      year = YEAR,
+                      instrument = INSTRUMENT) %>%
+        mutate(tfee = grepl('_tfee',metric,ignore.case = TRUE)) %>%
+        mutate(metric = gsub('_tfee','',metric,ignore.case = TRUE)) %>%
+        select(parameter,site,instrument,year,metric,value)
+
       readr::write_csv(df,
                        file = savefile,
                        append = file.exists(savefile))
     })
 
   }
+
+
+
 
   #create captures ------
   savefile <- paste(savedirectory,'captures.csv',sep='/')
@@ -260,21 +338,26 @@ create_metrics_annual <- function(years, savedirectory = NULL) {
       })
     }
   }
+
+
 }
 
 #' Calculate annual CAAQS metrics
 #'
 #' @param years is vector listing the years for CAAQS calculation
 #' @param savedirectory is the location where the result files are saved
+#'
 create_caaqs_annual <- function(years, savedirectory = NULL) {
   if (0) {
-    years <- 2011:2021
+    years <- 2013:2021
     savedirectory <- './test_data'
   }
 
   savefile = paste(savedirectory,'caaqs_results.csv',sep='/')
 
   caaqs_result <- NULL  #this is the result summarized in dataframe here
+  years <- (min(years)-2):max(years)
+  #redegine the years, add the extra two years before the beginning
 
   #PM2.5-----
   df <- importBC_data('pm25',years = years, flag_TFEE = TRUE,merge_Stations = TRUE)
@@ -396,6 +479,10 @@ create_caaqs_annual <- function(years, savedirectory = NULL) {
 
 
   #save the result into a file
+  #remove the extra two years
+  caaqs_result <- caaqs_result %>%
+    filter(caaqs_year>= (min(years)+2))
+
   readr::write_csv(caaqs_result,file = savefile)
 
 }
@@ -404,7 +491,9 @@ create_caaqs_annual <- function(years, savedirectory = NULL) {
 #' Calculate the management levels
 #'   NOTE: needs future management, change from datafile to an actual dataframe entry
 #'
-#' @param datafile is the location of the file containing summarized CAAQS data. This dataset was created with the create_metrics_annual function
+#' @param datafile is the location of the file containing summarized CAAQS data.
+#' This dataset was created with the create_metrics_annual function
+#'
 get_management <- function(datafile = NULL) {
 
   if (0) {
@@ -467,8 +556,9 @@ get_management <- function(datafile = NULL) {
 #' @param outputtype is either 'complete','station', 'airzone'
 #' 'complete' means that output is detailed for each metric, in each station
 #' 'station' means that output is a summary of the management for the station. only metric with highest management level is displayed
+#' 'airzone' means that output is a summary of the management for the airzones
 #'
-get_management_summary <- function(outputtype = 'station') {
+get_management_summary <- function(outputtype = 'complete') {
 
 
   #define the parameter for each metric
@@ -562,3 +652,42 @@ get_management_summary <- function(outputtype = 'station') {
 
 }
 
+#' INCOMPLETE:
+#' Create files that will make the CAAQS bar graph
+#'
+#' @param filedirectory is the location of the data files
+#'
+#' @return creates a file called air_data_summary.csv in the file directory
+create_CAAQS_graph_files <- function(filedirectory = NULL) {
+
+  if (0) {
+    filedirectory <- NULL
+  }
+
+  if (is.null(filedirectory)) {
+    filedirectory <- '././test_data'
+    list.files(filedirectory)
+  }
+
+  file_annual <- paste(filedirectory,'annual_results.csv',sep='/')
+  file_captures <- paste(filedirectory,'annual_results.csv',sep='/')
+  file_ <- paste(filedirectory,'annual_results.csv',sep='/')
+}
+
+#' Create CAAQS bar graph
+#'
+#' @description Creates the bar graph use for CAAQS
+#'
+#' @param df is the dataframe containing CAAQS metrics, and non-CAAQS annual metrics
+#' This dataframe is created using the create_CAAQS_graph_files()
+#' @param parameter is the parameter of either '','','',''
+#' @param is the station name
+#' if NULL, result displays the available stations that can be listed
+create_CAAQS_graph <- function(df, parameter, station = NULL) {
+
+  if (0) {
+    aq_summary <-  read_csv('././test_data/air_data_summary.csv') %>%
+      mutate(metric = recode(metric,'o3' = 'ozone'  ,'o3_tfee' = 'ozone_tfee'))
+    df <- aq_summary
+  }
+}

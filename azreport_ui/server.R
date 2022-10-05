@@ -21,7 +21,7 @@ library(patchwork)
 library(ggpattern)
 library(scales)
 
-aq_summary <-  read_csv('C:/OneDrives/OneDrive - Government of BC/Documents/!Working/Air Zone Report Development Process/R_Scripts_Development/Data/air_data_summary.csv') %>%
+aq_summary <-  read_csv('././test_data/air_data_summary.csv') %>%
   mutate(metric = recode(metric,'o3' = 'ozone'  ,'o3_tfee' = 'ozone_tfee'))
 
 
