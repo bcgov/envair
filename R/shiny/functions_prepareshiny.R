@@ -84,8 +84,10 @@ plot_npri <- function(pollutant,categorytype = 'Source',URL=NULL,output = 'basic
   if (tolower(output) == 'plotly') {
     require(plotly)
     a <- {
-      plot_ly(df_npri,x=~Year, y= ~value, color = ~groupingcolumn, type = 'bar', source = 'scatter') %>%
-        layout(barmode = 'stack')
+      plot_ly(df_npri,x=~Year, y= ~value, color = ~groupingcolumn, type = 'bar', source = 'scatter',
+              marker = list(line = list(width = 1,color = 'rgb(0, 0, 0)'))
+      ) %>%
+        layout(barmode = 'stack',yaxis = list(title = paste(pollutant,'(tonnes/year)')))
     }
     return(a)
   }
@@ -169,7 +171,7 @@ get_npri <- function(pollutant,categorytype = 'Source',URL=NULL) {
 #' @param savedirectory is the directory where the saved files will be located
 create_metrics_annual <- function(years, savedirectory = NULL) {
   if (0) {
-    years <- 2011:2021
+    years <- 1980:2010
     savedirectory <- './test_data'
   }
 
@@ -182,67 +184,81 @@ create_metrics_annual <- function(years, savedirectory = NULL) {
   #pm2.5
   savefile <- paste(savedirectory,'pm25_annual.csv',sep='/')
   for (year in years) {
-    df <- importBC_data_avg(parameter = 'pm25',years = year,
-                            averaging_type = c('annual 98p 24h','annual mean 24h'),
-                            flag_TFEE = TRUE,
-                            merge_Stations = TRUE)
 
-    readr::write_csv(df,
-                     file = savefile,
-                     append = file.exists(savefile))
+    try({
+      df <- importBC_data_avg(parameter = 'pm25',years = year,
+                              averaging_type = c('annual 98p 24h','annual mean 24h'),
+                              flag_TFEE = TRUE,
+                              merge_Stations = TRUE)
+
+      readr::write_csv(df,
+                       file = savefile,
+                       append = file.exists(savefile))
+    })
 
   }
 
   #ozone
   savefile <- paste(savedirectory,'o3_annual.csv',sep='/')
   for (year in years) {
-    df <- importBC_data_avg(parameter = 'o3',years = year,
-                            averaging_type = c('annual 4th d8hm'),
-                            flag_TFEE = TRUE,
-                            merge_Stations = TRUE)
+    try({
+      df <- importBC_data_avg(parameter = 'o3',years = year,
+                              averaging_type = c('annual 4th d8hm'),
+                              flag_TFEE = TRUE,
+                              merge_Stations = TRUE)
 
-    readr::write_csv(df,
-                     file = savefile,
-                     append = file.exists(savefile))
+      readr::write_csv(df,
+                       file = savefile,
+                       append = file.exists(savefile))
+    })
 
   }
 
   #no2
   savefile <- paste(savedirectory,'no2_annual.csv',sep='/')
   for (year in years) {
-    df <- importBC_data_avg(parameter = 'no2',years = year,
-                            averaging_type = c('annual 98p d1hm', 'annual mean 1hr'),
-                            flag_TFEE = TRUE,
-                            merge_Stations = TRUE)
 
-    readr::write_csv(df,
-                     file = savefile,
-                     append = file.exists(savefile))
+    try({
+      df <- importBC_data_avg(parameter = 'no2',years = year,
+                              averaging_type = c('annual 98p d1hm', 'annual mean 1hr'),
+                              flag_TFEE = TRUE,
+                              merge_Stations = TRUE)
+
+      readr::write_csv(df,
+                       file = savefile,
+                       append = file.exists(savefile))
+    })
 
   }
 
   #so2
   savefile <- paste(savedirectory,'so2_annual.csv',sep='/')
   for (year in years) {
-    df <- importBC_data_avg(parameter = 'so2',years = year,
-                            averaging_type = c('annual 99p d1hm', 'annual mean 1hr'),
-                            flag_TFEE = TRUE,
-                            merge_Stations = TRUE)
 
-    readr::write_csv(df,
-                     file = savefile,
-                     append = file.exists(savefile))
+    try({
+      df <- importBC_data_avg(parameter = 'so2',years = year,
+                              averaging_type = c('annual 99p d1hm', 'annual mean 1hr'),
+                              flag_TFEE = TRUE,
+                              merge_Stations = TRUE)
+
+      readr::write_csv(df,
+                       file = savefile,
+                       append = file.exists(savefile))
+    })
 
   }
 
   #create captures ------
   savefile <- paste(savedirectory,'captures.csv',sep='/')
   for (param in c('pm25','o3','no2','so2')) {
-    df <- get_captures(param = param, years = years, merge_Stations = TRUE)
-    readr::write_csv(df,
-                     file = savefile,
-                     append = file.exists(savefile))
-
+    for (year in years) {
+      try({
+        df <- get_captures(param = param, years = year, merge_Stations = TRUE)
+        readr::write_csv(df,
+                         file = savefile,
+                         append = file.exists(savefile))
+      })
+    }
   }
 }
 
@@ -250,7 +266,7 @@ create_metrics_annual <- function(years, savedirectory = NULL) {
 #'
 #' @param years is vector listing the years for CAAQS calculation
 #' @param savedirectory is the location where the result files are saved
-create_metrics_annual <- function(years, savedirectory = NULL) {
+create_caaqs_annual <- function(years, savedirectory = NULL) {
   if (0) {
     years <- 2011:2021
     savedirectory <- './test_data'
@@ -308,7 +324,7 @@ create_metrics_annual <- function(years, savedirectory = NULL) {
     dplyr::mutate(index = 1:n()) %>%
     filter(index == 1) %>% select(-index)
 
-   #without TFEE
+  #without TFEE
   o3_8h <- rcaaqs::o3_caaqs(df,by=c('site'))
 
 
@@ -327,7 +343,7 @@ create_metrics_annual <- function(years, savedirectory = NULL) {
   readr::write_csv(caaqs_result,file = savefile)
 
 
-#NO2-----
+  #NO2-----
   df <- importBC_data('no2',years = years, flag_TFEE = TRUE,merge_Stations = TRUE)
 
   df <- df %>%
@@ -383,3 +399,166 @@ create_metrics_annual <- function(years, savedirectory = NULL) {
   readr::write_csv(caaqs_result,file = savefile)
 
 }
+
+
+#' Calculate the management levels
+#'   NOTE: needs future management, change from datafile to an actual dataframe entry
+#'
+#' @param datafile is the location of the file containing summarized CAAQS data. This dataset was created with the create_metrics_annual function
+get_management <- function(datafile = NULL) {
+
+  if (0) {
+    datafile <- NULL
+  }
+  #retrieve data
+
+  if (is.null(datafile)) {
+    datafile <- '././test_data/caaqs_results.csv'
+    # list.files(datafile)
+  }
+
+  df <- readr::read_csv(datafile) %>%
+    dplyr::mutate(idx0 = 1:n())
+
+  df_levels <- rcaaqs::management_levels %>%
+    dplyr::rename(metric = parameter) %>%
+    dplyr::mutate(idx1 = 1:n())
+
+  df_levels_ <- df_levels %>%
+    select(metric,idx1,lower_breaks,upper_breaks) %>%
+    dplyr::mutate(lower_breaks = ifelse(is.na(lower_breaks),-9999,lower_breaks)) %>%
+    dplyr::mutate(upper_breaks = ifelse(is.na(upper_breaks),0,upper_breaks)) %>%
+    dplyr::mutate(upper_breaks = ifelse(is.infinite(upper_breaks),99999999,upper_breaks))
+
+  #conditions for assigning management levels
+  df_ <- df %>%
+    left_join(df_levels_) %>%
+    mutate(metric_value = ifelse(is.na(metric_value),-9999,metric_value)) %>%
+    filter(metric_value >= lower_breaks & metric_value < upper_breaks) %>%
+    select(-lower_breaks,-upper_breaks) %>%
+    mutate(metric_value = ifelse(metric_value == -9999,NA, metric_value)) %>%
+    left_join(df_levels) %>%
+    select(-idx0,-idx1)
+
+  #add column called colour_order to put sorting or numerical order to the colours
+  df_colour <- tribble(
+    ~colour_text, ~colour_order,
+    'grey',0,
+    'green',1,
+    'yellow',2,
+    'orange',3,
+    'red',4
+  )
+  df_ <- left_join(df_,df_colour)
+
+  if (nrow(df_) != nrow(df)) {
+    print('Error, some rows ended up missing or not determined')
+    return(NULL)
+  } else {
+    return(df_)
+  }
+
+
+
+}
+
+#' Retrieves the management level summary of station and airzones
+#'
+#' @param outputtype is either 'complete','station', 'airzone'
+#' 'complete' means that output is detailed for each metric, in each station
+#' 'station' means that output is a summary of the management for the station. only metric with highest management level is displayed
+#'
+get_management_summary <- function(outputtype = 'station') {
+
+
+  #define the parameter for each metric
+  #arrange in terms of an order
+  df_metric <- tribble(
+    ~metric,~parameter,
+    "pm2.5_annual",'pm25',
+    "pm2.5_24h",'pm25',
+    "o3",'o3',
+    "no2_1yr",'no2',
+    "no2_3yr",'no2',
+    "so2_1yr",'so2',
+    "so2_3yr",'so2',
+  )
+
+
+  #retrieve station and air zone
+  #note that some stations are merged based on the history, have to retrieve it
+  stn_history <- get_station_history() %>%
+    select(STATION_NAME,`Merged Station Name`) %>%
+    filter(!is.na(`Merged Station Name`)) %>%
+    unique()
+
+
+  lst_stations <- listBC_stations(use_CAAQS = TRUE) %>%
+    select(STATION_NAME,LAT,LONG,AIRZONE,Label) %>%
+    arrange(Label) %>%
+    group_by(STATION_NAME) %>%
+    dplyr::mutate(index = 1:n()) %>%
+    filter(index == 1) %>% select(-index) %>%
+    ungroup() %>%
+    left_join(stn_history) %>%
+    mutate(STATION_NAME = ifelse(is.na(`Merged Station Name`),STATION_NAME,`Merged Station Name`)) %>%
+    select(-`Merged Station Name`) %>%
+    dplyr::rename(site = STATION_NAME,
+                  latitude = LAT,
+                  longitude = LONG,
+                  airzone = AIRZONE,
+                  label = Label)
+
+  df <- get_management()
+
+  df <- df %>%
+    select(site,instrument,caaqs_year,metric,metric_value,colour,colour_text,colour_order,tfee) %>%
+    left_join(lst_stations) %>%
+    left_join(df_metric)
+
+#add order to the metric
+  df$metric <- factor(df$metric,levels = df_metric$metric)
+  #calculate and return result based on the type specified
+  outputtype <- tolower(outputtype)
+  if (outputtype == 'complete') {
+    return(df)
+  }
+
+  if (outputtype == 'station') {
+
+    df <- df %>%
+      group_by(parameter,site,caaqs_year,airzone,tfee) %>%
+      dplyr::mutate(max_colour_order = max(colour_order)) %>%
+      ungroup() %>%
+      filter(colour_order == max_colour_order) %>%
+      arrange(metric) %>%   #this gives priority to annual over 24h/1h metrics
+      group_by(parameter,site,caaqs_year,airzone,tfee) %>%
+      dplyr::mutate(index =1:n()) %>%
+      filter(index==1) %>% ungroup() %>% select(-index) %>%
+      arrange(parameter,site,tfee,caaqs_year) %>%
+      select(-max_colour_order)
+
+    return(df)
+    }
+
+  if (outputtype == 'airzone') {
+
+    df <- df %>%
+      arrange(airzone,metric_value) %>%
+      group_by(parameter,metric,caaqs_year,airzone,tfee) %>%
+      dplyr::mutate(max_metric_value = max(metric_value,na.rm = TRUE)) %>%
+      ungroup() %>%
+      filter(metric_value == max_metric_value) %>%
+      arrange(desc(colour_order), metric) %>%   #this gives prioroty to pm2.5annual or 24h, and no2_3yr over 1 yr
+      group_by(parameter,caaqs_year,airzone,tfee) %>%
+      dplyr::mutate(max_colour_order = max(colour_order),index = 1:n()) %>%
+      filter(colour_order == max_colour_order,index == 1) %>% ungroup() %>% select(-index) %>%
+      COLUMN_REORDER(c('parameter','airzone','tfee','caaqs_year')) %>%
+      select(-max_colour_order,-max_metric_value) %>%
+      arrange(parameter,airzone,tfee,caaqs_year)
+
+    return(df)
+  }
+
+}
+
