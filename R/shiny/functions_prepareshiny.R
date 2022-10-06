@@ -786,7 +786,7 @@ create_CAAQS_graph_files <- function(filedirectory = NULL) {
 create_CAAQS_graph <- function(df, parameter, station = NULL) {
 
   if (0) {
-    aq_summary <-  read_csv('././test_data/air_data_summary.csv') %>%
+    aq_summary1 <-  readr::read_csv('././test_data/air_data_summary.csv') %>%
       mutate(metric = recode(metric,'o3' = 'ozone'  ,'o3_tfee' = 'ozone_tfee'))
 
     aq_summary <-  readr::read_csv('./test_data/caaqs_results.csv')
@@ -821,6 +821,42 @@ create_CAAQS_graph <- function(df, parameter, station = NULL) {
     return(a)
   }
 
+  #this segment added as fix to the source file
+  if (0) {
+    df <- aq_summary
+    unique(df$metric)
+
+    colnames(aq_summary1)
+    colnames(df)
+  }
+  try(
+  df <- df %>%
+    mutate(metric = gsub('pm25','pm2.5',metric,ignore.case = TRUE)) %>%
+    mutate(metric = ifelse(tfee,paste(metric,'_tfee',sep=''),metric)) %>%
+    mutate(metric = recode(metric,
+                          'pm2.5_24h' = 'pm2.5_24h',
+                          'pm2.5_24hr(1yr)' = 'pm2.5_24h (1yr)',
+                          'pm2.5_24h_tfee' = 'pm2.5_24h_tfee',
+                          'pm2.5_24hr(1yr)_tfee' = 'pm2.5_24h_tfee (1yr)',
+                          'pm2.5_annual' = 'pm2.5_annual',
+                          'pm2.5_ann(1yr)' = 'pm2.5_annual (1yr)',
+                          'pm2.5_annual_tfee' =  'pm2.5_annual_tfee',
+                          'pm2.5_ann(1yr)_tfee' = 'pm2.5_annual_tfee (1yr)',
+                          'o3_8h' = 'ozone',
+                          'o3_8h_tfee' = 'ozone_tfee',
+                          'o3_8h(1yr)' = 'ozone_4th (1yr)',
+                          'o3_8h(1yr)_tfee' = 'ozone_4th_tfee (1yr)',
+                          'no2_1hr' = 'no2_1hr',
+                          'no2_ann' = 'no2_annual',
+                          'no2_1hr(1yr)' = 'no2_1hr (1yr)',
+                          'no2_ann(1yr)' = 'no2_annual (1yr)',
+                          'so2_1hr' = 'so2_1hr',
+                          'so2_ann' = 'so2_annual',
+                          'so2_1hr(1yr)' = 'so2_1hr (1yr)',
+                          'so2_ann(1yr)' = 'so2_annual (1yr)'
+
+                           )) %>%
+    select(site,instrument,year,metric,metric_value))
   #lower the case for the station
   station <- tolower(station)
   # print(station)
@@ -829,9 +865,11 @@ create_CAAQS_graph <- function(df, parameter, station = NULL) {
 
 
 
+
     aq <- df%>%
-      filter(grepl('pm2.5',metric)) %>%
+      filter(grepl('pm2.5',metric) ) %>%
       filter(tolower(site) == station)  #PROD
+
     # print(nrow(aq))
     #define data for line and bar graph
     #this will be the line trend
@@ -843,12 +881,12 @@ create_CAAQS_graph <- function(df, parameter, station = NULL) {
     aq_1yr <-
       aq %>%
       filter(grepl('1yr',metric)) %>%
-      pivot_wider(names_from = metric, values_from = metric_value) %>%
+      tidyr::pivot_wider(names_from = metric, values_from = metric_value) %>%
       mutate(`pm2.5_24h (1yr)` = `pm2.5_24h (1yr)` - `pm2.5_24h_tfee (1yr)`,
              `pm2.5_annual (1yr)` = `pm2.5_annual (1yr)`- `pm2.5_annual_tfee (1yr)`
       ) %>%
       # View()
-      pivot_longer(cols = -c('site','instrument','year'),
+      tidyr::pivot_longer(cols = -c('site','instrument','year'),
                    names_to = 'metric', values_to = 'metric_value')
 
 
