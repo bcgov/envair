@@ -205,7 +205,7 @@ create_CAAQS_graph <- function(df, parameter, station = NULL, startyear = 2013) 
 
       #Labels for CAAQS reference lines
       annotate("text",x= year_min+1,y=10+1,label = '2015 CAAQS',colour = 'white',angle =0,hjust =0) +
-      annotate("text",x= year_max,y=8.8+1,label = '2020 CAAQS',colour = 'white',angle =0,hjust=0.2) +
+      annotate("text",x= year_max,y=8.8+1,label = '2020 CAAQS',colour = 'white',angle =0,hjust=1) +
 
       # geom_hline(yintercept = 27, linetype ='dashed',colour = 'red') +
       # annotate("text",x= 2013,y=27,label = '2020 CAAQS',colour = 'red',angle =0) +
@@ -277,7 +277,7 @@ create_CAAQS_graph <- function(df, parameter, station = NULL, startyear = 2013) 
 
       #labels to CAAQS reference lines
       annotate("text",x= year_min+1,y=28+4,label = '2015 CAAQS',colour = 'white',angle =0,hjust =0) +
-      annotate("text",x= year_max,y=27+4,label = '2020 CAAQS',colour = 'white',angle =0,hjust=0.2) +
+      annotate("text",x= year_max,y=27+4,label = '2020 CAAQS',colour = 'white',angle =0,hjust=1) +
 
       # geom_hline(yintercept = 27, linetype ='dashed',colour = 'red') +
       # annotate("text",x= 2013,y=27,label = '2020 CAAQS',colour = 'red',angle =0) +
@@ -384,7 +384,7 @@ create_CAAQS_graph <- function(df, parameter, station = NULL, startyear = 2013) 
 
       #Labels for CAAQS reference lines
       annotate("text",x= year_min+1,y=63+2,label = '2015 CAAQS',colour = 'white',angle =0,hjust =0) +
-      annotate("text",x= year_max,y=62+2,label = '2020 CAAQS',colour = 'white',angle =0,hjust=0.2) +
+      annotate("text",x= year_max,y=62+2,label = '2020 CAAQS',colour = 'white',angle =0,hjust=1) +
 
       # geom_hline(yintercept = 27, linetype ='dashed',colour = 'red') +
       # annotate("text",x= 2013,y=27,label = '2020 CAAQS',colour = 'red',angle =0) +
@@ -472,7 +472,7 @@ create_CAAQS_graph <- function(df, parameter, station = NULL, startyear = 2013) 
 
 
       #Labels for CAAQS reference lines
-      annotate("text",x= year_min+1,y=17+1,label = '2020 CAAQS',colour = 'white',angle =0,hjust =0) +
+      annotate("text",x= year_min+1,y=17+1,label = '2020 CAAQS',colour = 'white',angle =0,hjust =1) +
 
 
       # xlab('Reporting Period')+
@@ -531,7 +531,7 @@ create_CAAQS_graph <- function(df, parameter, station = NULL, startyear = 2013) 
       geom_segment(aes(x=year_min-0.2,y=60,xend=year_max + 1,yend=60),colour='red2',linetype='dashed',size=1)+
 
       #labels to CAAQS reference lines
-      annotate("text",x= year_min+1,y=65,label = '2020 CAAQS',colour = 'white',angle =0,hjust =0) +
+      annotate("text",x= year_min+1,y=65,label = '2020 CAAQS',colour = 'white',angle =0,hjust =1) +
 
       # xlab('Reporting Period')+
       ylab(expression(paste('NO'[2],' 1-Hour Metric (ppb)'))) +
@@ -615,7 +615,7 @@ create_CAAQS_graph <- function(df, parameter, station = NULL, startyear = 2013) 
 
 
       #Labels for CAAQS reference lines
-      annotate("text",x= year_min+1,y=5+1,label = '2020 CAAQS',colour = 'white',angle =0,hjust =0) +
+      annotate("text",x= year_min+1,y=5+1,label = '2020 CAAQS',colour = 'white',angle =0,hjust =1) +
 
 
       # xlab('Reporting Period')+
@@ -674,7 +674,7 @@ create_CAAQS_graph <- function(df, parameter, station = NULL, startyear = 2013) 
       geom_segment(aes(x=year_min-0.2,y=70,xend=year_max + 1,yend=70),colour='red2',linetype='dashed',size=1)+
 
       #labels to CAAQS reference lines
-      annotate("text",x= year_min+1,y=65,label = '2020 CAAQS',colour = 'white',angle =0,hjust =0) +
+      annotate("text",x= year_min+1,y=65,label = '2020 CAAQS',colour = 'white',angle =0,hjust =1) +
 
       # xlab('Reporting Period')+
       ylab(expression(paste('SO'[2],' 1-Hour Metric (ppb)'))) +
