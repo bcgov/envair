@@ -30,7 +30,9 @@ Imports:
      lubridate (>= 1.8.0),
      curl (>= 4.3.2),
      readxl (>= 1.4.0),
-     httr (>= 1.4.4)
+     httr (>= 1.4.4),
+     tidyr (>=1.2.0),
+
 Suggests:
      rmarkdown,
      bcmaps,

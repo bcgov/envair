@@ -15,21 +15,24 @@
 #' Create a bar graph of the NPRI
 #'
 #' @param pollutant
+#' @param df is the pollutant data. This can be retrieved with get_npri()
 #' @param categorytype is either source, sector, or subsector. Default is source
 #' @param URL is the ECCC URL for the NPRI
 #' @param output is the output type of either 'basic' or 'plotly'
 #'
 #' @export
-plot_npri <- function(pollutant,categorytype = 'Source',URL=NULL,output = 'basic') {
+plot_npri <- function(pollutant,df=NULL,categorytype = 'Source',URL=NULL,output = 'basic') {
   if (0) {
-    pollutant <- c('pm25')
+    pollutant <- c('')
     categorytype <- 'Source'
     output = 'basic'
     URL=NULL
   }
 
   require(ggplot2)
-  df_npri <- get_npri(pollutant = pollutant, categorytype = categorytype, URL = URL)%>%
+
+  df <- get_npri(pollutant = pollutant, df=df, categorytype = categorytype, URL = URL)
+  df_npri <- df %>%
     dplyr::rename(groupingcolumn= categorytype)
 
   #change pollutant for labelling purposes
@@ -49,7 +52,7 @@ plot_npri <- function(pollutant,categorytype = 'Source',URL=NULL,output = 'basic
   if (grepl('nox',pollutant,ignore.case = TRUE)) {
     label <- expression(NO[x]*' tonnes/year')
   }
-  if (grepl('Sox',pollutant,ignore.case = TRUE)) {
+  if (grepl('sox',pollutant,ignore.case = TRUE)) {
     label <- expression(SO[x]*' tonnes/year')
   }
 
@@ -76,7 +79,7 @@ plot_npri <- function(pollutant,categorytype = 'Source',URL=NULL,output = 'basic
             panel.background = element_rect(fill=NA,colour = 'black')) +
       ylab(label) +
       scale_x_continuous(expand=c(0,0)) +
-      guides(fill=guide_legend(ncol=5,reverse = TRUE))
+      guides(fill=guide_legend(ncol=3,reverse = TRUE))
 
     return(a)
   }
@@ -99,24 +102,28 @@ plot_npri <- function(pollutant,categorytype = 'Source',URL=NULL,output = 'basic
 #' Files are retrieved from ECCC APRI site
 #'
 #' @param pollutant is the pollutant to retrieve
+#' @param df is the dataframe containg the data from source
 #' @param categorytype is either source, sector, or subsector. Default is source
 #' @param is the ECCC URL for the NPRI
 #'
 #' @export
-get_npri <- function(pollutant,categorytype = 'Source',URL=NULL) {
+get_npri <- function(pollutant,df=NULL,categorytype = 'Source',URL=NULL) {
   if (0) {
     pollutant <- c('pm25')
     categorytype <- 'Source'
+    URL <- '././test_data/EN_APEI-Can-Prov_Terr.csv'
   }
   if (is.null(URL)) {
     URL <- 'https://data-donnees.ec.gc.ca/data/substances/monitor/canada-s-air-pollutant-emissions-inventory/EN_APEI-Can-Prov_Terr.csv'
   }
+
   #These will be the static  portion of the data, to be included in all queries
   cols_include <- c('Region','Source','Sector','Subsector','Year')
 
   #retrieve data from ECCC
-  df_npri <- readr::read_csv(URL)
-
+  if (is.null(df)) {
+    df_npri <- readr::read_csv(URL)
+  }
   #retrieve the columns related relevant to the query
   cols <- colnames(df_npri)
   cols_include <- cols_include[tolower(cols_include) %in% tolower(cols)]

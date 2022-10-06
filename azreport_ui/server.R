@@ -22,7 +22,8 @@ library(ggpattern)
 library(scales)
 
 
-aq_summary <-  read_csv('../test_data/caaqs_results.csv')
+aq_summary <-  readr::read_csv('../test_data/caaqs_results.csv')
+df_npri <- readr::read_csv('../test_data/EN_APEI-Can-Prov_Terr.csv')
 
 stationlist <- aq_summary %>%
   pull(site) %>%
@@ -66,9 +67,7 @@ server <-  function(input, output) {
     source('././R/shiny/functions_prepareshiny.R')
   }
 
-
-
-
+  #Bar graph summary----
   #filter station list based on parameter
   output$stationSelect <- renderUI({
 
@@ -80,8 +79,16 @@ server <-  function(input, output) {
 
   output$plot1 <- renderPlot({
 
-    create_CAAQS_graph(aq_summary,parameter = input$Parameter,station = input$Station)
+    create_CAAQS_graph(aq_summary,parameter = input$Parameter,
+                       station = input$Station,
+                       startyear = 2013)
 
+  })
+
+  #NPRI----
+
+  output$plot3 <- renderPlotly({
+    plot_npri(input$pollutant,df = df_npri, output = 'plotly')
   })
 
 }

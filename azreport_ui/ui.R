@@ -23,10 +23,11 @@
                   'NO\u2082',
                   'SO\u2082')
 
-
+ parameters_npri <- c('pm25','pm10','nh3','nox','sox'
+                      )
   ui <- fluidPage(
-    titlePanel("Environmental Standards Branch"),
-    navbarPage(title = "B.C. Air Zone Report", theme = "bcgov.css", # add yellow highlighted text to theme the navigation bar
+    titlePanel(""),
+    navbarPage(title = "B.C. Air Zone Report", theme = "./www/bcgov.css", # add yellow highlighted text to theme the navigation bar
                tabPanel("Station Summary",
                         ## add this chunk for the footer =================================
                         column(width = 12,
@@ -41,17 +42,38 @@
                                                             tags$li(a(href="https://www2.gov.bc.ca/gov/content/home/privacy", "Privacy", style="font-size:1em; font-weight:normal; color:white; padding-left:5px; padding-right:5px; border-right:1px solid #4b5e7e;")),
                                                             tags$li(a(href="https://www2.gov.bc.ca/gov/content/home/accessibility", "Accessibility", style="font-size:1em; font-weight:normal; color:white; padding-left:5px; padding-right:5px; border-right:1px solid #4b5e7e;")),
                                                             tags$li(a(href="https://www2.gov.bc.ca/gov/content/home/copyright", "Copyright", style="font-size:1em; font-weight:normal; color:white; padding-left:5px; padding-right:5px; border-right:1px solid #4b5e7e;")),
-                                                            tags$li(a(href="https://www2.gov.bc.ca/StaticWebResources/static/gov3/html/contact-us.html", "Contact", style="font-size:1em; font-weight:normal; color:white; padding-left:5px; padding-right:5px; border-right:1px solid #4b5e7e;")))  )))
+                                                            tags$li(a(href="https://www2.gov.bc.ca/StaticWebResources/static/gov3/html/contact-us.html", "Contact", style="font-size:1em; font-weight:normal; color:white; padding-left:5px; padding-right:5px; border-right:1px solid #4b5e7e;")))))),
+
                         ## end of footer chunk =========================================
-               )),
+                        selectInput("Parameter", "Select Pollutant to Display:",
+                                    list(`Parameter` = parameters)
+                        ),
+                        uiOutput("stationSelect"), plotOutput("plot1"),plotlyOutput("plot2")
+               ),
+               tabPanel('Emission Inventory',
+                   ## add this chunk for the footer =================================
+               column(width = 12,
+                      style = "background-color:#003366; border-top:2px solid #fcba19;",
+                      tags$footer(class="footer",
+                                  tags$div(class="container",style="display:flex; justify-content:center; flex-direction:column;
+                              text-align:center; height:46px;",
+                                           tags$ul(style="display:flex; flex-direction:row; flex-wrap:wrap; margin:0; list-style:none; align-items:center; height:100%;",
+                                                   tags$li(a(href="https://www2.gov.bc.ca/gov/content/home", "Home",
+                                                             style="font-size:1em; font-weight:normal; color:white; padding-left:5px; padding-right:5px; border-right:1px solid #4b5e7e;")),
+                                                   tags$li(a(href="https://www2.gov.bc.ca/gov/content/home/disclaimer", "Disclaimer", style="font-size:1em; font-weight:normal; color:white; padding-left:5px; padding-right:5px; border-right:1px solid #4b5e7e;")),
+                                                   tags$li(a(href="https://www2.gov.bc.ca/gov/content/home/privacy", "Privacy", style="font-size:1em; font-weight:normal; color:white; padding-left:5px; padding-right:5px; border-right:1px solid #4b5e7e;")),
+                                                   tags$li(a(href="https://www2.gov.bc.ca/gov/content/home/accessibility", "Accessibility", style="font-size:1em; font-weight:normal; color:white; padding-left:5px; padding-right:5px; border-right:1px solid #4b5e7e;")),
+                                                   tags$li(a(href="https://www2.gov.bc.ca/gov/content/home/copyright", "Copyright", style="font-size:1em; font-weight:normal; color:white; padding-left:5px; padding-right:5px; border-right:1px solid #4b5e7e;")),
+                                                   tags$li(a(href="https://www2.gov.bc.ca/StaticWebResources/static/gov3/html/contact-us.html", "Contact", style="font-size:1em; font-weight:normal; color:white; padding-left:5px; padding-right:5px; border-right:1px solid #4b5e7e;")))))),
 
-    selectInput("Parameter", "Select Pollutant to Display:",
-                list(`Parameter` = parameters)
-    ),
-    uiOutput("stationSelect"), plotOutput("plot1"),plotOutput("plot2")
+               ## end of footer chunk =========================================
 
+               selectInput("pollutant", "Select Air Pollutant to display:",
+                           list(`Parameter` = parameters_npri)
+               ),
+               plotly::plotlyOutput('plot3')
 
-    )
+    )))
 
 
 # }
