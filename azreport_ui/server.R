@@ -23,8 +23,8 @@ library(scales)
 
 aq_summary <-  read_csv('C:/OneDrives/OneDrive - Government of BC/Documents/!Working/envair/envair/test_data/caaqs_results.csv') %>%
   mutate(metric = recode(metric,'o3' = 'ozone'  ,'o3_tfee' = 'ozone_tfee'))
-aq_summary <-  readr::read_csv('C:/OneDrives/OneDrive - Government of BC/Documents/!Working/envair/envair/test_data/air_data_summary.csv') %>%
-  mutate(metric = recode(metric,'o3' = 'ozone'  ,'o3_tfee' = 'ozone_tfee'))
+# aq_summary <-  readr::read_csv('C:/OneDrives/OneDrive - Government of BC/Documents/!Working/envair/envair/test_data/air_data_summary.csv') %>%
+#   mutate(metric = recode(metric,'o3' = 'ozone'  ,'o3_tfee' = 'ozone_tfee'))
 
 stationlist <- aq_summary %>%
   pull(site) %>%
