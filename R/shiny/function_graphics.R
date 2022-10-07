@@ -11,14 +11,6 @@
 # See the License for the specific language governing permissions and limitations under the License.
 
 
-
-
-
-
-
-
-
-
 #' Create CAAQS bar graph
 #'
 #' @description Creates the bar graph use for CAAQS
@@ -707,4 +699,88 @@ create_CAAQS_graph <- function(df, parameter, station = NULL, startyear = 2013) 
 
   return(a)
 
+}
+
+#' Create a bar graph of the NPRI
+#'
+#' @param pollutant
+#' @param df is the pollutant data. This can be retrieved with get_npri()
+#' @param categorytype is either source, sector, or subsector. Default is source
+#' @param URL is the ECCC URL for the NPRI
+#' @param output is the output type of either 'basic' or 'plotly'
+#'
+#' @export
+plot_npri <- function(pollutant,df=NULL,categorytype = 'Source',URL=NULL,output = 'basic') {
+  if (0) {
+    pollutant <- c('')
+    categorytype <- 'Source'
+    output = 'basic'
+    URL=NULL
+  }
+
+  require(ggplot2)
+
+  df <- get_npri(pollutant = pollutant, df=df, categorytype = categorytype, URL = URL)
+  df_npri <- df %>%
+    dplyr::rename(groupingcolumn= categorytype)
+
+  #change pollutant for labelling purposes
+  label <- pollutant
+  if (grepl('pm25',pollutant,ignore.case = TRUE)) {
+    label <- expression(PM[2.5]*' tonnes/year')
+  }
+
+  if (grepl('pm10',pollutant,ignore.case = TRUE)) {
+    label <- expression(PM[10]*' tonnes/year')
+  }
+
+  if (grepl('nh3',pollutant,ignore.case = TRUE)) {
+    label <- expression(NH[3]*' tonnes/year')
+  }
+
+  if (grepl('nox',pollutant,ignore.case = TRUE)) {
+    label <- expression(NO[x]*' tonnes/year')
+  }
+  if (grepl('sox',pollutant,ignore.case = TRUE)) {
+    label <- expression(SO[x]*' tonnes/year')
+  }
+
+
+  #to arrange based on value
+  levels_grouping <- df_npri %>%
+    # filter(Year == max(df_npri$Year)) %>%
+    arrange((value)) %>%
+    pull(groupingcolumn) %>%
+    unique()
+
+  if (tolower(output) == 'basic') {
+
+
+    a <- df_npri %>%
+      filter(!is.na(groupingcolumn)) %>%
+      # filter(tolower(groupingcolumn) != 'dust') %>%
+      dplyr::mutate(groupingcolumn = factor(groupingcolumn,levels = levels_grouping)) %>%
+      # pull(groupingcolumn) %>% unique()
+      ggplot(aes(x=Year,y=value,fill = groupingcolumn)) +
+      geom_col(colour = 'black') +
+      theme(legend.position = 'bottom',
+            legend.title = element_blank(),
+            panel.background = element_rect(fill=NA,colour = 'black')) +
+      ylab(label) +
+      scale_x_continuous(expand=c(0,0)) +
+      guides(fill=guide_legend(ncol=3,reverse = TRUE))
+
+    return(a)
+  }
+
+  if (tolower(output) == 'plotly') {
+    require(plotly)
+    a <- {
+      plot_ly(df_npri,x=~Year, y= ~value, color = ~groupingcolumn, type = 'bar', source = 'scatter',
+              marker = list(line = list(width = 1,color = 'rgb(0, 0, 0)'))
+      ) %>%
+        layout(barmode = 'stack',yaxis = list(title = paste(pollutant,'(tonnes/year)')))
+    }
+    return(a)
+  }
 }

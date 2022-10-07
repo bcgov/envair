@@ -24,6 +24,8 @@ library(scales)
 
 aq_summary <-  readr::read_csv('../test_data/caaqs_results.csv')
 df_npri <- readr::read_csv('../test_data/EN_APEI-Can-Prov_Terr.csv')
+lst_stations <- listBC_stations(use_CAAQS = TRUE,merge_Stations = TRUE)
+df_caaqs <- readr::read_csv('../test_data/caaqs_results.csv')
 
 stationlist <- aq_summary %>%
   pull(site) %>%
@@ -70,9 +72,7 @@ server <-  function(input, output) {
   #Bar graph summary----
   #filter station list based on parameter
   output$stationSelect <- renderUI({
-
     site_list <- create_CAAQS_graph(aq_summary,parameter = input$Parameter)
-
     selectInput("Station","Select Station to Display:",choices = site_list)
   })
 
@@ -91,4 +91,16 @@ server <-  function(input, output) {
     plot_npri(input$pollutant,df = df_npri, output = 'plotly')
   })
 
+  #Long Term Trends-----
+  output$stationSelect2 <- renderUI({
+    site_list2 <- plot_trends(plot_metric = input$`pollutant trend`,station = NULL,
+                             airzone = input$airzone,df=df_caaqs,lst_stations = lst_stations)
+    selectInput("Station2","Select Station to Display:",choices = site_list2)
+  })
+
+  output$plot4 <- renderPlot({
+    plot_trends(plot_metric = input$`pollutant trend`,
+                station=input$Station2,airzone = input$airzone,
+                df=df_caaqs,lst_stations = lst_stations)
+  })
 }

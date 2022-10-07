@@ -20,7 +20,7 @@
 #' @param use_CAAQS default FALSE. If TRUE, it will return the station list that is
 #' used for air zone and other reporting purposes. This list is from the
 #' Excel file located in:'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/BC_CAAQS_station_history.xlsx'
-#'
+
 #' @examples
 #' listBC_stations()
 #' listBC_stations(2015)
@@ -28,28 +28,43 @@
 #'
 #' @export
 #'
-listBC_stations <- function(year=NULL,use_CAAQS = FALSE)
+listBC_stations <- function(year=NULL,use_CAAQS = FALSE,merge_Stations = FALSE)
 {
   if (0) {
     source('./r/get_caaqs_Stn_history.R')
     year <- 2005
-  }
+    use_CAAQS = FALSE
+  merge_Stations = TRUE
 
+}
+
+  df_result <- NULL
   require(dplyr)
-  result_now <- listBC_stations_()
+  df_result <- listBC_stations_()
 
   if (use_CAAQS) {
     print('Retrieving Station List from CAAQS History Table')
     result <- get_excel_table('ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/BC_CAAQS_station_history.xlsx',
                     sheet = 'Monitoring Station',header_row = 2)
 
-    result_now <- result_now %>%
+    df_result <- df_result %>%
       select(STATION_NAME,STATION_NAME_FULL) %>%
       left_join(result)
 
-    result_now <- dplyr::filter(result_now,!is.na(STATION_NAME))
+    df_result <- dplyr::filter(df_result,!is.na(STATION_NAME))
 
-    return(result_now)
+    #retrieve station history for merging details
+    df_merge <- get_station_history() %>%
+      select(STATION_NAME,`Merged Station Name`) %>%
+      filter(!is.na(`Merged Station Name`)) %>%
+      dplyr::rename(site = `Merged Station Name`) %>%
+      unique()
+    #merge
+    df_result <- df_result %>%
+      left_join(df_merge) %>%
+      mutate(site = ifelse(is.na(site),STATION_NAME,site)) %>%
+      mutate(Label = ifelse(is.na(Label),site,Label)) %>%
+      COLUMN_REORDER(c('STATION_NAME','site','Label'))
   }
 
 
@@ -65,13 +80,23 @@ listBC_stations <- function(year=NULL,use_CAAQS = FALSE)
         result_prev <- result_prev %>%
           dplyr::left_join(result_now %>%
                              select(cols_add))
-        return(result_prev %>% dplyr::filter(!is.na(STATION_NAME)))
+
+        df_result <- result_prev %>%
+          dplyr::filter(!is.na(STATION_NAME))
+
       }
     )
+  }
 
 
-   }
-  return(result_now %>% dplyr::filter(!is.na(STATION_NAME)))
+
+  df_result <- df_result %>%
+    dplyr::filter(!is.na(STATION_NAME))
+
+
+
+
+  return(df_result)
 }
 
 
