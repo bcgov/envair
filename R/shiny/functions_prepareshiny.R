@@ -535,7 +535,15 @@ get_management <- function(datafile = NULL) {
 
   df_levels <- rcaaqs::management_levels %>%
     dplyr::rename(metric = parameter) %>%
-    dplyr::mutate(idx1 = 1:n())
+    dplyr::mutate(idx1 = 1:n()) %>%
+    mutate(metric = recode(metric,
+                           'o3' = 'o3_8h',
+                           'pm2.5_annual' = 'pm25_annual',
+                           'pm2.5_24h' = 'pm25_24h',
+                           'no2_1yr' = 'no2_ann',
+                           'no2_3yr' = 'no2_1hr',
+                           'so2_1yr' = 'so2_ann',
+                           'so2_3yr' = 'so2_1hr'))
 
   df_levels_ <- df_levels %>%
     select(metric,idx1,lower_breaks,upper_breaks) %>%
@@ -564,12 +572,9 @@ get_management <- function(datafile = NULL) {
   )
   df_ <- left_join(df_,df_colour)
 
-  if (nrow(df_) != nrow(df)) {
-    print('Error, some rows ended up missing or not determined')
-    return(NULL)
-  } else {
-    return(df_)
-  }
+
+  return(df_)
+
 
 
 
@@ -581,55 +586,40 @@ get_management <- function(datafile = NULL) {
 #' 'complete' means that output is detailed for each metric, in each station
 #' 'station' means that output is a summary of the management for the station. only metric with highest management level is displayed
 #' 'airzone' means that output is a summary of the management for the airzones
-#'
-get_management_summary <- function(outputtype = 'complete') {
+#' @param df_preload is dataframe of preloaded data, generated in initial load only
+get_management_summary <- function(outputtype = 'complete',df_preload = NULL) {
 
 
   #define the parameter for each metric
   #arrange in terms of an order
   df_metric <- tribble(
     ~metric,~parameter,
-    "pm2.5_annual",'pm25',
-    "pm2.5_24h",'pm25',
-    "o3",'o3',
-    "no2_1yr",'no2',
-    "no2_3yr",'no2',
-    "so2_1yr",'so2',
-    "so2_3yr",'so2',
+    "pm25_annual",'pm25',
+    "pm25_24h",'pm25',
+    "o3_8h",'o3',
+    "no2_ann",'no2',
+    "no2_1hr",'no2',
+    "so2_ann",'so2',
+    "so2_1hr",'so2',
   )
 
+  if (is.null(df_preload)) {
+    lst_stations <- listBC_stations(use_CAAQS = TRUE,merge_Stations = TRUE) %>%
+      dplyr::rename(latitude = LAT,
+                    longitude = LONG,
+                    airzone = AIRZONE,
+                    label = Label)
 
-  #retrieve station and air zone
-  #note that some stations are merged based on the history, have to retrieve it
-  stn_history <- get_station_history() %>%
-    select(STATION_NAME,`Merged Station Name`) %>%
-    filter(!is.na(`Merged Station Name`)) %>%
-    unique()
+    df <- get_management()
 
-
-  lst_stations <- listBC_stations(use_CAAQS = TRUE) %>%
-    select(STATION_NAME,LAT,LONG,AIRZONE,Label) %>%
-    arrange(Label) %>%
-    group_by(STATION_NAME) %>%
-    dplyr::mutate(index = 1:n()) %>%
-    filter(index == 1) %>% select(-index) %>%
-    ungroup() %>%
-    left_join(stn_history) %>%
-    mutate(STATION_NAME = ifelse(is.na(`Merged Station Name`),STATION_NAME,`Merged Station Name`)) %>%
-    select(-`Merged Station Name`) %>%
-    dplyr::rename(site = STATION_NAME,
-                  latitude = LAT,
-                  longitude = LONG,
-                  airzone = AIRZONE,
-                  label = Label)
-
-  df <- get_management()
-
-  df <- df %>%
-    select(site,instrument,caaqs_year,metric,metric_value,colour,colour_text,colour_order,tfee) %>%
-    left_join(lst_stations) %>%
-    left_join(df_metric)
-
+    df <- df %>%
+      select(site,instrument,year,metric,metric_value,colour,colour_text,colour_order,tfee) %>%
+      left_join(lst_stations) %>%
+      left_join(df_metric)
+  }
+if (0) {
+  readr::write_csv(df,'././test_data/management.csv')
+}
   #add order to the metric
   df$metric <- factor(df$metric,levels = df_metric$metric)
   #calculate and return result based on the type specified
@@ -641,15 +631,15 @@ get_management_summary <- function(outputtype = 'complete') {
   if (outputtype == 'station') {
 
     df <- df %>%
-      group_by(parameter,site,caaqs_year,airzone,tfee) %>%
+      group_by(parameter,site,year,airzone,tfee) %>%
       dplyr::mutate(max_colour_order = max(colour_order)) %>%
       ungroup() %>%
       filter(colour_order == max_colour_order) %>%
       arrange(metric) %>%   #this gives priority to annual over 24h/1h metrics
-      group_by(parameter,site,caaqs_year,airzone,tfee) %>%
+      group_by(parameter,site,year,airzone,tfee) %>%
       dplyr::mutate(index =1:n()) %>%
       filter(index==1) %>% ungroup() %>% select(-index) %>%
-      arrange(parameter,site,tfee,caaqs_year) %>%
+      arrange(parameter,site,tfee,year) %>%
       select(-max_colour_order)
 
     return(df)
@@ -659,17 +649,17 @@ get_management_summary <- function(outputtype = 'complete') {
 
     df <- df %>%
       arrange(airzone,metric_value) %>%
-      group_by(parameter,metric,caaqs_year,airzone,tfee) %>%
+      group_by(parameter,metric,year,airzone,tfee) %>%
       dplyr::mutate(max_metric_value = max(metric_value,na.rm = TRUE)) %>%
       ungroup() %>%
       filter(metric_value == max_metric_value) %>%
       arrange(desc(colour_order), metric) %>%   #this gives prioroty to pm2.5annual or 24h, and no2_3yr over 1 yr
-      group_by(parameter,caaqs_year,airzone,tfee) %>%
+      group_by(parameter,year,airzone,tfee) %>%
       dplyr::mutate(max_colour_order = max(colour_order),index = 1:n()) %>%
       filter(colour_order == max_colour_order,index == 1) %>% ungroup() %>% select(-index) %>%
-      COLUMN_REORDER(c('parameter','airzone','tfee','caaqs_year')) %>%
+      COLUMN_REORDER(c('parameter','airzone','tfee','year')) %>%
       select(-max_colour_order,-max_metric_value) %>%
-      arrange(parameter,airzone,tfee,caaqs_year)
+      arrange(parameter,airzone,tfee,year)
 
     return(df)
   }
@@ -692,7 +682,7 @@ create_CAAQS_graph_files <- function(filedirectory = NULL) {
     filedirectory <- '././test_data'
     list.files(filedirectory)
   }
-
+``
   file_annual <- paste(filedirectory,'annual_results.csv',sep='/')
   file_captures <- paste(filedirectory,'annual_results.csv',sep='/')
   file_ <- paste(filedirectory,'annual_results.csv',sep='/')

@@ -27,7 +27,7 @@
                       )
 airzones <- sort(c('Central Interior','Northeast','Georgia Strait','Lower Fraser Valley',
               'Southern Interior','Northwest','Coastal'))
-metrics <- c('pm25_24h','pm25_annual')
+metrics <- c('pm25_24h','pm25_annual','o3_8h','no2_1hr','no2_ann','so2_1hr','so2_ann')
 
   ui <- fluidPage(
     titlePanel(""),
@@ -105,6 +105,32 @@ metrics <- c('pm25_24h','pm25_annual')
                         ),
                         uiOutput("stationSelect2"),
                         plotOutput('plot4')
+
+                        ),
+               tabPanel('map',
+                        ## add this chunk for the footer =================================
+                        column(width = 12,
+                               style = "background-color:#003366; border-top:2px solid #fcba19;",
+                               tags$footer(class="footer",
+                                           tags$div(class="container",style="display:flex; justify-content:center; flex-direction:column;
+                              text-align:center; height:46px;",
+                                                    tags$ul(style="display:flex; flex-direction:row; flex-wrap:wrap; margin:0; list-style:none; align-items:center; height:100%;",
+                                                            tags$li(a(href="https://www2.gov.bc.ca/gov/content/home", "Home",
+                                                                      style="font-size:1em; font-weight:normal; color:white; padding-left:5px; padding-right:5px; border-right:1px solid #4b5e7e;")),
+                                                            tags$li(a(href="https://www2.gov.bc.ca/gov/content/home/disclaimer", "Disclaimer", style="font-size:1em; font-weight:normal; color:white; padding-left:5px; padding-right:5px; border-right:1px solid #4b5e7e;")),
+                                                            tags$li(a(href="https://www2.gov.bc.ca/gov/content/home/privacy", "Privacy", style="font-size:1em; font-weight:normal; color:white; padding-left:5px; padding-right:5px; border-right:1px solid #4b5e7e;")),
+                                                            tags$li(a(href="https://www2.gov.bc.ca/gov/content/home/accessibility", "Accessibility", style="font-size:1em; font-weight:normal; color:white; padding-left:5px; padding-right:5px; border-right:1px solid #4b5e7e;")),
+                                                            tags$li(a(href="https://www2.gov.bc.ca/gov/content/home/copyright", "Copyright", style="font-size:1em; font-weight:normal; color:white; padding-left:5px; padding-right:5px; border-right:1px solid #4b5e7e;")),
+                                                            tags$li(a(href="https://www2.gov.bc.ca/StaticWebResources/static/gov3/html/contact-us.html", "Contact", style="font-size:1em; font-weight:normal; color:white; padding-left:5px; padding-right:5px; border-right:1px solid #4b5e7e;")))))),
+
+                        ## end of footer chunk =========================================
+                        leafletOutput("mymap2"),
+                        p()
+                        # actionButton("recalcPM25", "PM2.5"),
+                        # actionButton("recalcOzone", "Ozone"),
+                        # actionButton("recalcNO2", "NO2"),
+                        # actionButton("recalcSO2", "SO2")
+
 
                         )
 
