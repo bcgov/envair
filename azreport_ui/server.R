@@ -21,6 +21,7 @@ library(patchwork)
 library(ggpattern)
 library(scales)
 library(envreportutils)
+library(plotly)
 
 # Preload from save files --------
 aq_summary <-  readr::read_csv('../test_data/caaqs_results.csv')

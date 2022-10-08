@@ -31,7 +31,7 @@ Imports:
      curl (>= 4.3.2),
      readxl (>= 1.4.0),
      httr (>= 1.4.4),
-     tidyr (>=1.2.0),
+     tidyr (>= 1.2.0),
 
 Suggests:
      rmarkdown,
