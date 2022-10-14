@@ -10,23 +10,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and limitations under the License.
 
-# #preload data
-# aq_files <- list.files('././test_data',full.names = TRUE)
-# aq_captures <- readr::read_csv(aq_files[grepl('captures.csv',aq_files)])
-
 # app_ui <- function() {
   ## this is the shell of an app.R scriptwith the bcgov style template
   ## ensure that the .css file and logo are in the www folder in your app directory.
   # Define UI ----
-  parameters <- c('PM\u2082.\u2085',
-                  'Ozone',
-                  'NO\u2082',
-                  'SO\u2082')
-
+  # parameters <- c('PM\u2082.\u2085',
+  #                 'Ozone',
+  #                 'NO\u2082',
+  #                 'SO\u2082')
+  parameters <- c('PM<sub>2.5</sub>',
+                 'O<sub>3</sub>',
+                 'NO<sub>2</sub>',
+                 'SO<sub>2</sub>')
  parameters_npri <- c('pm25','pm10','nh3','nox','sox'
                       )
 airzones <- sort(c('Central Interior','Northeast','Georgia Strait','Lower Fraser Valley',
               'Southern Interior','Northwest','Coastal'))
+
 metrics <- c('pm25_24h','pm25_annual','o3_8h','no2_1hr','no2_ann','so2_1hr','so2_ann')
 
   ui <- fluidPage(
@@ -54,7 +54,7 @@ metrics <- c('pm25_24h','pm25_annual','o3_8h','no2_1hr','no2_ann','so2_1hr','so2
                         ),
                         uiOutput("stationSelect"),
                         plotOutput("plot1"),
-                        plotlyOutput("plot2")
+                        plotly::plotlyOutput("plot2")
                ),
                tabPanel('Emission Inventory',
                    ## add this chunk for the footer =================================
@@ -107,7 +107,7 @@ metrics <- c('pm25_24h','pm25_annual','o3_8h','no2_1hr','no2_ann','so2_1hr','so2
                         plotOutput('plot4')
 
                         ),
-               tabPanel('map',
+               tabPanel('Map',
                         ## add this chunk for the footer =================================
                         column(width = 12,
                                style = "background-color:#003366; border-top:2px solid #fcba19;",
@@ -124,7 +124,7 @@ metrics <- c('pm25_24h','pm25_annual','o3_8h','no2_1hr','no2_ann','so2_1hr','so2
                                                             tags$li(a(href="https://www2.gov.bc.ca/StaticWebResources/static/gov3/html/contact-us.html", "Contact", style="font-size:1em; font-weight:normal; color:white; padding-left:5px; padding-right:5px; border-right:1px solid #4b5e7e;")))))),
 
                         ## end of footer chunk =========================================
-                        leafletOutput("mymap2"),
+                        leaflet::leafletOutput("mymap2"),
                         p()
                         # actionButton("recalcPM25", "PM2.5"),
                         # actionButton("recalcOzone", "Ozone"),

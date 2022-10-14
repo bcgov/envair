@@ -87,7 +87,7 @@ get_stats <- function(param, years=NULL,add_TFEE = FALSE, merge_Stations = FALSE
       df_captures_list %>%
         dplyr::mutate(capture_type = gsub('valid','perc',capture_type))
     ) %>%
-    unique()
+    distinct()
 
   #assigning default values
   # for years, use the current year
@@ -180,7 +180,7 @@ get_stats <- function(param, years=NULL,add_TFEE = FALSE, merge_Stations = FALSE
       df_captures %>%
         dplyr::rename(YEAR=year) %>%
         arrange(capture_type) %>%
-        ungroup() %>% unique() %>%
+        ungroup() %>% distinct() %>%
         tidyr::pivot_wider(names_from = capture_type,values_from = value)
     ) %>%
     filter(YEAR %in% years)

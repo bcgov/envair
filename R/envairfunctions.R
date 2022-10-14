@@ -449,6 +449,7 @@ RUN_PACKAGE<-function(packages=c('dplyr','ggplot2','reshape',
 #' @param columns the vector of strings listing the column names in desired order. Columns not listed are added at the end
 #' @param align specifies where the specified columns are inserted at
 #' beginning ("left") or end ("right")
+#' @export
 COLUMN_REORDER<-function(data.input,columns=c(''),align = 'left')
 {
   #reorders column based on the defined vlaue in columns

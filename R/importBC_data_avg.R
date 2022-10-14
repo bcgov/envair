@@ -100,10 +100,10 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
       if (any(!df_data$PARAMETER %in% do_not_mergeauto) & merge_Stations) {
         df_instrument <- df_data %>%
           select(STATION_NAME,INSTRUMENT,PARAMETER) %>%
-          unique() %>%
+          distinct() %>%
           group_by(STATION_NAME,PARAMETER) %>%
           dplyr::mutate(new_INSTRUMENT = paste(INSTRUMENT,collapse ='/')) %>%
-          unique()
+          distinct()
 
         df_data <- df_data %>%
           left_join(df_instrument) %>%
@@ -380,10 +380,8 @@ averaging_type <- gsub('more','EXCEED',averaging_type,ignore.case = TRUE)
           arrange(desc(value)) %>%
           dplyr::select(-cols_remove) %>%
           group_by(PARAMETER,YEAR,STATION_NAME,INSTRUMENT,name) %>%
-          dplyr::mutate(index = 1:n()) %>%
-          filter(index == nth) %>%
-          dplyr::select(-index) %>%
-          unique() %>%
+          slice(nth) %>%
+          distinct() %>%
           dplyr::mutate(name = gsub('VALUE','ANNUAL',name,ignore.case = TRUE)) %>%
           dplyr::mutate(name = gsub(averaging_type,
                                     paste(toupper(annual_summary),averaging_type,sep='_'),

@@ -285,7 +285,7 @@ importBC_data_<-function(parameter_or_station,
         left_join(
           listBC_stations(data.year) %>%
             dplyr::select(STATION_NAME,NAPS_ID) %>%
-            unique()
+            distinct()
         )
     }
 
@@ -305,9 +305,7 @@ importBC_data_<-function(parameter_or_station,
       dplyr::filter(!is.na(RAW_VALUE)) %>%
       arrange(STATION_NAME,DATE_PST) %>%
       dplyr::group_by(DATE_PST,STATION_NAME,PARAMETER,INSTRUMENT) %>%
-      dplyr::mutate(index = 1:n(),count=n()) %>%
-      dplyr::filter(index==1) %>%
-      dplyr::select(-index,-count) %>%
+      dplyr::slice(1) %>%
       dplyr::ungroup()
     if (pad) {
 

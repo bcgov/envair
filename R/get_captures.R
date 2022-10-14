@@ -87,10 +87,10 @@ get_captures0 <- function(param,years=NULL,merge_Stations=FALSE,stop_at_present 
     if (any(!df$PARAMETER %in% do_not_mergeauto) & merge_Stations) {
       df_instrument <- df %>%
         select(STATION_NAME,INSTRUMENT,PARAMETER) %>%
-        unique() %>%
+        distinct() %>%
         group_by(STATION_NAME,PARAMETER) %>%
         dplyr::mutate(new_INSTRUMENT = paste(INSTRUMENT,collapse ='/')) %>%
-        unique()
+        distinct()
 
       df <- df %>%
         left_join(df_instrument) %>%
@@ -122,7 +122,7 @@ get_captures0 <- function(param,years=NULL,merge_Stations=FALSE,stop_at_present 
   #note: new station "TOTAL" created with perfect data captures
   df_full <- df %>%
     select(DATE_PST,PARAMETER) %>%
-    unique() %>%
+    distinct() %>%
     dplyr::mutate(STATION_NAME = 'TOTAL',INSTRUMENT = 'TOTAL') %>%
     pad_data(add_DATETIME = TRUE) %>%
     filter(DATE_PST<=current_date) %>%
@@ -163,14 +163,14 @@ get_captures0 <- function(param,years=NULL,merge_Stations=FALSE,stop_at_present 
 
   #categorize the entries into years, quarter, months
   df_captures <- captures_hrs %>%
-    select(STATION_NAME,INSTRUMENT,PARAMETER,year,valid_hrs_year) %>% unique() %>%
+    select(STATION_NAME,INSTRUMENT,PARAMETER,year,valid_hrs_year) %>% distinct() %>%
     dplyr::rename(value = valid_hrs_year) %>%
     dplyr::mutate(date_value = 'year',unit = 'hours',date_category = 'year',
                   date_value = as.character(date_value)) %>%
     dplyr::bind_rows(
 
       captures_hrs %>%
-        select(STATION_NAME,INSTRUMENT,PARAMETER,quarter,year,valid_hrs_quarter) %>% unique() %>%
+        select(STATION_NAME,INSTRUMENT,PARAMETER,quarter,year,valid_hrs_quarter) %>% distinct() %>%
         dplyr::rename(value = valid_hrs_quarter,
                       date_value = quarter) %>%
         dplyr::mutate(unit = 'hours',date_category = 'quarter',
@@ -178,7 +178,7 @@ get_captures0 <- function(param,years=NULL,merge_Stations=FALSE,stop_at_present 
     ) %>%
     dplyr::bind_rows(
       captures_hrs %>%
-        select(STATION_NAME,INSTRUMENT,PARAMETER,year,month,valid_hrs_month) %>% unique() %>%
+        select(STATION_NAME,INSTRUMENT,PARAMETER,year,month,valid_hrs_month) %>% distinct() %>%
         dplyr::rename(value = valid_hrs_month,
                       date_value = month) %>%
         dplyr::mutate(unit = 'hours',date_category = 'month',
@@ -197,7 +197,7 @@ get_captures0 <- function(param,years=NULL,merge_Stations=FALSE,stop_at_present 
     dplyr::bind_rows(
       df_full %>%
         select(DATE,STATION_NAME,INSTRUMENT,PARAMETER,year) %>%
-        unique()
+        distinct()
       ) %>%
     dplyr::mutate(year = lubridate::year(DATE),
                   month = as.character(DATE,format='%b')) %>%
@@ -220,7 +220,7 @@ get_captures0 <- function(param,years=NULL,merge_Stations=FALSE,stop_at_present 
   df_captures <- df_captures %>%
     dplyr::bind_rows(
     captures_days %>%
-    select(STATION_NAME,INSTRUMENT,PARAMETER,year,valid_days_year) %>% unique() %>%
+    select(STATION_NAME,INSTRUMENT,PARAMETER,year,valid_days_year) %>% distinct() %>%
     dplyr::rename(value = valid_days_year) %>%
     dplyr::mutate(unit = 'days',date_category = 'year',
                   date_value = 'year')
@@ -228,7 +228,7 @@ get_captures0 <- function(param,years=NULL,merge_Stations=FALSE,stop_at_present 
     dplyr::bind_rows(
 
       captures_days %>%
-        select(STATION_NAME,INSTRUMENT,PARAMETER,year,quarter,valid_days_quarter) %>% unique() %>%
+        select(STATION_NAME,INSTRUMENT,PARAMETER,year,quarter,valid_days_quarter) %>% distinct() %>%
         dplyr::rename(value = valid_days_quarter,
                       date_value = quarter) %>%
         dplyr::mutate(unit = 'days',date_category = 'quarter',
@@ -236,7 +236,7 @@ get_captures0 <- function(param,years=NULL,merge_Stations=FALSE,stop_at_present 
     ) %>%
     dplyr::bind_rows(
       captures_days %>%
-        select(STATION_NAME,INSTRUMENT,PARAMETER,year,month,valid_days_month) %>% unique() %>%
+        select(STATION_NAME,INSTRUMENT,PARAMETER,year,month,valid_days_month) %>% distinct() %>%
         dplyr::rename(value = valid_days_month,
                       date_value = month) %>%
         dplyr::mutate(unit = 'days',date_category = 'month',
@@ -246,12 +246,12 @@ get_captures0 <- function(param,years=NULL,merge_Stations=FALSE,stop_at_present 
   #add total valid column-----
   df_TOTAL <- df_captures %>%
     filter(STATION_NAME == 'TOTAL') %>%
-    select(date_value,value,unit,date_category,year) %>% unique() %>%
+    select(date_value,value,unit,date_category,year) %>% distinct() %>%
     dplyr::rename(total = value) %>%
     merge(
       df_captures%>%
         select(STATION_NAME,INSTRUMENT,PARAMETER) %>%
-        unique()
+        distinct()
     )
 
   df_captures <- df_TOTAL %>%
