@@ -44,9 +44,9 @@
 #'
 #' @export
 importBC_data <- function(parameter_or_station,
-                         years=NULL,use_openairformat=TRUE,
-                         use_ws_vector = FALSE,pad = TRUE,
-                         flag_TFEE = FALSE, merge_Stations = FALSE) {
+                          years=NULL,use_openairformat=TRUE,
+                          use_ws_vector = FALSE,pad = TRUE,
+                          flag_TFEE = FALSE, merge_Stations = FALSE) {
 
   #debug
   if (0)
@@ -75,11 +75,11 @@ importBC_data <- function(parameter_or_station,
   }
   #use original function to retrieve data
   df <- importBC_data_(parameter_or_station = parameter_or_station,
-                 years=years,
-                 use_openairformat=use_openairformat,
-                 use_ws_vector = use_ws_vector,
-                 pad = pad
-                 )
+                       years=years,
+                       use_openairformat=use_openairformat,
+                       use_ws_vector = use_ws_vector,
+                       pad = pad
+  )
 
   #return with original query if no TFEE flags or merging are needed
 
@@ -93,8 +93,8 @@ importBC_data <- function(parameter_or_station,
 
     print('Adding TFEE flags')
     df <- df %>%
-     add_TFEE(station_column = 'STATION_NAME',date_column = 'DATE',param_column = 'PARAMETER')
-  print('Done. TFEE flags added.')
+      add_TFEE(station_column = 'STATION_NAME',date_column = 'DATE',param_column = 'PARAMETER')
+    print('Done. TFEE flags added.')
 
   }
 
@@ -128,8 +128,8 @@ importBC_data <- function(parameter_or_station,
 #' @param caaqs default is FALSE. If TRUE, it adds fields for TFEE, \n
 #' and merges station names
 importBC_data_<-function(parameter_or_station,
-                        years=NULL,use_openairformat=TRUE,
-                        use_ws_vector = FALSE,pad = TRUE)
+                         years=NULL,use_openairformat=TRUE,
+                         use_ws_vector = FALSE,pad = TRUE)
 
 {
   #debug
@@ -173,7 +173,7 @@ importBC_data_<-function(parameter_or_station,
   parameter_or_station <- tolower(parameter_or_station)
 
   df_parameter_list <- tribble(
-    ~parameter_or_station,~standard_name,
+    ~parameter,~standard_name,
     'ozone','o3',
     'pm2.5','pm25',
     'wdir','wdir_vect',
@@ -184,19 +184,31 @@ importBC_data_<-function(parameter_or_station,
     'temp','temp_mean'
   )
 
-  if (parameter_or_station %in% df_parameter_list$parameter_or_station) {
-     #rename to the standard name
-    parameter_or_station <- df_parameter_list$standard_name[df_parameter_list$parameter_or_station == parameter_or_station]
-  }
 
-  if (any(tolower(parameter_or_station) %in% tolower(temp_)))
+
+  #identify if the user enter parameter or station
+  if (any(tolower(parameter_or_station) %in% tolower(c(temp_,df_parameter_list$parameter))))
   {
+    if (0) {
+      parameter_or_station <- c('pm2.5','aqhi','temp')
+    }
     parameters <- parameter_or_station
     stations <- NULL
     use_openairformat <- FALSE
 
-  } else
-  {
+
+    #process parameter, rename to standard name
+    parameters_ <- NULL
+    for (param_ in parameters) {
+      if (param_ %in% df_parameter_list$parameter) {
+        #rename to the standard name
+        param_ <- df_parameter_list$standard_name[df_parameter_list$parameter == param_]
+      }
+      parameters_ <- c(parameters_,param_)
+    }
+
+    parameters <- unique(parameters_)
+  } else  {
     stations  <- parameter_or_station
     parameters <- NULL
   }
@@ -424,15 +436,15 @@ importBC_data_<-function(parameter_or_station,
             data.result_ <- NULL
             try(
               data.result_ <- readr::read_csv(source_,
-                                                 col_types = readr::cols(
-                                                   DATE_PST = readr::col_datetime(),
-                                                   NAPS_ID = readr::col_character(),
-                                                   EMS_ID = readr::col_character(),
-                                                   RAW_VALUE = readr::col_double(),
-                                                   ROUNDED_VALUE = readr::col_double()
-                                                 )) %>%
-                                   dplyr::mutate(VALIDATION_STATUS=ifelse(data.year<= valcycle,
-                                                                          'VALID','UNVERIFIED'))
+                                              col_types = readr::cols(
+                                                DATE_PST = readr::col_datetime(),
+                                                NAPS_ID = readr::col_character(),
+                                                EMS_ID = readr::col_character(),
+                                                RAW_VALUE = readr::col_double(),
+                                                ROUNDED_VALUE = readr::col_double()
+                                              )) %>%
+                dplyr::mutate(VALIDATION_STATUS=ifelse(data.year<= valcycle,
+                                                       'VALID','UNVERIFIED'))
             )
 
             #process date, filter by year
@@ -596,17 +608,17 @@ importBC_data_<-function(parameter_or_station,
 
     if (pad)
     {
-       cols_ <- colnames(data.result)
-       cols_instrument <- cols_[grepl('_instrument',cols_,ignore.case=TRUE)]
-       cols_unit <- cols_[grepl('_units',cols_,ignore.case=TRUE)]
-       cols_vals <- cols_[grepl('_raw',cols_,ignore.case=TRUE)]
-       cols_vals <- unique(c('validation_status','VALIDATION_STATUS','WS','WD','ws','wd',cols_vals,gsub('_raw','',cols_vals,ignore.case =TRUE)))
+      cols_ <- colnames(data.result)
+      cols_instrument <- cols_[grepl('_instrument',cols_,ignore.case=TRUE)]
+      cols_unit <- cols_[grepl('_units',cols_,ignore.case=TRUE)]
+      cols_vals <- cols_[grepl('_raw',cols_,ignore.case=TRUE)]
+      cols_vals <- unique(c('validation_status','VALIDATION_STATUS','WS','WD','ws','wd',cols_vals,gsub('_raw','',cols_vals,ignore.case =TRUE)))
 
 
-       data.result <- data.result %>%
-         pad_data(date_time= c('date','DATE_PST')[c('date','DATE_PST') %in% cols_],
-                  values = c(cols_vals,cols_instrument,cols_unit),
-                  add_DATETIME = !use_openairformat)
+      data.result <- data.result %>%
+        pad_data(date_time= c('date','DATE_PST')[c('date','DATE_PST') %in% cols_],
+                 values = c(cols_vals,cols_instrument,cols_unit),
+                 add_DATETIME = !use_openairformat)
     }
 
   }
@@ -638,7 +650,7 @@ importBC_data_<-function(parameter_or_station,
   data.result %>%
     ungroup() %>%
     as.data.frame() %>%
-  return()
+    return()
 }
 
 
