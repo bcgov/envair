@@ -130,7 +130,7 @@ pad_data <- function(df,date_time = NULL,padby='hour' ,values = NULL,time_ending
       merge(
         df %>%
           dplyr::select(all_of(cols_selection)) %>%
-          unique()
+          distinct()
       ) %>%
       dplyr::left_join(df)
 
@@ -191,7 +191,7 @@ pad_data <- function(df,date_time = NULL,padby='hour' ,values = NULL,time_ending
       merge(
         df %>%
           dplyr::select(cols_selection) %>%
-          unique()
+          distinct()
       ) %>%
       dplyr::left_join(df)
     print(paste('Added/padded rows:',nrow(df_result) - nrow(df)))

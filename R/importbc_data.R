@@ -136,7 +136,7 @@ importBC_data_<-function(parameter_or_station,
   if (0)
   {
 
-    parameter_or_station <- 'wdir'
+    parameter_or_station <- 'aqhi'
     parameter_or_station <- 'smithers'
     years <- 2020
     pad = TRUE
@@ -235,17 +235,55 @@ importBC_data_<-function(parameter_or_station,
         print(paste('Retrieving data from:',list.data))
 
         df_data <- NULL
-        try(df_data <-readr::read_csv(list.data,
-                                      col_types = readr::cols(
-                                        DATE_PST = readr::col_datetime(),
-                                        NAPS_ID = readr::col_character(),
-                                        EMS_ID = readr::col_character(),
-                                        RAW_VALUE = readr::col_double(),
-                                        ROUNDED_VALUE = readr::col_double()
-                                      )) %>%
-              dplyr::mutate(VALIDATION_STATUS=ifelse(data.year<= valcycle,
-                                                     'VALID','UNVERIFIED'))
-        )
+
+        #scan data to find column names, etc
+        try(df_data_scan <- readr::read_csv(list.data,n_max=0))
+        cols_data <- colnames(df_data_scan)
+
+        #if column include RAW_DATA
+        #then process like below to ensure proper data type
+        if ('RAW_VALUE' %in% cols_data) {
+          try(df_data <-readr::read_csv(list.data,
+                                        col_types = readr::cols(
+                                          DATE_PST = readr::col_datetime(),
+                                          NAPS_ID = readr::col_character(),
+                                          EMS_ID = readr::col_character(),
+                                          RAW_VALUE = readr::col_double(),
+                                          ROUNDED_VALUE = readr::col_double()
+                                        )) %>%
+                dplyr::mutate(VALIDATION_STATUS=ifelse(data.year<= valcycle,
+                                                       'VALID','UNVERIFIED'))
+          )
+        } else {
+          #define all possible raw value
+          cols_rawvalue <- c('AQHI_REPORTED')
+
+
+          try({
+            df_data <- readr::read_csv(list.data,col_types = readr::cols(.default = "c"))
+            df_data$DATE_PST <- lubridate::ymd_hm(df_data$DATE_PST, tz='etc/GMT+8')
+            cols_rawvalue <- cols_data[tolower(cols_data) %in% tolower(cols_rawvalue)][1]
+            df_data <-  df_data %>%
+              dplyr::mutate_(RAW_VALUE = cols_rawvalue) %>%
+              mutate(date_ = DATE_PST - lubridate::hours(1)) %>%
+              mutate(DATE = lubridate::date(date_),
+                     TIME = as.character(DATE_PST,format = '%H:%M')) %>%
+              mutate(TIME = ifelse(TIME == '00:00','24:00', TIME)) %>%
+              select(-date_) %>%
+              mutate(RAW_VALUE= as.numeric(RAW_VALUE)) %>%
+              mutate(ROUNDED_VALUE = round2(RAW_VALUE,0),
+                     PARAMETER = toupper(parameter), INSTRUMENT=NA)
+
+            #reorder columns
+            cols_ordered <- c('DATE_PST','DATE','TIME','PARAMETER','AQHI_AREA','STATION_NAME',
+                              'STATION_NAME_FULL','RAW_VALUE','ROUNDED_VALUE','AQHI_REPORTED')
+            cols_ordered <- cols_ordered[tolower(cols_ordered) %in% tolower(colnames(df_data))]
+
+            df_data <- COLUMN_REORDER(df_data,c(cols_ordered,'RAw_VALUE','ROUNDED_VALUE'))
+
+          })
+
+        }
 
         try(df_data$DATE_PST <- lubridate::force_tz(df_data$DATE_PST,tz='etc/GMT+8'))
         #remove DATE,TIME column if it is there
@@ -268,12 +306,13 @@ importBC_data_<-function(parameter_or_station,
 
         if (!is.null(df_data))
         {
-          print('adding the file to retrieved data')
+          print(paste('Adding',nrow(df_data),'hours of data'))
 
           df_data$year_ <-  lubridate::year(df_data$DATE_PST - lubridate::hours(1))
           df_data <- df_data[df_data$year_ == data.year,]
           df_data <- subset(df_data,select=-year_)
           data.result <- dplyr::bind_rows(data.result, df_data)
+          print(paste('Total rows of data:',nrow(data.result)))
 
         }
 
@@ -309,6 +348,10 @@ importBC_data_<-function(parameter_or_station,
     }
 
 
+    #if AQHI parameter, send the result
+    if (tolower(parameter) == 'aqhi') {
+      return(data.result)
+    }
     # remove duplicates (added 2022-08-18)
     rows_rawdata <- nrow(data.result)   #rows before removing duplicates
     print('checking for duplicates')
@@ -320,6 +363,7 @@ importBC_data_<-function(parameter_or_station,
       dplyr::mutate(index = 1:n()) %>% #slice(1) is too slow
       filter(index == 1) %>% select(-index) %>%
       dplyr::ungroup()
+
     if (pad) {
 
       data.result <- pad_data(data.result,add_DATETIME = TRUE)
@@ -327,8 +371,7 @@ importBC_data_<-function(parameter_or_station,
 
 
 
-  } else
-  {
+  } else  {
     #retrieve station data, not parameters-----
     #search based on the station name,if it matches
     list.stations<-listBC_stations()%>%
