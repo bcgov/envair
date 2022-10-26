@@ -25,36 +25,18 @@ library(plotly)
 
 source('01_load.R')
 
-stationlist <- aq_summary %>%
-  pull(site) %>%
-  unique() %>%
-  sort() %>%
-  list()
-
-yearlist <- aq_summary %>%
-  pull(year) %>%
-  unique() %>%
-  sort() %>%
-  list() %>%
-  unlist()
-
-parameterlist <- aq_summary %>%
-  pull(metric) %>%
-  unique() %>%
-  sort() %>%
-  list() %>%
-  unlist()
 
 
-# parameters <- c('PM\u2082.\u2085',
-#                 'Ozone',
-#                 'NO\u2082',
-#                 'SO\u2082')
 
-parameter <- c('PM<sub>2.5</sub>',
-               'O<sub>3</sub>',
-               'NO<sub>2</sub>',
-               'SO<sub>2</sub>')
+parameters <- c('PM\u2082.\u2085',
+                'Ozone',
+                'NO\u2082',
+                'SO\u2082')
+
+# parameter <- c('PM<sub>2.5</sub>',
+#                'O<sub>3</sub>',
+#                'NO<sub>2</sub>',
+#                'SO<sub>2</sub>')
 server <-  function(input, output) {
 
   # developer lines to create summary
@@ -85,8 +67,7 @@ server <-  function(input, output) {
     create_CAAQS_graph(aq_summary,parameter = input$Parameter,
                        station = input$Station,
                        startyear = 2013)
-
-  })
+  }, height =400, width=600)
 
   #NPRI----
 
@@ -96,79 +77,24 @@ server <-  function(input, output) {
 
   #Long Term Trends-----
   output$stationSelect2 <- renderUI({
-    site_list2 <- plot_trends(plot_metric = input$`pollutant trend`,station = NULL,
+    input_parameter <- df_parameter$parameter[df_parameter$display == input$`pollutant trend`]
+    site_list2 <- plot_trends(pollutant = input_parameter,
+                              station = NULL,
                              airzone = input$airzone,df=df_caaqs,lst_stations = lst_stations)
     selectInput("Station2","Select Station to Display:",choices = site_list2)
   })
 
   #Create plots for long term trends ----
   output$plot4 <- renderPlot({
-    plot_trends(plot_metric = input$`pollutant trend`,
+    input_parameter <- df_parameter$parameter[df_parameter$display == input$`pollutant trend`]
+    plot_trends(pollutant = input_parameter,
                 station=input$Station2,airzone = input$airzone,
-                df=df_caaqs,lst_stations = lst_stations)
-  })
-
-  #create for map-----
-
+                df=df_caaqs,
+                lst_stations = lst_stations)
+  }, height = 800, width = 600)
 
 
 
-  #list of stations-----
-  df_current_list_all <- df_preload_management %>%
-    filter(year == max(df_preload_management$year)) %>%
-    select(site,latitude,longitude,parameter) %>%
-    distinct() %>%
-    group_by(site) %>%
-    dplyr::mutate(parameter = paste0(unique(parameter),collapse = ',')) %>%
-    slice(1) %>% ungroup()
-
-  #assets
-  df_current_list <-  df_preload_management %>%
-    left_join(df_metric_list() %>%select(-parameter)) %>%
-    select(site,tfee,instrument,year,latitude,longitude,pollutant,metric,metric_value,airzone,colour_order,colour,label,colour_text) %>%
-    ungroup() %>%
-    group_by(site,year,pollutant,tfee) %>%
-    arrange(desc(metric),desc(colour_order)) %>%
-    dplyr::mutate(mgmt = max(colour_order,na.rm = TRUE)) %>%
-    ungroup() %>%
-    dplyr::filter(mgmt == colour_order) %>%
-    group_by(site,year,pollutant,tfee) %>%
-    slice(1) %>% select(-mgmt) %>% ungroup()
-
-  df_current_list_pm25 <- df_current_list %>%
-    filter(year == max(df_current_list$year)) %>%
-    filter(pollutant == 'PM25') %>%
-    filter(!tfee)
-
-  df_current_list_pm25_tfee <- df_current_list %>%
-    filter(year == max(df_current_list$year)) %>%
-    filter(pollutant == 'PM25')%>%
-    filter(tfee)
-
-  df_current_list_o3 <- df_current_list %>%
-    filter(year == max(df_current_list$year)) %>%
-    filter(pollutant == 'O3')
-
-  df_current_list_no2 <- df_current_list %>%
-    filter(year == max(df_current_list$year)) %>%
-    filter(pollutant == 'NO2')
-
-  df_current_list_so2 <- df_current_list %>%
-    filter(year == max(df_current_list$year)) %>%
-    filter(pollutant == 'SO2') %>%
-    mutate(icon = '../assets/marker_orange.svg')
-
-
-  #create the airzone background-----
-  az_mgmt <- airzones() %>%
-    st_make_valid() %>%
-    st_transform(st_crs(bc_bound())) %>%
-    st_intersection(st_geometry(bc_bound())) %>%
-    group_by(airzone = Airzone) %>%
-    summarize() %>%
-    st_transform(4326)
-
-#for guide on map: https://rstudio.github.io/leaflet/showhide.html
 
 
 
@@ -184,44 +110,64 @@ server <-  function(input, output) {
       #add monitoring stations
       addMarkers(lng = df_current_list_pm25_tfee$longitude,
                  lat = df_current_list_pm25_tfee$latitude,
-                 popup = df_current_list_pm25_tfee$site,
-                 group = 'tfee',
+                 popup = df_current_list_pm25_tfee$popup,
+                 group = 'PM<sub>2.5</sub>',
                  layerId = paste(df_current_list_pm25_tfee$site,"PM<sub>2.5</sub>",sep='')
                  )%>%
-      addMarkers(lng = df_current_list_pm25$longitude,
-                 lat = df_current_list_pm25$latitude,
-                 popup = df_current_list_pm25$site,
-                 group = 'Include wildfires',
-                 layerId = paste(df_current_list_pm25_tfee$site,"PM<sub>2.5</sub>",sep='')
-      )%>%
+      # addMarkers(lng = df_current_list_pm25$longitude,
+      #            lat = df_current_list_pm25$latitude,
+      #            popup = df_current_list_pm25$site,
+      #            group = 'PM<sub>2.5</sub>',
+      #            layerId = paste(df_current_list_pm25_tfee$site,"PM<sub>2.5</sub>",sep='')
+      # )%>%
       addMarkers(lng = df_current_list_o3$longitude,
                  lat = df_current_list_o3$latitude,
-                 popup = df_current_list_o3$site,
-                 group = 'No_tfee',
-                 layerId =  "O<sub>3</sub>"
+                 popup = df_current_list_o3$popup,
+                 group = 'O<sub>3</sub>',
+                 layerId =  paste(df_current_list_pm25_tfee$site,"O<sub>3</sub>",sep='')
 
                  ) %>%
 
       addMarkers(lng = df_current_list_no2$longitude,
                  lat = df_current_list_no2$latitude,
-                 popup = df_current_list_no2$site,
-                 group = 'No_tfee',
-                 layerId = "NO<sub>2</sub>") %>%
+                 popup = df_current_list_no2$popup,
+                 group = 'NO<sub>2</sub>',
+                 layerId = paste(df_current_list_pm25_tfee$site,"NO<sub>2</sub>",sep='')
+                 )%>%
 
       addMarkers(lng = df_current_list_so2$longitude,
                  lat = df_current_list_so2$latitude,
-                 popup = df_current_list_so2$site,
-                 icon = list(iconURL =  df_current_list_so2$icon),
-                 layerId = "SO<sub>2</sub>",
-                 group = 'Include wildfires') %>%
+                 popup = df_current_list_so2$popup,
+                 # icon = ~oceanIcons[colour_text],
+                 # icon = list(iconURL =  df_current_list_so2$icon),
+                 layerId = paste(df_current_list_pm25_tfee$site,"SO<sub>2</sub>",sep=''),
+                 group = 'SO<sub>2</sub>') %>%
 
       #add background air zone, colours
-     addPolygons(data = az_mgmt,
-                 color = "white", weight = 2, opacity = 1, fillOpacity = 0.7) %>%
+
+
+      # addPolygons(data = az_mgmt,
+      #             color = 'black', weight = 2, opacity = 1, fillOpacity = 0) %>%
+
+      #PM25 and other pollutants
+      addPolygons(data = az_mgmt%>%filter(parameter == 'pm25'),
+                  color = ~colour, weight = 0, opacity = 0, fillOpacity = 1,
+                  group = 'PM<sub>2.5</sub>') %>%
+      addPolygons(data = az_mgmt%>%filter(parameter == 'o3'),
+                  color = ~colour, weight = 0, opacity = 0, fillOpacity = 1,
+                  group = 'O<sub>3</sub>') %>%
+     addPolygons(data = az_mgmt%>%filter(parameter == 'no2'),
+                 color = ~colour, weight = 0, opacity = 0, fillOpacity = 1,
+                 group = 'NO<sub>2</sub>') %>%
+      addPolygons(data = az_mgmt%>%filter(parameter == 'so2'),
+                  color = ~colour, weight = 0, opacity = 0, fillOpacity = 1,
+                  group = 'SO<sub>2</sub>') %>%
+      #lines only
+      addPolylines(data = az_mgmt,color = 'black',weight = 2) %>%
 
       addLayersControl(
         baseGroups = c("PM<sub>2.5</sub>", "O<sub>3</sub>", "NO<sub>2</sub>","SO<sub>2</sub>"),
-        overlayGroups = c("Include wildfires"),
+        # overlayGroups = c("Include wildfires"),
         options = layersControlOptions(collapsed = FALSE)
         )%>%
 
@@ -279,7 +225,24 @@ server <-  function(input, output) {
     # }")
   })
 
-  #create for air zone map-----
+  #create for bar graph----
+  output$plot5 <- renderPlot({
+    plot_bar_ranked(df_caaqs_results = df_caaqs,df_stations = lst_stations,
+                    pollutant = df_parameter$parameter[df_parameter$display == input$pollutants_bar],
+                    airzone = input$airzone_bar,year = input$year_bar)
+  }, height = 400, width = 600)
 
 
+  #create interactive bar graph for airzone
+  output$plot6 <- renderPlotly({
+    plot_npri_airzone(pollutant = df_parameter$parameter[df_parameter$display == input$pollutant_emission_airzone],
+                      df = df_NPRI,
+                      airzone = input$AirZone_emission)
+  })
+
+  #create interactive bar graph for airzone
+  output$plot7 <- renderPlotly({
+    plot_woodstove(df = df_woodstove,
+                      airzone = input$Woodstove_exchange)
+  })
 }

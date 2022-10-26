@@ -129,7 +129,7 @@ pad_data <- function(df,date_time = NULL,padby='hour' ,values = NULL,time_ending
     df_result <- df_datetime %>%
       merge(
         df %>%
-          dplyr::select(cols_selection) %>%
+          dplyr::select(all_of(cols_selection)) %>%
           unique()
       ) %>%
       dplyr::left_join(df)

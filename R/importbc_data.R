@@ -57,14 +57,14 @@ importBC_data <- function(parameter_or_station,
     source('./r/envairfunctions.R')
     source('./r/get_caaqs_stn_history.R')
     source('./r/importbc_data.R')
-    parameter_or_station <- 'no2'
+    parameter_or_station <- 'wdir_vect'
     parameter_or_station <- 'smithers'
-    years <- 2021
+    years <- 2020
     pad = TRUE
     use_openairformat <- TRUE
     use_ws_vector <- FALSE
-    flag_TFEE = TRUE
-    merge_Stations = TRUE
+    flag_TFEE = FALSE
+    merge_Stations = FALSE
 
   }
 
@@ -136,11 +136,11 @@ importBC_data_<-function(parameter_or_station,
   if (0)
   {
 
-    parameter_or_station <- 'no2'
+    parameter_or_station <- 'wdir'
     parameter_or_station <- 'smithers'
-    years <- 2019
-    pad = FALSE
-    use_openairformat <- TRUE
+    years <- 2020
+    pad = TRUE
+    use_openairformat <- FALSE
 
     use_ws_vector <- FALSE
   }
@@ -169,13 +169,25 @@ importBC_data_<-function(parameter_or_station,
   temp_<-gsub('.csv','',temp_,ignore.case=TRUE)
 
   #process parameter or station
+  # rename to a matching standard naming system
   parameter_or_station <- tolower(parameter_or_station)
-  parameter_or_station <- gsub('ozone','o3',parameter_or_station)
-  parameter_or_station <- gsub('pm2.5','pm25',parameter_or_station)
-  parameter_or_station <- gsub('wdir','wdir_vect',parameter_or_station)
-  parameter_or_station <- gsub('wspd','wspd_sclr',parameter_or_station)
-  parameter_or_station <- gsub('rh','humidity',parameter_or_station)
 
+  df_parameter_list <- tribble(
+    ~parameter_or_station,~standard_name,
+    'ozone','o3',
+    'pm2.5','pm25',
+    'wdir','wdir_vect',
+    'wspd','wspd_sclr',
+    'rh','humidity',
+    'precipitation','precip',
+    'temperature','temp_mean',
+    'temp','temp_mean'
+  )
+
+  if (parameter_or_station %in% df_parameter_list$parameter_or_station) {
+     #rename to the standard name
+    parameter_or_station <- df_parameter_list$standard_name[df_parameter_list$parameter_or_station == parameter_or_station]
+  }
 
   if (any(tolower(parameter_or_station) %in% tolower(temp_)))
   {
@@ -305,7 +317,8 @@ importBC_data_<-function(parameter_or_station,
       dplyr::filter(!is.na(RAW_VALUE)) %>%
       arrange(STATION_NAME,DATE_PST) %>%
       dplyr::group_by(DATE_PST,STATION_NAME,PARAMETER,INSTRUMENT) %>%
-      dplyr::slice(1) %>%
+      dplyr::mutate(index = 1:n()) %>% #slice(1) is too slow
+      filter(index == 1) %>% select(-index) %>%
       dplyr::ungroup()
     if (pad) {
 
