@@ -33,7 +33,7 @@ get_stats <- function(param, years=NULL,add_TFEE = FALSE, merge_Stations = FALSE
 
     merge_Stations = TRUE
     # param <- c('pm25','no2')
-    param <- 'pm25'
+    param <- 'o3'
     years <- 2021
     add_TFEE = FALSE
     merge_Stations <- FALSE
@@ -110,7 +110,8 @@ get_stats <- function(param, years=NULL,add_TFEE = FALSE, merge_Stations = FALSE
 
 
   #retrieve data captures
-  df_captures <- get_captures0(param = df)
+  df_captures <- get_captures0(param = df) %>%
+    filter(year %in% years)
 
 
   cols <- colnames(df_captures)
@@ -139,7 +140,7 @@ get_stats <- function(param, years=NULL,add_TFEE = FALSE, merge_Stations = FALSE
                    'total_hours(year)','total_hours(Q1)','total_hours(Q2)','total_hours(Q3)','total_hours(Q4)',
                    'perc_hours(year)','perc_hours(Q1)','perc_hours(Q2)','perc_hours(Q3)','perc_hours(Q4)'
 
-                   )
+  )
 
   cols_select <- cols_select[cols_select %in% cols]
   cols <- c(cols_select,cols[!cols %in% cols_select])
@@ -176,7 +177,7 @@ get_stats <- function(param, years=NULL,add_TFEE = FALSE, merge_Stations = FALSE
           tidyr::pivot_longer(cols = cols_notselect)
       )
 
-}
+  }
   #pivot wider and add captures
   df_result <- df_result %>%
     tidyr::pivot_wider(names_from = name,values_from = value)

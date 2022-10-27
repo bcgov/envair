@@ -158,7 +158,7 @@ importBC_data_avg0 <- function(parameter, years = NULL, averaging_type =  NULL, 
     # parameter <- 'pm25'
     parameter <- df
     years <- 2018
-    averaging_type <- 'd8hm'
+    averaging_type <- 'annual 4th 1hr'
     data_threshold <- 0.75
     merge_Stations <- TRUE
     flag_tfee = TRUE
@@ -370,8 +370,10 @@ averaging_type <- gsub('more','EXCEED',averaging_type,ignore.case = TRUE)
       #for nth highest,standardize number suffix (-rd,-th,-st)
       if (gsub('[0-9]+', '', annual_summary) %in% c('rd','th','st','nd')) {
 
-        print('Calculating the nth highest of the year')
-        nth <- stringr::str_extract(annual_summary,'\\d+')
+
+        nth_order <- stringr::str_extract(annual_summary,'\\d+')
+        nth_order <- as.numeric(nth_order)
+        print(paste('Calculating the nth highest of the year. nth =',nth_order))
         cols_remove <- cols[!cols %in% c('STATION_NAME','INSTRUMENT','PARAMETER','YEAR',cols_values)]
 
         df_result <-   df_result %>%
@@ -380,7 +382,7 @@ averaging_type <- gsub('more','EXCEED',averaging_type,ignore.case = TRUE)
           arrange(desc(value)) %>%
           dplyr::select(-cols_remove) %>%
           group_by(PARAMETER,YEAR,STATION_NAME,INSTRUMENT,name) %>%
-          slice(nth) %>%
+          slice(nth_order) %>%
           distinct() %>%
           dplyr::mutate(name = gsub('VALUE','ANNUAL',name,ignore.case = TRUE)) %>%
           dplyr::mutate(name = gsub(averaging_type,
