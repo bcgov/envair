@@ -33,10 +33,10 @@ get_stats <- function(param, years=NULL,add_TFEE = FALSE, merge_Stations = FALSE
 
     merge_Stations = TRUE
     # param <- c('pm25','no2')
-    param <- 'o3'
+    param <- 'pm25'
     years <- 2021
-    add_TFEE = TRUE
-    merge_Stations <- TRUE
+    add_TFEE = FALSE
+    merge_Stations <- FALSE
 
   }
 
@@ -152,12 +152,18 @@ get_stats <- function(param, years=NULL,add_TFEE = FALSE, merge_Stations = FALSE
 
 
   df_result <- NULL
-  #extract data one type at a time
-  for (i in 1:nrow(df_stats_list)) {
-    param_i <- df_stats_list[i,]
-    df_ <- df %>%
-      filter(PARAMETER == param_i$PARAMETER) %>%
-      importBC_data_avg(years=years,averaging_type = param_i$averaging_type,flag_TFEE = include_TFEE,merge_Stations = merge_Stations)
+  #extract data one parameter at a time
+
+
+
+  for (param_ in param) {
+
+    print(param_)
+    df_ <- importBC_data_avg(parameter = param_,
+                             years = years,
+                             averaging_type = df_stats_list$averaging_type,
+                             flag_TFEE = include_TFEE,
+                             merge_Stations = merge_Stations)
 
     cols <- colnames(df_)
     cols_select <- c('STATION_NAME','STATION_NAME_FULL','INSTRUMENT','PARAMETER','DATE','YEAR','TIME','DATE_PST','DATETIME')
@@ -169,8 +175,8 @@ get_stats <- function(param, years=NULL,add_TFEE = FALSE, merge_Stations = FALSE
         df_ %>%
           tidyr::pivot_longer(cols = cols_notselect)
       )
-  }
 
+}
   #pivot wider and add captures
   df_result <- df_result %>%
     tidyr::pivot_wider(names_from = name,values_from = value)

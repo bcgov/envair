@@ -51,7 +51,7 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
     source('./r/importBC_data_avg.R')
     parameter <- 'no2'
     parameter <- df
-    years <- 2018
+    years <- NULL
     averaging_type <- c('annual mean 1hr','annual mean 24h')
     data_threshold <- 0.75
     merge_Stations <- TRUE
