@@ -72,7 +72,7 @@ server <-  function(input, output) {
   #NPRI----
 
   output$plot3 <- renderPlotly({
-    plot_npri(input$pollutant,df = df_npri, output = 'plotly')
+    plot_npri(input$pollutant,df = df_apei, output = 'plotly')
   })
 
   #Long Term Trends-----

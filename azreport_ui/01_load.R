@@ -40,6 +40,7 @@ if (0){
 
 
 source('00_setup.R')
+
 az <- airzones() %>%
   st_make_valid() %>%
   st_transform(st_crs(bc_bound())) %>%
@@ -58,25 +59,25 @@ df_parameter <- tribble(
 # Generate the files using /R/shiny/04_output.R
 
 
-  aq_summary <-  readr::read_csv('../test_data/caaqs_results.csv')
+aq_summary <-  readr::read_csv(paste(saveDirectory,'caaqs_results.csv',sep='/'))
 df_caaqs <- aq_summary
-  df_npri <- readr::read_csv('../test_data/EN_APEI-Can-Prov_Terr.csv')
-  lst_stations <- listBC_stations(use_CAAQS = TRUE,merge_Stations = TRUE) %>%
-    dplyr::rename(label = Label,
-                  latitude  = LAT,
-                  longitude = LONG,
-                  airzone = AIRZONE) %>%
-    select(site,label,airzone,latitude,longitude) %>%
-    group_by(site) %>%
-    slice(1) %>% ungroup()%>%
-    filter(!is.na(airzone))
+df_apei <- readr::read_csv(paste(saveDirectory,'EN_APEI-Can-Prov_Terr.csv',sep='/'))
+lst_stations <- listBC_stations(use_CAAQS = TRUE,merge_Stations = TRUE) %>%
+  dplyr::rename(label = Label,
+                latitude  = LAT,
+                longitude = LONG,
+                airzone = AIRZONE) %>%
+  select(site,label,airzone,latitude,longitude) %>%
+  group_by(site) %>%
+  slice(1) %>% ungroup()%>%
+  filter(!is.na(airzone))
 
 
 
-  #cleanup
-  df_caaqs$metric_value <- ifelse(df_caaqs$metric_value<0,NA,df_caaqs$metric_value )
+#cleanup
+df_caaqs$metric_value <- ifelse(df_caaqs$metric_value<0,NA,df_caaqs$metric_value )
 
-  df_preload_management <- readr::read_csv('../test_data/management.csv')
+df_preload_management <- readr::read_csv(paste(saveDirectory,'management.csv',sep='/'))
 
 
 df_management <- get_management_summary(outputtype = 'station',df_preload =  df_preload_management)
@@ -200,11 +201,11 @@ az_mgmt <- airzones() %>%
 
 #Create the NPRI Summaries
 
-df_NPRI <- readr::read_csv('../test_data/NPRI.csv')
+df_NPRI <- readr::read_csv(paste(saveDirectory,'NPRI.csv',sep='/'))
 
 #Create the woodstove exchange program summaries
 # list.files('../test_data')
-woodstove_file <- '../test_data/2021 report summary Woodstove exchange Totals.xlsx'
+woodstove_file <- paste(saveDirectory,'2021 report summary Woodstove exchange Totals.xlsx',sep='/')
 
 # readxl::excel_sheets(woodstove_file)
 df_woodstove <- readxl::read_excel(woodstove_file,sheet = 'Reported totals',skip =1,n_max = 31)

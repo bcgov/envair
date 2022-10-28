@@ -15,7 +15,7 @@
 #' Create a bar graph of the NPRI
 #'
 #' @param pollutant
-#' @param df is the pollutant data. This can be retrieved with get_npri()
+#' @param df is the pollutant data. This can be retrieved with get_apei()
 #' @param categorytype is either source, sector, or subsector. Default is source
 #' @param URL is the ECCC URL for the NPRI
 #' @param output is the output type of either 'basic' or 'plotly'
@@ -31,7 +31,7 @@ plot_npri <- function(pollutant,df=NULL,categorytype = 'Source',URL=NULL,output 
 
   require(ggplot2)
 
-  df <- get_npri(pollutant = pollutant, df=df, categorytype = categorytype, URL = URL)
+  df <- get_apei(pollutant = pollutant, df=df, categorytype = categorytype, URL = URL)
   df_npri <- df %>%
     dplyr::rename(groupingcolumn= categorytype)
 
@@ -360,9 +360,11 @@ plot_bar_ranked0 <- function(df_caaqs_results,metric,year,airzone = NULL,df_stat
 #' If NULL, the result will be a list of stations in the specified air zone
 #' @param airzone is the airzone
 #' @param tfee defines if data is adjusted for transboundary flow and exceptional events
-#' @param df is the data file
+#' @param df is the data file containing CAAQS summary.
+#' use create_caaqs_annual() to generate caaqs_results.csv
 #' @param lst_stations is the list of stations, use importBC_data()
 #' If NULL, it will retrieve from the local test data location
+#'
 plot_trends <- function(pollutant,station=NULL,airzone = NULL, adjust_tfee = FALSE,
                         df=NULL,lst_stations=NULL)  {
 
