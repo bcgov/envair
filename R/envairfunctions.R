@@ -245,6 +245,7 @@ RENAME_COLUMN_untidy<-function(data.station,colname.orig,colname.new=NULL,quiet=
 #' @param n the number of decimal places for resulting output
 #' round2()
 #'
+#' @export
 round2 = function(x,n=0)
 {
   x=as.numeric(x)
@@ -1293,6 +1294,8 @@ GET_URL_FOLDERS<-function(source.url='https://dd.weather.gc.ca/bulletins/alphanu
 #' @param colname.new string vector containing the new name for the column. if NULL, it deletes the specified column
 #' @keywords rename dataframe
 #' RENAME_COLUMN()
+#'
+#' @export
 RENAME_COLUMN<-function(data.station,colname.orig,colname.new=NULL,quiet=TRUE)
 
 {
