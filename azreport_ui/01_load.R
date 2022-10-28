@@ -40,6 +40,12 @@ if (0){
 
 
 source('00_setup.R')
+try(source('../R/listBC_stations.R'))
+try(source('../R/get_caaqs_stn_history.R'))
+try(source('../R/envairfunctions.R'))
+try(source('../R/get_emissioninventory.R'))
+try(source('../R/shiny/00_shinysetup.R'))
+
 
 az <- airzones() %>%
   st_make_valid() %>%
@@ -81,6 +87,8 @@ df_preload_management <- readr::read_csv(paste(saveDirectory,'management.csv',se
 
 
 df_management <- get_management_summary(outputtype = 'station',df_preload =  df_preload_management)
+
+
 df_management_airzone <- get_management_summary(outputtype = 'airzone',df_preload =  df_preload_management) %>%
   select(parameter,airzone,tfee,year,site,label,metric,metric_value,colour_text,colour,colour_order,latitude,longitude)
 
