@@ -1427,4 +1427,44 @@ plot_npri_airzone <- function(pollutant,df, airzone = 'All') {
   return(a)
 }
 
+#' Plot woodstove exchange program
+#'
+plot_woodstove <- function(df, airzone) {
+
+  require(ggplot2)
+  require(plotly)
+  airzone_filter <- airzone
+
+  if (airzone == 'All') {
+    df_result <-  df %>%
+      group_by(year,airzone) %>%
+      dplyr::summarise(replacements = sum(value,na.rm = TRUE)) %>%
+      filter(replacements>0)
+
+
+    a <-
+      plot_ly(df_result,x=~year, y= ~replacements, color = ~airzone, type = 'bar', source = 'scatter',
+              marker = list(line = list(width = 1,color = 'rgb(0, 0, 0)'))
+      ) %>%
+      layout(barmode = 'stack',yaxis = list(title = 'Community Woodsmoke Reduction Program'))
+  } else {
+    df_result <-  df %>%
+      group_by(Community,airzone,year) %>%
+      dplyr::summarise(replacements = sum(value,na.rm = TRUE)) %>%
+      filter(airzone %in% airzone_filter) %>%
+      filter(replacements>0)
+
+    a <-
+      plot_ly(df_result,x=~year, y= ~replacements, color = ~Community, type = 'bar', source = 'scatter',
+              marker = list(line = list(width = 1,color = 'rgb(0, 0, 0)'))
+      ) %>%
+      layout(barmode = 'stack',yaxis = list(title = 'Community Woodsmoke Reduction Program'))
+
+  }
+
+
+
+
+  return(a)
+}
 
