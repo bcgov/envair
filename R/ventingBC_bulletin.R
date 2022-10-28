@@ -714,7 +714,7 @@ GET_VENTING_ECCC<-function(date.start=NULL)
   if (0)
   {
     date.start<-date_today
-    date.start <- '2019-12-25'
+    date.start <- '2022-10-28'
     date.start <- '2016-09-01'
   }
   #date.start<-NULL

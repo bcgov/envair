@@ -1236,7 +1236,7 @@ GET_URL_FOLDERS<-function(source.url='https://dd.weather.gc.ca/bulletins/alphanu
   RUN_PACKAGE(c('dplyr','tidyr','httr','curl'))
 
   #note: Do not use the RCurl version of reading https, there is an SSL
-  httr::set_config(config( ssl_verifypeer = 0L ) )
+  try(httr::set_config(config(ssl_verifypeer = 0L )),silent = TRUE)
 
   result <- NULL
 

@@ -219,7 +219,7 @@ GET_CGNDB<-function(list.cities)
 #' This function retrieves the list of folders that are in the specified URL
 #' @param source.url is the URL containing the data folders, default is ECCC datamart
 
-GET_URL_FOLDERS_deprecated<-function(source.url='http://dd.weatheroffice.ec.gc.ca/bulletins/alphanumeric/' )
+GET_URL_FOLDERS_deprecated <-function(source.url='http://dd.weatheroffice.ec.gc.ca/bulletins/alphanumeric/' )
 {
   if (0)
   {
