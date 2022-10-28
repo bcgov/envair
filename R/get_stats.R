@@ -10,7 +10,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and limitations under the License.
 
-#' Calculate the statistucs for the pollutants based on CAAQS
+#' Calculate the statistics for the pollutants based on CAAQS
 #'
 #' Note that these are based on the metrics defined by the CCME
 #' Guidance Document of Achievement Determination

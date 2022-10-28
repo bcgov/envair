@@ -2,7 +2,7 @@
 % Please edit documentation in R/get_stats.R
 \name{get_stats}
 \alias{get_stats}
-\title{Calculate the statistucs for the pollutants based on CAAQS}
+\title{Calculate the statistics for the pollutants based on CAAQS}
 \usage{
 get_stats(param, years = NULL, add_TFEE = FALSE, merge_Stations = FALSE)
 }
