@@ -729,7 +729,11 @@ GET_VENTING_ECCC<-function(date.start=NULL)
   venting.metadata='https://envistaweb.env.gov.bc.ca/aqo/files/VentingMetaData.csv'
   venting.url2 <- 'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/VentingBulletins/'
 
+  if (is.null(date.start)) {
+    date.start <- Sys.Date()
+  }
   date.start.entry <- date.start #note that date.start will be reformatted at some point
+
 
   if (is.null(date.start))
   {
@@ -763,6 +767,7 @@ GET_VENTING_ECCC<-function(date.start=NULL)
 
   date_diff <- difftime(as.POSIXct(Sys.Date(),tz='etc/gmt+8'),
                         as.POSIXct(date.start.entry,tz='etc/gmt+8'),units='days')
+
   if (nrow(temp.list) != 0 & date_diff<3)
   {
 
