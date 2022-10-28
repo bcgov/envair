@@ -1295,14 +1295,14 @@ GET_URL_FOLDERS<-function(source.url='https://dd.weather.gc.ca/bulletins/alphanu
 #' @keywords rename dataframe
 #' RENAME_COLUMN()
 #'
-#' @export
+#'@export
 RENAME_COLUMN<-function(data.station,colname.orig,colname.new=NULL,quiet=TRUE)
 
 {
 
 
 
-  if (is.null(colname.new)==TRUE)
+  if (is.null(colname.new))
   {
     #delete the column
 
