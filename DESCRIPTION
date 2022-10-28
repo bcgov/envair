@@ -31,14 +31,14 @@ Imports:
      curl (>= 4.3.2),
      readxl (>= 1.4.0),
      httr (>= 1.4.4),
-     tidyr (>= 1.2.0)
+     tidyr (>= 1.2.0),
+     sf (>= 1.0-8)
 Suggests:
      rmarkdown,
      bcmaps,
      bcmapsdata,
      ggplot2 (>= 3.0),
-     rcaaqs,
-     sf (>= 0.7)
+     rcaaqs
 LazyData: true
 RoxygenNote: 7.2.1
 Roxygen: list(markdown = TRUE)
