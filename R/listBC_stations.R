@@ -34,8 +34,8 @@ listBC_stations <- function(year=NULL,use_CAAQS = FALSE,merge_Stations = FALSE)
     source('./r/get_caaqs_Stn_history.R')
     year <- 2005
     use_CAAQS = FALSE
-  merge_Stations = TRUE
-
+  merge_Stations = FALSE
+year <- NULL
 }
 
   df_result <- NULL
@@ -157,6 +157,7 @@ listBC_stations_<-function(year=NULL)
                                        "0" = "INACTIVE")
     )
 
+
   #fix if there are no NOTES column
   if (!any('NOTES' %in% colnames(station.details)))
   {
@@ -234,19 +235,29 @@ listBC_stations_<-function(year=NULL)
 
   #retrieve air zone details
 
+  #remove airzone column
   try(
     station.details <- station.details %>%
-      dplyr::select(-AIRZONE)
+      dplyr::select(-AIRZONE),
+    silent = TRUE
   )
+
+  if (0) {
+    #debug airzone null
+    # readr::write_csv(station.details,'temp.csv')
+    require(dplyr)
+    source('./r/listBC_stations.R')
+    station.details <- readr::read_csv('temp.csv')
+  }
 
   airzone_details <-
     station.details %>%
     dplyr::mutate(lat = as.numeric(LAT), lon = as.numeric(LONG), ems_id = EMS_ID) %>%
-    dplyr::filter(!is.na(lat),!is.na(lon),abs(lat)<=90) %>%
+    dplyr::filter(!is.na(lat),!is.na(lon),abs(lat)<=90,abs(lat)>0) %>%
     rcaaqs::assign_airzone(bcmaps::airzones()) %>%
     dplyr::rename(AIRZONE = airzone) %>%
     dplyr::select(LAT,LONG,AIRZONE) %>%
-    unique()
+    distinct()
 
   station.details <- station.details %>%
     dplyr::left_join(airzone_details)

@@ -487,6 +487,7 @@ create_CAAQS_graph_files <- function(filedirectory = NULL) {
 #'   NOTE: needs future management, change from datafile to an actual dataframe entry
 #'
 #' @param datafile is the location of the file containing summarized CAAQS data.
+#'
 #' This dataset was created with the create_metrics_annual function
 #'
 get_management <- function(datafile = NULL) {
@@ -558,6 +559,7 @@ get_management <- function(datafile = NULL) {
 #' 'station' means that output is a summary of the management for the station. only metric with highest management level is displayed
 #' 'airzone' means that output is a summary of the management for the airzones
 #' @param df_preload is dataframe of preloaded data, generated in initial load only
+#' @param datafile is the name of the resulting file,
 get_management_summary <- function(outputtype = 'complete',df_preload = NULL,
                                    datafile = NULL) {
 
