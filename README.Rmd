@@ -273,8 +273,12 @@ listBC_stations()
 listBC_stations(2016)
 ```
 
-```{r, echo = FALSE}
+```{r, echo = FALSE,results='hide'}
 table_ <- envair::listBC_stations()
+
+```
+
+```{r, echo= FALSE}
 knitr::kable(table_[1:4,])
 ```
 
@@ -297,8 +301,12 @@ GET_VENTING_ECCC((dates = seq(from = lubridate::ymd('2021-01-01'),
         to = lubridate::ymd('2021-05-01'), by = 'day')))
 ```
 
-```{r, echo = FALSE}
+```{r, echo = FALSE, results='hide'}
 table_ <- envair::GET_VENTING_ECCC()
+
+```
+
+```{r, echo = FALSE}
 knitr::kable(table_[1:4,])
 ```
 

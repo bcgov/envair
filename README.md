@@ -369,7 +369,6 @@ listBC_stations(2016)
     #> The following objects are masked from 'package:base':
     #> 
     #>     intersect, setdiff, setequal, union
-    #> [1] "Retrieving station details from FTP..."
     #> Rows: 464 Columns: 16
     #> ── Column specification ────────────────────────────────────────────────────────
     #> Delimiter: ","
@@ -410,24 +409,17 @@ GET_VENTING_ECCC((dates = seq(from = lubridate::ymd('2021-01-01'),
         to = lubridate::ymd('2021-05-01'), by = 'day')))
 ```
 
-    #> [1] "Attempt 1 in GETURLFolder for https://dd.weather.gc.ca/bulletins/alphanumeric/"
     #> Warning: Expected 7 pieces. Additional pieces discarded in 1 rows [1].
     #> Warning: Expected 2 pieces. Additional pieces discarded in 150 rows [2, 3, 4, 5,
     #> 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, ...].
-    #> [1] "Attempt 1 in GETURLFolder for https://dd.weather.gc.ca/bulletins/alphanumeric/20221102/FL/CWVR/"
     #> Warning: Expected 7 pieces. Additional pieces discarded in 1 rows [1].
     #> Warning: Expected 2 pieces. Additional pieces discarded in 2 rows [2, 3].
-    #> [1] "scanning content of https://dd.weather.gc.ca/bulletins/alphanumeric/20221102/FL/CWVR/13/"
-    #> [1] "Attempt 1 in GETURLFolder for https://dd.weather.gc.ca/bulletins/alphanumeric/20221102/FL/CWVR/13/"
     #> Warning: Expected 7 pieces. Additional pieces discarded in 1 rows [1].
-    #> Expected 2 pieces. Additional pieces discarded in 2 rows [2, 3].
-    #> [1] "processing content: https://dd.weather.gc.ca/bulletins/alphanumeric/20221102/FL/CWVR/13/FLCN39_CWVR_021300___57275"
+    #> Warning: Expected 2 pieces. Additional pieces discarded in 2 rows [2, 3].
     #> Warning: `data_frame()` was deprecated in tibble 1.1.0.
     #> ℹ Please use `tibble()` instead.
     #> ℹ The deprecated feature was likely used in the envair package.
     #>   Please report the issue at <]8;;https://github.com/bcgov/envair/issueshttps://github.com/bcgov/envair/issues]8;;>.
-    #> [1] "OK. 43 rows"
-    #> [1] "Success. Ignore warnings and errors"
     #> Warning: `as.tibble()` was deprecated in tibble 2.0.0.
     #> ℹ Please use `as_tibble()` instead.
     #> ℹ The signature and semantics have changed, see `?as_tibble`.
