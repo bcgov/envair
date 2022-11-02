@@ -60,11 +60,12 @@ download.file(url = 'https://data-donnees.ec.gc.ca/data/substances/monitor/canad
 create_caaqs_annual(years = years, savedirectory = saveDirectory)
 
 # Create management levels summary-----
-df_management_summary <- get_management_summary(datafile = paste(saveDirectory,'management.csv',sep='/'))
+df_management_summary <- get_management_summary(datafile = paste(saveDirectory,'caaqs_results.csv',sep='/'))
 readr::write_csv(df_management_summary,paste(saveDirectory,'management.csv',sep='/'))
 
 # OPTIONAL: Create annual metrics file----
 # Calculations for YOY metrics are based on the envair package
 # this generates the file: annual_results.csv
 create_metrics_annual(years = years,savedirectory = saveDirectory)
+
 

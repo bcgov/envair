@@ -44,8 +44,10 @@ create_metrics_annual <- function(years, savedirectory = NULL) {
     savefile <- paste(savedirectory,'so2_annual.csv',sep='/')
 
     #run both
+    saveDirectory <- '../data/out'
     df <- readr::read_csv(savefile)
-    savefile <- paste(savedirectory,'annual_results.csv',sep='/')
+    savefile <- paste(saveDirectory,'annual_results.csv',sep='/')
+    list.files(saveDirectory)
   }
 
   # create annual metrics ----
@@ -498,10 +500,11 @@ get_management <- function(datafile = NULL) {
   #retrieve data
 
   if (is.null(datafile)) {
-    datafile <- '././test_data/caaqs_results.csv'
+    datafile <- '../test_data/caaqs_results.csv'
     # list.files(datafile)
   }
 
+  print(paste('Reading data from:',datafile))
   df <- readr::read_csv(datafile) %>%
     dplyr::mutate(idx0 = 1:n())
 
@@ -559,7 +562,7 @@ get_management <- function(datafile = NULL) {
 #' 'station' means that output is a summary of the management for the station. only metric with highest management level is displayed
 #' 'airzone' means that output is a summary of the management for the airzones
 #' @param df_preload is dataframe of preloaded data, generated in initial load only
-#' @param datafile is the name of the resulting file,
+#' @param datafile is the source data file
 get_management_summary <- function(outputtype = 'complete',df_preload = NULL,
                                    datafile = NULL) {
 
