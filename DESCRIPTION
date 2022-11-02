@@ -38,7 +38,8 @@ Suggests:
      bcmaps,
      bcmapsdata,
      ggplot2 (>= 3.0),
-     rcaaqs
+     rcaaqs,
+     envreportutils
 LazyData: true
 RoxygenNote: 7.2.1
 Roxygen: list(markdown = TRUE)
