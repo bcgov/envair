@@ -4,10 +4,10 @@
 \alias{GET_VENTING_ECCC}
 \title{Retrieves the venting index FLCN 39 from ECCC data mart}
 \usage{
-GET_VENTING_ECCC(date.start = NULL)
+GET_VENTING_ECCC(dates = NULL)
 }
 \arguments{
-\item{date.start}{string in YYYY-mm-dd
+\item{dates}{datetime or string. can be a vector
 if left undefined, it uses the current date}
 }
 \description{
@@ -15,5 +15,7 @@ This function connects to ECCC datamart and retrieves venting data
 }
 \examples{
 GET_VENTING_ECCC()
+GET_VENTING_ECCC(dates = seq(from = lubridate::ymd('2021-01-01'),
+       to = lubridate::ymd('2021-05-01'), by = 'day'))
 
 }
