@@ -701,14 +701,46 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE,isCOVID = FALSE,fireban=NULL)
 #' Retrieves the venting index FLCN 39 from ECCC data mart
 #'
 #' This function connects to ECCC datamart and retrieves venting data
-#' @param date.start string in YYYY-mm-dd
+#' @param dates datetime or string. can be a vector
 #'        if left undefined, it uses the current date
 #'
 #' @examples
 #' GET_VENTING_ECCC()
+#' GET_VENTING_ECCC(dates = seq(from = lubridate::ymd('2021-01-01'),
+#'        to = lubridate::ymd('2021-05-01'), by = 'day'))
 #'
 #' @export
-GET_VENTING_ECCC<-function(date.start=NULL)
+GET_VENTING_ECCC <- function(dates = NULL) {
+
+  if (0) {
+    dates <- NULL
+    dates = seq(from = lubridate::ymd('2021-01-01'),
+                        to = lubridate::ymd('2021-05-01'), by = 'day')
+  }
+  if (is.null(dates)) {
+    dates <- Sys.Date()
+  }
+
+  #convert dates to character
+  dates <- as.character(dates,'%Y-%m-%d')
+
+  df_result <- NULL
+
+  for (date_ in dates) {
+    print(paste('=======Retrieving Venting Index from:',date_,'========'))
+    df <- GET_VENTING_ECCC0(date.start = date_)
+    df_result <- df_result %>%
+      bind_rows(df)
+  }
+
+  return(df_result)
+
+}
+
+
+#' This is now a backend function
+#' use GET_VENTING_ECCC()
+GET_VENTING_ECCC0 <-function(date.start=NULL)
 {
   #debug
   if (0)
@@ -824,7 +856,7 @@ GET_VENTING_ECCC<-function(date.start=NULL)
   {
     #if ECCC does not have data, located from ENV ftp, venting.url2
 
-    ftp.url <- paste(venting.url2,year(ymd(date.start)),'/',sep='')
+    ftp.url <- paste(venting.url2,lubridate::year(lubridate::ymd(date.start)),'/',sep='')
     print(paste('Retrieving data from:',ftp.url))
     lst_ventfiles <- RCurl::getURL(ftp.url,verbose=TRUE,
                             ftp.use.epsv=TRUE, dirlistonly = TRUE
@@ -839,9 +871,9 @@ GET_VENTING_ECCC<-function(date.start=NULL)
                         into=c('TXT1','TXT2','TXT3'),
                         sep='_',
                         remove = FALSE)%>%
-        dplyr::mutate(Created = ymd(TXT3),
+        dplyr::mutate(Created = lubridate::ymd(TXT3),
                       Fullpath = paste(ftp.url,Files,sep='')) %>%
-        dplyr::filter(Created == ymd(date.start))
+        dplyr::filter(Created == lubridate::ymd(date.start))
     )
 
 
@@ -883,7 +915,7 @@ GET_VENTING_ECCC<-function(date.start=NULL)
     #if venting date not retrieved, use the search date
     if (is.null(venting.date))
     {
-      venting.date <- as.character(ymd(date.start),format='%Y-%m-%d')
+      venting.date <- as.character(lubridate::ymd(date.start),format='%Y-%m-%d')
     }
   } else
   {

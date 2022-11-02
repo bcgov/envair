@@ -139,7 +139,7 @@ library(envair)
 
 -   `importECCC_forecast()` Retrieves AQHI, PM2.5, PM10, O3, and NO2 forecasts from the ECCC datamart
 
--   `GET_VENTING_ECCC()` Retrieve the venting index FLCN39 from Environment and Climate Change Canada datamart
+-   `GET_VENTING_ECCC()` Retrieve the venting index FLCN39 from Environment and Climate Change Canada datamart or from the B.C.'s Open Data Portal
 
 -   `ventingBC_kml()` Creates a kml or shape file based on the 2019 OBSCR rules.
     This incorporates venting index and sensitivity zones.
@@ -220,7 +220,7 @@ pm25_3year <- importBC_data('PM25',2010:2012)
 > ```{r, eval = FALSE}
 > #user can specify the parameter, enter parameter name as input
 > annual_mean <- importBC_data_avg(c('pm25','o3'), years = 2015:2018, averaging_type = 'annual mean 24-hr')
->
+> >
 > #or if you already have a dataframe, you can use the dataframe as input to for the statistical summary
 > df_input <- importBC_data(param = c('pm25','o3'), years = 2015:2018)
 > annual_mean <- importBC_data_avg(df_input,averaging_type = 'annual mean 24-hr')
@@ -230,7 +230,7 @@ pm25_3year <- importBC_data('PM25',2010:2012)
 
 ------------------------------------------------------------------------
 
-##### Calculate the  annual metrics of PM2.5
+##### Calculate the annual metrics of PM2.5
 
 > The function will calculate statistical summaries , data captures, and number of exceedances based on the CAAQS metrics and values.
 > The function will only perform a year-by-year calculation so the results are not the actual CAAQS metrics, but can be used to derive it.
@@ -239,7 +239,7 @@ pm25_3year <- importBC_data('PM25',2010:2012)
 > ```{r, eval = FALSE}
 > #example retrieves stat summaries
 > stats_result <- get_stats(param = 'o3', years = 2016,add_TFEE = TRUE, merge_Stations = TRUE)
->
+> >
 > ```
 
 #### `get_captures()`
@@ -254,7 +254,7 @@ pm25_3year <- importBC_data('PM25',2010:2012)
 > ```{r, eval = FALSE}
 > #you can use the parameter as input
 > data_captures <- get_captures(param = c('pm25','o3'), years = 2015:2018,merge_Stations = TRUE)
->
+> >
 > #or you can use a dataframe 
 > air_data <- importBC_data(c('pm25','o3'), years = 2015:201,merge_Stations = TRUE)
 > data_captures <- get_captures(param = air_data, years = 2015:2018)
@@ -274,7 +274,7 @@ listBC_stations(2016)
 ```
 
 ```{r, echo = FALSE}
-table_ <- read.csv('listbc_stations.csv',sep=',')
+table_ <- envair::listBC_stations()
 knitr::kable(table_[1:4,])
 ```
 
@@ -289,16 +289,16 @@ knitr::kable(table_[1:4,])
 ------------------------------------------------------------------------
 
 > produces a dataframe containing the recent venting index.
-> Optional entry of date string retrieves venting from a particular date.
-> Archived data is dependent on ECCC's data availability
 
 ```{r, eval = FALSE}
 GET_VENTING_ECCC()
 GET_VENTING_ECCC('2019-11-08')
+GET_VENTING_ECCC((dates = seq(from = lubridate::ymd('2021-01-01'),
+        to = lubridate::ymd('2021-05-01'), by = 'day')))
 ```
 
 ```{r, echo = FALSE}
-table_ <- read.csv('get_vent.csv',sep=',')
+table_ <- envair::GET_VENTING_ECCC()
 knitr::kable(table_[1:4,])
 ```
 

@@ -1,14 +1,14 @@
 
--   <a href="#bcgovenvair-bc-air-quality-data-retrieval-and-analysis-tool"
-    id="toc-bcgovenvair-bc-air-quality-data-retrieval-and-analysis-tool">bcgov/envair:
-    BC air quality data retrieval and analysis tool</a>
--   <a href="#bcgovr" id="toc-bcgovr">bcgovr</a>
-    -   <a href="#overview" id="toc-overview">Overview</a>
-    -   <a href="#installation" id="toc-installation">Installation</a>
-    -   <a href="#features" id="toc-features">Features</a>
-    -   <a href="#functions" id="toc-functions">Functions</a>
-    -   <a href="#usage-and-examples" id="toc-usage-and-examples">Usage and
-        Examples</a>
+- <a href="#bcgovenvair-bc-air-quality-data-retrieval-and-analysis-tool"
+  id="toc-bcgovenvair-bc-air-quality-data-retrieval-and-analysis-tool">bcgov/envair:
+  BC air quality data retrieval and analysis tool</a>
+- <a href="#bcgovr" id="toc-bcgovr">bcgovr</a>
+  - <a href="#overview" id="toc-overview">Overview</a>
+  - <a href="#installation" id="toc-installation">Installation</a>
+  - <a href="#features" id="toc-features">Features</a>
+  - <a href="#functions" id="toc-functions">Functions</a>
+  - <a href="#usage-and-examples" id="toc-usage-and-examples">Usage and
+    Examples</a>
 
 <!--
 Copyright 2022 Province of British Columbia
@@ -62,166 +62,165 @@ library(envair)
 
 ## Features
 
--   Retrieve data from the Air Quality Data Archive by specifying
-    parameter (pollutant) or station. Functions have the option to add
-    Transboundary Flow Exceptional Event (TFEE) flags. Data archive is
-    located in the ENV’s FTP server:
-    <ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/>
+- Retrieve data from the Air Quality Data Archive by specifying
+  parameter (pollutant) or station. Functions have the option to add
+  Transboundary Flow Exceptional Event (TFEE) flags. Data archive is
+  located in the ENV’s FTP server:
+  <ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/>
 
--   Generate annual metrics, data captures and statistical summaries
-    following the Guidance Document on Achievement Determination and the
-    Canadian Ambient Air Quality Standards
+- Generate annual metrics, data captures and statistical summaries
+  following the Guidance Document on Achievement Determination and the
+  Canadian Ambient Air Quality Standards
 
--   Most of data processing functions can automatically process a
-    parameter as input, or a dataframe of air quality data.
+- Most of data processing functions can automatically process a
+  parameter as input, or a dataframe of air quality data.
 
--   Retrieve archived and current ventilation index data with options to
-    generate a kml map.
+- Retrieve archived and current ventilation index data with options to
+  generate a kml map.
 
 ## Functions
 
--   `importBC_data()` Retrieves station or parameter data from specified
-    year/s between 1980 and yesterday.
+- `importBC_data()` Retrieves station or parameter data from specified
+  year/s between 1980 and yesterday.
 
-    -   for you can specify one or several parameters, or name of one or
-        several stations
-    -   if station is specified, output returns a wide table following
-        the format of the openair package. It also renames all columns
-        into lowercase letters, changes scalar wind speed to ws, and
-        vector wind direction to wd. It also shifts the datetime to the
-        time-beginning format
-    -   if parameter is specified, output displays data from all air
-        quality monitoring stations that reported this data.
-    -   use *flag_TFEE = TRUE* to add a new boolean (TRUE/FALSE) column
-        called *flag_tfee*. This option only works when you enter
-        parameter (not station) in the parameter_or_station.
-    -   use merge_Stations = TRUE to merge data from monitoring stations
-        and corresponding alternative stations, especially in locations
-        where the monitoring station was relocated. This function may
-        also change the name of the air quality monitoring station.
-    -   set *pad = TRUE* to pad missing dates, set *use_ws_vector =
-        TRUE* to use vector wind speed instead of scalar, and set
-        *use_openairformat = FALSE* to produce the original
-        *non-openair* output.
+  - for you can specify one or several parameters, or name of one or
+    several stations
+  - if station is specified, output returns a wide table following the
+    format of the openair package. It also renames all columns into
+    lowercase letters, changes scalar wind speed to ws, and vector wind
+    direction to wd. It also shifts the datetime to the time-beginning
+    format
+  - if parameter is specified, output displays data from all air quality
+    monitoring stations that reported this data.
+  - use *flag_TFEE = TRUE* to add a new boolean (TRUE/FALSE) column
+    called *flag_tfee*. This option only works when you enter parameter
+    (not station) in the parameter_or_station.
+  - use merge_Stations = TRUE to merge data from monitoring stations and
+    corresponding alternative stations, especially in locations where
+    the monitoring station was relocated. This function may also change
+    the name of the air quality monitoring station.
+  - set *pad = TRUE* to pad missing dates, set *use_ws_vector = TRUE* to
+    use vector wind speed instead of scalar, and set *use_openairformat
+    = FALSE* to produce the original *non-openair* output.
 
--   `importBC_data_avg()` Retrieves pollutant (parameter) data and
-    performs statistical averaging based on the specified averaging_type
+- `importBC_data_avg()` Retrieves pollutant (parameter) data and
+  performs statistical averaging based on the specified averaging_type
 
-    -   function can retrieve 24-hour averages (24-hr), daily 1-hour
-        maximum (d1hm), daily 8-hour maximum (d8hm), rolling 8-hour
-        values (8-hr)
-    -   it can also make annual summaries such as 98th percentile of
-        daily 1-hour maximum, annual mean of 24-hour values. To perform
-        annual summaries, the averaging_type should include “annual
-        \<averaging/percentile\> \<1-hour or 24-hour or dxhm\>”
-        -   function can calculate the number of times a certain value
-            has been exceeded
+  - function can retrieve 24-hour averages (24-hr), daily 1-hour maximum
+    (d1hm), daily 8-hour maximum (d8hm), rolling 8-hour values (8-hr)
+  - it can also make annual summaries such as 98th percentile of daily
+    1-hour maximum, annual mean of 24-hour values. To perform annual
+    summaries, the averaging_type should include “annual
+    \<averaging/percentile\> \<1-hour or 24-hour or dxhm\>”
+    - function can calculate the number of times a certain value has
+      been exceeded
 
-            <table>
-            <caption>List of possible values for the
-            <em>averaging_type</em>.</caption>
-            <colgroup>
-            <col style="width: 29%" />
-            <col style="width: 20%" />
-            <col style="width: 50%" />
-            </colgroup>
-            <thead>
-            <tr class="header">
-            <th>Type of averaging</th>
-            <th><em>averaging_type=</em> Syntax</th>
-            <th>Output description</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr class="odd">
-            <td>1-hr</td>
-            <td>“1-hr”</td>
-            <td>Outputs hourly data. No averaging done.</td>
-            </tr>
-            <tr class="even">
-            <td>Daily Average</td>
-            <td>“24-hr”</td>
-            <td>Outputs the daily (24-hour) values.</td>
-            </tr>
-            <tr class="odd">
-            <td>Rolling 8-hour</td>
-            <td>“8-hr”</td>
-            <td>Outputs hourly values that were calculated from rolling 8-hour
-            average.</td>
-            </tr>
-            <tr class="even">
-            <td>Daily 1-hour maximum</td>
-            <td>“d1hm”</td>
-            <td>Outputs daily values of the highest 1-hour concentration</td>
-            </tr>
-            <tr class="odd">
-            <td>Daily 8-hour maximum</td>
-            <td>“d8hm”</td>
-            <td>Outputs the daily 8-hour maximum for each day</td>
-            </tr>
-            <tr class="even">
-            <td>Annual mean of 1-hour values</td>
-            <td>“annual mean 1-hr”</td>
-            <td>Outputs the average of all hourly values</td>
-            </tr>
-            <tr class="odd">
-            <td>Annual mean of daily values</td>
-            <td><p>“annual mean 24-hr”</p>
-            <p>“annual mean &lt;avging&gt;”</p></td>
-            <td>Outputs average of all daily values.</td>
-            </tr>
-            <tr class="even">
-            <td>Annual 98th percentile of 1-hour values</td>
-            <td><p>“annual 98p 1-hr”</p>
-            <p>“annual &lt;xxp&gt; &lt;avging&gt;</p></td>
-            <td>Outputs the 98th percentile of the 1-hour values.</td>
-            </tr>
-            <tr class="odd">
-            <td>4th Highest daily 8-hour maximum</td>
-            <td><p>“annual 4th d8hm”</p>
-            <p>“annual &lt;rank&gt; &lt;avging&gt;</p></td>
-            <td>Outputs the 4th highest daily 8-hour maximum.</td>
-            </tr>
-            <tr class="even">
-            <td>Number of daily values exceeding 28 µg/m3</td>
-            <td><p>“exceed 28 24-hr”</p>
-            <p>“exceed &lt;value&gt; &lt;avging&gt;</p></td>
-            <td>Outputs the number of days where the 28 µg/m3 is exceeded</td>
-            </tr>
-            <tr class="odd">
-            <td>Number of exceedance to d8hm of 62ppb</td>
-            <td><p>“exceed 62 d8hm”</p>
-            <p>“exceed &lt;value&gt; &lt;avging&gt;</p></td>
-            <td>Outputs the number of days where the daily 8-hour maximum exceeds 62
-            ppb</td>
-            </tr>
-            </tbody>
-            </table>
+      <table style="width:99%;">
+      <caption>List of possible values for the
+      <em>averaging_type</em>.</caption>
+      <colgroup>
+      <col style="width: 29%" />
+      <col style="width: 20%" />
+      <col style="width: 49%" />
+      </colgroup>
+      <thead>
+      <tr class="header">
+      <th>Type of averaging</th>
+      <th><em>averaging_type=</em> Syntax</th>
+      <th>Output description</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr class="odd">
+      <td>1-hr</td>
+      <td>“1-hr”</td>
+      <td>Outputs hourly data. No averaging done.</td>
+      </tr>
+      <tr class="even">
+      <td>Daily Average</td>
+      <td>“24-hr”</td>
+      <td>Outputs the daily (24-hour) values.</td>
+      </tr>
+      <tr class="odd">
+      <td>Rolling 8-hour</td>
+      <td>“8-hr”</td>
+      <td>Outputs hourly values that were calculated from rolling 8-hour
+      average.</td>
+      </tr>
+      <tr class="even">
+      <td>Daily 1-hour maximum</td>
+      <td>“d1hm”</td>
+      <td>Outputs daily values of the highest 1-hour concentration</td>
+      </tr>
+      <tr class="odd">
+      <td>Daily 8-hour maximum</td>
+      <td>“d8hm”</td>
+      <td>Outputs the daily 8-hour maximum for each day</td>
+      </tr>
+      <tr class="even">
+      <td>Annual mean of 1-hour values</td>
+      <td>“annual mean 1-hr”</td>
+      <td>Outputs the average of all hourly values</td>
+      </tr>
+      <tr class="odd">
+      <td>Annual mean of daily values</td>
+      <td><p>“annual mean 24-hr”</p>
+      <p>“annual mean &lt;avging&gt;”</p></td>
+      <td>Outputs average of all daily values.</td>
+      </tr>
+      <tr class="even">
+      <td>Annual 98th percentile of 1-hour values</td>
+      <td><p>“annual 98p 1-hr”</p>
+      <p>“annual &lt;xxp&gt; &lt;avging&gt;</p></td>
+      <td>Outputs the 98th percentile of the 1-hour values.</td>
+      </tr>
+      <tr class="odd">
+      <td>4th Highest daily 8-hour maximum</td>
+      <td><p>“annual 4th d8hm”</p>
+      <p>“annual &lt;rank&gt; &lt;avging&gt;</p></td>
+      <td>Outputs the 4th highest daily 8-hour maximum.</td>
+      </tr>
+      <tr class="even">
+      <td>Number of daily values exceeding 28 µg/m3</td>
+      <td><p>“exceed 28 24-hr”</p>
+      <p>“exceed &lt;value&gt; &lt;avging&gt;</p></td>
+      <td>Outputs the number of days where the 28 µg/m3 is exceeded</td>
+      </tr>
+      <tr class="odd">
+      <td>Number of exceedance to d8hm of 62ppb</td>
+      <td><p>“exceed 62 d8hm”</p>
+      <p>“exceed &lt;value&gt; &lt;avging&gt;</p></td>
+      <td>Outputs the number of days where the daily 8-hour maximum exceeds 62
+      ppb</td>
+      </tr>
+      </tbody>
+      </table>
 
-            List of possible values for the *averaging_type*.
+      List of possible values for the *averaging_type*.
 
--   `get_stats()` Retrieves a statistical summary based on the default
-    for the pollutant. Currently applies to PM2.5, O3, NO2, and SO2.
-    Output includes data captures, annual metrics, and exceedances.
+- `get_stats()` Retrieves a statistical summary based on the default for
+  the pollutant. Currently applies to PM2.5, O3, NO2, and SO2. Output
+  includes data captures, annual metrics, and exceedances.
 
--   `get_captures()` Calculates the data captures for a specified
-    pollutant or dataframe. Output is a long list of capture statistics
-    such as hourly, daily, quarterly, and annual sumamaries.
+- `get_captures()` Calculates the data captures for a specified
+  pollutant or dataframe. Output is a long list of capture statistics
+  such as hourly, daily, quarterly, and annual sumamaries.
 
--   `listBC_stations()` Lists details of all air quality monitoring
-    stations (active or inactive)
+- `listBC_stations()` Lists details of all air quality monitoring
+  stations (active or inactive)
 
--   `list_parameters()` Lists the parameters that can be imported by
-    `importBC_data()`
+- `list_parameters()` Lists the parameters that can be imported by
+  `importBC_data()`
 
--   `importECCC_forecast()` Retrieves AQHI, PM2.5, PM10, O3, and NO2
-    forecasts from the ECCC datamart
+- `importECCC_forecast()` Retrieves AQHI, PM2.5, PM10, O3, and NO2
+  forecasts from the ECCC datamart
 
--   `GET_VENTING_ECCC()` Retrieve the venting index FLCN39 from
-    Environment and Climate Change Canada datamart
+- `GET_VENTING_ECCC()` Retrieve the venting index FLCN39 from
+  Environment and Climate Change Canada datamart or from the B.C.’s Open
+  Data Portal
 
--   `ventingBC_kml()` Creates a kml or shape file based on the 2019
-    OBSCR rules. This incorporates venting index and sensitivity zones.
+- `ventingBC_kml()` Creates a kml or shape file based on the 2019 OBSCR
+  rules. This incorporates venting index and sensitivity zones.
 
 ## Usage and Examples
 
@@ -264,14 +263,13 @@ pollutionRose(PG_data,pollutant='pm25')
 
 ##### Other features for station data retrieval
 
--   To import without renaming column names, specify *use_openairformat
-    = FALSE*. This also keeps date in time-ending format
--   By default, *vector wind direction* and *scalar wind speeds* are
-    used
--   To use vector wind speed, use *use_ws_vector = TRUE*
--   Station name is not case sensitive, and works on partial text match
--   Multiple stations can be specified *c(‘Prince George’,‘Kamloops’)*
--   For non-continuous multiple years, use *c(2010,2011:2014)*
+- To import without renaming column names, specify *use_openairformat =
+  FALSE*. This also keeps date in time-ending format
+- By default, *vector wind direction* and *scalar wind speeds* are used
+- To use vector wind speed, use *use_ws_vector = TRUE*
+- Station name is not case sensitive, and works on partial text match
+- Multiple stations can be specified *c(‘Prince George’,‘Kamloops’)*
+- For non-continuous multiple years, use *c(2010,2011:2014)*
 
 ``` r
 importBC_data('Prince George Plaza 400',2010:2012,use_openairformat = FALSE)
@@ -361,12 +359,36 @@ listBC_stations()
 listBC_stations(2016)
 ```
 
-| SERIAL_CODE | EMS_ID  | STATION_NAME                     | STATION_NAME_FULL                | LOCATION            | CITY       | CATEGORY                        | STATION_ENVIRONMENT | STATION_OWNER | DATE_ESTABLISHED     | NOTES                       | LATITUDE | LONGITUDE | HEIGHT.m. | STATUS   | CGNDB |
-|------------:|:--------|:---------------------------------|:---------------------------------|:--------------------|:-----------|:--------------------------------|:--------------------|:--------------|:---------------------|:----------------------------|:---------|:----------|----------:|:---------|:------|
-|         428 | E289309 | Abbotsford A Columbia Street     | Abbotsford A Columbia Street     | N/A                 | Abbotsford | METRO VANCOUVER                 | N/A                 | MVRD          | 7/25/2012            | GVRD T045                   | 49.0215  | -122.3266 |        65 | ACTIVE   | N/A   |
-|         429 | E289309 | Abbotsford A Columbia Street     | Abbotsford A Columbia Street Met | N/A                 | Abbotsford | METRO VANCOUVER                 | N/A                 | MVRD          | 7/25/2012 6:28:41 AM | GVRD T045                   | 49.0215  | -122.3266 |        65 | ACTIVE   | N/A   |
-|         306 | 0310081 | Abbotsford Airport               | Abbotsford Airport               | 2nd Avenue          | Abbotsford | NON OPERATIONAL                 | Commercial          | MVRD          | 1/7/1978             | GVRD T011;Closed 1994-04-28 | 49.0306  | -122.3761 |        40 | INACTIVE | N/A   |
-|         262 | E246240 | Abbotsford Airport Walmsley Road | Abbotsford Airport Walmsley Road | 31790 Walmsley Road | Aldergrove | METRO VANCOUVER NON OPERATIONAL | Commercial          | MVRD          | 5/1/2001             | GVRD T034                   | 49.0235  | -122.3430 |        65 | INACTIVE | N/A   |
+    #> Loading required package: dplyr
+    #> Warning: package 'dplyr' was built under R version 4.2.2
+    #> 
+    #> Attaching package: 'dplyr'
+    #> The following objects are masked from 'package:stats':
+    #> 
+    #>     filter, lag
+    #> The following objects are masked from 'package:base':
+    #> 
+    #>     intersect, setdiff, setequal, union
+    #> [1] "Retrieving station details from FTP..."
+    #> Rows: 464 Columns: 16
+    #> ── Column specification ────────────────────────────────────────────────────────
+    #> Delimiter: ","
+    #> chr  (9): STATION_NAME_FULL, STATION_NAME, EMS_ID, CITY, STATUS_DESCRIPTION,...
+    #> dbl  (5): NAPS_ID, SERIAL, LAT, LONG, ELEVATION
+    #> date (2): OPENED, CLOSED
+    #> 
+    #> ℹ Use `spec()` to retrieve the full column specification for this data.
+    #> ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
+    #> airzones was updated on NULL
+    #> 
+    #> Joining, by = c("LAT", "LONG")
+
+| STATION_NAME_FULL                | STATION_NAME                 | EMS_ID  | NAPS_ID | SERIAL | CITY           | LAT     | LONG      | ELEVATION | STATUS_DESCRIPTION | OWNER | REGION              | STATUS   | OPENED     | CLOSED | NOTES | SERIAL_CODE | CGNDB | AIRZONE             |
+|:---------------------------------|:-----------------------------|:--------|:--------|:-------|:---------------|:--------|:----------|:----------|:-------------------|:------|:--------------------|:---------|:-----------|:-------|:------|:------------|:------|:--------------------|
+| 100 Mile House                   | 100 Mile House               | M116006 | NA      | 374    | 100 Mile House | 51.6542 | -121.375  | 1000      | NON OPERATIONAL    | ENV   | 05 - Cariboo        | INACTIVE | 1992-11-11 | NA     | N/A   | UNKNOWN     | N/A   | Central Interior    |
+| 100 Mile House BCAC              | 100 Mile House BCAC          | E218444 | NA      | 228    | 100 MIle House | 51.6461 | -121.937  | 0         | NON OPERATIONAL    | ENV   | 05 - Cariboo        | INACTIVE | 2010-02-16 | NA     | N/A   | UNKNOWN     | N/A   | Central Interior    |
+| Abbotsford A Columbia Street     | Abbotsford A Columbia Street | E289309 | NA      | 428    | Abbotsford     | 49.0215 | -122.3266 | 65        | METRO VANCOUVER    | MVRD  | 02 - Lower Mainland | ACTIVE   | 2012-07-25 | NA     | N/A   | UNKNOWN     | N/A   | Lower Fraser Valley |
+| Abbotsford A Columbia Street Met | Abbotsford A Columbia Street | E289309 | NA      | 429    | Abbotsford     | 49.0215 | -122.3266 | 65        | METRO VANCOUVER    | MVRD  | 02 - Lower Mainland | ACTIVE   | 2012-07-25 | NA     | N/A   | UNKNOWN     | N/A   | Lower Fraser Valley |
 
 #### `list_parameters()`
 
@@ -379,28 +401,52 @@ listBC_stations(2016)
 
 ------------------------------------------------------------------------
 
-> produces a dataframe containing the recent venting index. Optional
-> entry of date string retrieves venting from a particular date.
-> Archived data is dependent on ECCC’s data availability
+> produces a dataframe containing the recent venting index.
 
 ``` r
 GET_VENTING_ECCC()
 GET_VENTING_ECCC('2019-11-08')
+GET_VENTING_ECCC((dates = seq(from = lubridate::ymd('2021-01-01'),
+        to = lubridate::ymd('2021-05-01'), by = 'day')))
 ```
 
+    #> [1] "Attempt 1 in GETURLFolder for https://dd.weather.gc.ca/bulletins/alphanumeric/"
+    #> Warning: Expected 7 pieces. Additional pieces discarded in 1 rows [1].
+    #> Warning: Expected 2 pieces. Additional pieces discarded in 150 rows [2, 3, 4, 5,
+    #> 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, ...].
+    #> [1] "Attempt 1 in GETURLFolder for https://dd.weather.gc.ca/bulletins/alphanumeric/20221102/FL/CWVR/"
+    #> Warning: Expected 7 pieces. Additional pieces discarded in 1 rows [1].
+    #> Warning: Expected 2 pieces. Additional pieces discarded in 2 rows [2, 3].
+    #> [1] "scanning content of https://dd.weather.gc.ca/bulletins/alphanumeric/20221102/FL/CWVR/13/"
+    #> [1] "Attempt 1 in GETURLFolder for https://dd.weather.gc.ca/bulletins/alphanumeric/20221102/FL/CWVR/13/"
+    #> Warning: Expected 7 pieces. Additional pieces discarded in 1 rows [1].
+    #> Expected 2 pieces. Additional pieces discarded in 2 rows [2, 3].
+    #> [1] "processing content: https://dd.weather.gc.ca/bulletins/alphanumeric/20221102/FL/CWVR/13/FLCN39_CWVR_021300___57275"
+    #> Warning: `data_frame()` was deprecated in tibble 1.1.0.
+    #> ℹ Please use `tibble()` instead.
+    #> ℹ The deprecated feature was likely used in the envair package.
+    #>   Please report the issue at <]8;;https://github.com/bcgov/envair/issueshttps://github.com/bcgov/envair/issues]8;;>.
+    #> [1] "OK. 43 rows"
+    #> [1] "Success. Ignore warnings and errors"
+    #> Warning: `as.tibble()` was deprecated in tibble 2.0.0.
+    #> ℹ Please use `as_tibble()` instead.
+    #> ℹ The signature and semantics have changed, see `?as_tibble`.
+    #> ℹ The deprecated feature was likely used in the envair package.
+    #>   Please report the issue at <]8;;https://github.com/bcgov/envair/issueshttps://github.com/bcgov/envair/issues]8;;>.
+
 | VENTING_INDEX_ABBREV | DATE_ISSUED | CURRENT_VI | CURRENT_VI_DESC | CURRENT_WSPD | CURRENT_MIX_HEIGHT | TODAY_VI | TODAY_VI_DESC | TODAY_WSPD | TODAY_MIX_HEIGHT | TOMORROW_VI | TOMORROW_VI_DESC | TOMORROW_WSPD | TOMORROW_MIX_HEIGHT | NAME           | REGION           |      LAT |      LONG |
-|:---------------------|:------------|-----------:|:----------------|-------------:|-------------------:|---------:|:--------------|-----------:|-----------------:|------------:|:-----------------|--------------:|--------------------:|:---------------|:-----------------|---------:|----------:|
-| 100 MILE             | 2019-11-08  |         23 | POOR            |           20 |               1072 |       21 | POOR          |         23 |             1040 |          23 | POOR             |            11 |                1183 | 100 Mile House | CENTRAL INTERIOR | 51.63915 | -121.2945 |
-| ATLIN                | 2019-11-08  |         16 | POOR            |            3 |               1169 |       36 | FAIR          |         23 |              966 |          34 | FAIR             |            16 |                1050 | Atlin          | NORTHERN BC      | 59.57000 | -133.7000 |
-| BELLA COOLA          | 2019-11-08  |          9 | POOR            |            5 |                 55 |       16 | POOR          |         14 |              134 |          22 | POOR             |             8 |                 345 | Bella Coola    | COAST            | 52.38000 | -126.7500 |
-| BURNS LAKE           | 2019-11-08  |         20 | POOR            |           17 |                833 |       26 | POOR          |         16 |              915 |          19 | POOR             |            19 |                 815 | Burns Lake     | CENTRAL INTERIOR | 54.23142 | -125.7597 |
+|:---------------------|:------------|:-----------|:----------------|:-------------|:-------------------|:---------|:--------------|:-----------|:-----------------|:------------|:-----------------|:--------------|:--------------------|:---------------|:-----------------|---------:|----------:|
+| 100 MILE             | 2022-11-02  | 47         | FAIR            | 23           | 1298               | 58       | GOOD          | 14         | 1762             | 73          | GOOD             | 33            | 1456                | 100 Mile House | CENTRAL INTERIOR | 51.63915 | -121.2945 |
+| ATLIN                | 2022-11-02  | 17         | POOR            | 16           | 789                | 40       | FAIR          | 32         | 900              | 20          | POOR             | 20            | 800                 | Atlin          | NORTHERN BC      | 59.57000 | -133.7000 |
+| BELLA COOLA          | 2022-11-02  | 15         | POOR            | 9            | 163                | 36       | FAIR          | 7          | 840              | 38          | FAIR             | 20            | 340                 | Bella Coola    | COAST            | 52.38000 | -126.7500 |
+| BURNS LAKE           | 2022-11-02  | 27         | POOR            | 16           | 935                | 53       | FAIR          | 15         | 1386             | 38          | FAIR             | 20            | 1015                | Burns Lake     | CENTRAL INTERIOR | 54.23142 | -125.7597 |
 
 #### `importECCC_forecast()`
 
 ------------------------------------------------------------------------
 
--   Retrieves forecasts and model data from ECCC
--   parameters include AQHI, PM25, NO2, O3, PM10
+- Retrieves forecasts and model data from ECCC
+- parameters include AQHI, PM25, NO2, O3, PM10
 
 ``` r
 importECCC_forecast('no2')
@@ -410,9 +456,9 @@ importECCC_forecast('no2')
 
 ------------------------------------------------------------------------
 
--   creates a kml object based on the 2019 OBSCR rules
--   directory to save kml file can be specified. File will be saved in
-    that directory as *Venting_Index_HD.kml*.
+- creates a kml object based on the 2019 OBSCR rules
+- directory to save kml file can be specified. File will be saved in
+  that directory as *Venting_Index_HD.kml*.
 
 ``` r
 ventingBC_kml()
