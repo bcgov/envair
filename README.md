@@ -359,29 +359,6 @@ listBC_stations()
 listBC_stations(2016)
 ```
 
-    #> Loading required package: dplyr
-    #> Warning: package 'dplyr' was built under R version 4.2.2
-    #> 
-    #> Attaching package: 'dplyr'
-    #> The following objects are masked from 'package:stats':
-    #> 
-    #>     filter, lag
-    #> The following objects are masked from 'package:base':
-    #> 
-    #>     intersect, setdiff, setequal, union
-    #> Rows: 464 Columns: 16
-    #> ── Column specification ────────────────────────────────────────────────────────
-    #> Delimiter: ","
-    #> chr  (9): STATION_NAME_FULL, STATION_NAME, EMS_ID, CITY, STATUS_DESCRIPTION,...
-    #> dbl  (5): NAPS_ID, SERIAL, LAT, LONG, ELEVATION
-    #> date (2): OPENED, CLOSED
-    #> 
-    #> ℹ Use `spec()` to retrieve the full column specification for this data.
-    #> ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
-    #> airzones was updated on NULL
-    #> 
-    #> Joining, by = c("LAT", "LONG")
-
 | STATION_NAME_FULL                | STATION_NAME                 | EMS_ID  | NAPS_ID | SERIAL | CITY           | LAT     | LONG      | ELEVATION | STATUS_DESCRIPTION | OWNER | REGION              | STATUS   | OPENED     | CLOSED | NOTES | SERIAL_CODE | CGNDB | AIRZONE             |
 |:---------------------------------|:-----------------------------|:--------|:--------|:-------|:---------------|:--------|:----------|:----------|:-------------------|:------|:--------------------|:---------|:-----------|:-------|:------|:------------|:------|:--------------------|
 | 100 Mile House                   | 100 Mile House               | M116006 | NA      | 374    | 100 Mile House | 51.6542 | -121.375  | 1000      | NON OPERATIONAL    | ENV   | 05 - Cariboo        | INACTIVE | 1992-11-11 | NA     | N/A   | UNKNOWN     | N/A   | Central Interior    |
@@ -408,23 +385,6 @@ GET_VENTING_ECCC('2019-11-08')
 GET_VENTING_ECCC((dates = seq(from = lubridate::ymd('2021-01-01'),
         to = lubridate::ymd('2021-05-01'), by = 'day')))
 ```
-
-    #> Warning: Expected 7 pieces. Additional pieces discarded in 1 rows [1].
-    #> Warning: Expected 2 pieces. Additional pieces discarded in 150 rows [2, 3, 4, 5,
-    #> 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, ...].
-    #> Warning: Expected 7 pieces. Additional pieces discarded in 1 rows [1].
-    #> Warning: Expected 2 pieces. Additional pieces discarded in 2 rows [2, 3].
-    #> Warning: Expected 7 pieces. Additional pieces discarded in 1 rows [1].
-    #> Warning: Expected 2 pieces. Additional pieces discarded in 2 rows [2, 3].
-    #> Warning: `data_frame()` was deprecated in tibble 1.1.0.
-    #> ℹ Please use `tibble()` instead.
-    #> ℹ The deprecated feature was likely used in the envair package.
-    #>   Please report the issue at <]8;;https://github.com/bcgov/envair/issueshttps://github.com/bcgov/envair/issues]8;;>.
-    #> Warning: `as.tibble()` was deprecated in tibble 2.0.0.
-    #> ℹ Please use `as_tibble()` instead.
-    #> ℹ The signature and semantics have changed, see `?as_tibble`.
-    #> ℹ The deprecated feature was likely used in the envair package.
-    #>   Please report the issue at <]8;;https://github.com/bcgov/envair/issueshttps://github.com/bcgov/envair/issues]8;;>.
 
 | VENTING_INDEX_ABBREV | DATE_ISSUED | CURRENT_VI | CURRENT_VI_DESC | CURRENT_WSPD | CURRENT_MIX_HEIGHT | TODAY_VI | TODAY_VI_DESC | TODAY_WSPD | TODAY_MIX_HEIGHT | TOMORROW_VI | TOMORROW_VI_DESC | TOMORROW_WSPD | TOMORROW_MIX_HEIGHT | NAME           | REGION           |      LAT |      LONG |
 |:---------------------|:------------|:-----------|:----------------|:-------------|:-------------------|:---------|:--------------|:-----------|:-----------------|:------------|:-----------------|:--------------|:--------------------|:---------------|:-----------------|---------:|----------:|

@@ -273,7 +273,7 @@ listBC_stations()
 listBC_stations(2016)
 ```
 
-```{r, echo = FALSE,results='hide'}
+```{r, echo = FALSE,results='hide',message=FALSE,warning=FALSE}
 table_ <- envair::listBC_stations()
 
 ```
@@ -301,7 +301,7 @@ GET_VENTING_ECCC((dates = seq(from = lubridate::ymd('2021-01-01'),
         to = lubridate::ymd('2021-05-01'), by = 'day')))
 ```
 
-```{r, echo = FALSE, results='hide'}
+```{r, echo = FALSE,results='hide',message=FALSE,warning=FALSE}
 table_ <- envair::GET_VENTING_ECCC()
 
 ```
