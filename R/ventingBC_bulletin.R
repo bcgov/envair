@@ -22,15 +22,15 @@
 #'
 #' @export
 ventingBC_bulletin <- function(date.start=NULL,
-                             savefile=NULL,
-                             output='html')
+                               savefile=NULL,
+                               output='html')
 {
   #debug
   if (0)
   {
     date.start<-NULL
     savefile=NULL
-    output='csv'
+    output='html'
     source('../../envair/R/envairfunctions.R')
   }
   # date.start<-NULL
@@ -38,14 +38,13 @@ ventingBC_bulletin <- function(date.start=NULL,
   # RUN_PACKAGE(c('lubridate','curl','dplyr'))
   if (is.null(date.start)) {
     date.start <- as.character(format(Sys.Date(),tz='etc/GMT+2',format ='%Y-%m-%d'))
-    }
+  }
   #These are pre-defined based on intended output locations if running on DAS server
   #results are based on whether it is saving into ftp or file
   default_html <- 'E:/WebSites/wwwroot/Web2016/aqo/files/bulletin/venting.html'
   default_text <- 'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/VentingBulletins/'
   default_csv <- 'E:/apps_data/open_data_portal/VentingIndex.csv'
 
-  source('envairfunctions.R')
 
   if (is.null(savefile))
   {
@@ -153,7 +152,7 @@ ventingBC_bulletin <- function(date.start=NULL,
     }
   }
 
-  if (venting.date == as.character(ymd(date.start),'%Y-%m-%d'))
+  if (venting.date == as.character(lubridate::ymd(date.start),'%Y-%m-%d'))
   {
 
     print(paste('Found Venting of date',venting.date))
@@ -464,11 +463,11 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE,isCOVID = FALSE,fireban=NULL)
                                               'N/A',
                                               TOMORROW_VI_DESC)) %>%
       dplyr::mutate(TODAY_VI = ifelse(SENSI == 'HIGH',
-                                           'N/A',
-                                           TODAY_VI)) %>%
+                                      'N/A',
+                                      TODAY_VI)) %>%
       dplyr::mutate(TOMORROW_VI = ifelse(SENSI == 'HIGH',
-                                              'N/A',
-                                              TOMORROW_VI))
+                                         'N/A',
+                                         TOMORROW_VI))
   }
 
 
@@ -715,7 +714,7 @@ GET_VENTING_ECCC <- function(dates = NULL) {
   if (0) {
     dates <- NULL
     dates = seq(from = lubridate::ymd('2021-01-01'),
-                        to = lubridate::ymd('2021-05-01'), by = 'day')
+                to = lubridate::ymd('2021-05-01'), by = 'day')
   }
   if (is.null(dates)) {
     dates <- Sys.Date()
@@ -859,7 +858,7 @@ GET_VENTING_ECCC0 <-function(date.start=NULL)
     ftp.url <- paste(venting.url2,lubridate::year(lubridate::ymd(date.start)),'/',sep='')
     print(paste('Retrieving data from:',ftp.url))
     lst_ventfiles <- RCurl::getURL(ftp.url,verbose=TRUE,
-                            ftp.use.epsv=TRUE, dirlistonly = TRUE
+                                   ftp.use.epsv=TRUE, dirlistonly = TRUE
     )
 
     #create dataframe with 0 row
@@ -989,7 +988,7 @@ importECCC_forecast<-function(parameter=NULL)
   #debug
   if (0)
   {
-    parameter<-'FORECASTSUMMARY'
+    parameter<-'AQHI'
   }
   #end debug
 
@@ -1035,7 +1034,7 @@ importECCC_forecast<-function(parameter=NULL)
     #creating a flat table
     for (column in colnames(temp)[!grepl('NAPS_ID',colnames(temp)) &
                                   !grepl('CGNDB',colnames(temp))
-                                  ])
+    ])
     {
       print(paste('Retrieving from',column))
 
@@ -1062,24 +1061,27 @@ importECCC_forecast<-function(parameter=NULL)
   #aqhi.list<-XML::xmlParse(description.url)
 
   #added min() to remove duplication station with same NAPS_ID
-  list.station<-GET_STATION_DETAILS_FTP(2018)%>%
-    dplyr::group_by(NAPS_ID)%>%
-    dplyr::mutate(TEMP=min(STATION_NAME_FULL))%>%
-    dplyr::ungroup()%>%
-    dplyr::filter(STATION_NAME_FULL==TEMP)%>%
+  list.station<-listBC_stations()%>%
+    dplyr::group_by(STATION_NAME,NAPS_ID)%>%
+    dplyr::mutate(index = 1:n()) %>%
+    filter(index == 1) %>% select(-index) %>%
     dplyr::select(STATION_NAME,NAPS_ID,LAT,LONG)%>%
     RENAME_COLUMN(c('LAT','LONG'),c('LATITUDE','LONGITUDE'))%>%
     unique()
 
   #the min(),max() used to remove duplicate station with same NAPS ID and station name
-  list.aqhi<-GET_STATION_DETAILS_FTP()%>%
+  list.aqhi<-GET_STATION_DETAILS_FTP() %>%
+    RENAME_COLUMN(c('LAT','LONG'),c('LATITUDE','LONGITUDE'))%>%
     dplyr::group_by(CGNDB,LATITUDE,LONGITUDE)%>%
-    dplyr::mutate(TEMP=max(DATE_ESTABLISHED),TEMP2=min(STATION_NAME_FULL))%>%
-    ungroup()%>%
-    dplyr::filter(DATE_ESTABLISHED==TEMP)%>%
-    dplyr::filter(STATION_NAME_FULL==TEMP2)%>%
-    dplyr::select(STATION_NAME,CGNDB,LATITUDE,LONGITUDE)%>%
-    dplyr::mutate(CGNDB=toupper(CGNDB))%>%
+
+    dplyr::mutate(index = 1:n()) %>%
+    filter(index == 1) %>% select(-index) %>%
+    # dplyr::mutate(TEMP=max(DATE_ESTABLISHED),TEMP2=min(STATION_NAME_FULL))%>%
+    # ungroup()%>%
+    # dplyr::filter(DATE_ESTABLISHED==TEMP)%>%
+    # dplyr::filter(STATION_NAME_FULL==TEMP2) %>%
+    # dplyr::select(STATION_NAME,CGNDB,LATITUDE,LONGITUDE)%>%
+    # dplyr::mutate(CGNDB=toupper(CGNDB))%>%
     dplyr::filter(!CGNDB %in% c('N/A','NA',''))%>%
     unique()
 
@@ -1109,3 +1111,20 @@ importECCC_forecast<-function(parameter=NULL)
 
 
 
+get_CGNDB <- function(lat,lon,radius = 50) {
+
+  if (0){
+    lat <- 51.6542
+    lon <- -121.375
+    radius <- 50
+
+  }
+  # api_string <- 'https://geogratis.gc.ca/services/geoname/en/geonames?q=<city>&province=59'
+  api_string <- 'https://geogratis.gc.ca/services/geoname/en/geonames?lat=<lat>&lon=<lon>&sort-field=distance'
+
+  srch_api <- gsub('<lat>',as.character(lat),api_string)
+  srch_api <- gsub('<lon>',as.character(lon),srch_api)
+  srch_api <- gsub('<rad>',as.character(radius),srch_api)
+
+readLines(srch_api)
+}
