@@ -135,6 +135,10 @@ importBC_data_<-function(parameter_or_station,
   #debug
   if (0)
   {
+    parameter_or_station <-"Crofton Substation"
+    years <- 2019:2021
+
+
 
     parameter_or_station <- 'aqhi'
     parameter_or_station <- 'smithers'
@@ -465,6 +469,7 @@ importBC_data_<-function(parameter_or_station,
 
             })
 
+
             try(
               data.result <- dplyr::bind_rows(data.result,data.result_)
             )
@@ -472,6 +477,19 @@ importBC_data_<-function(parameter_or_station,
 
         }
       }
+
+      cols_ <- colnames(data.result)
+      cols_instrument <- cols_[grepl('_instrument',cols_,ignore.case=TRUE)]
+      cols_unit <- cols_[grepl('_units',cols_,ignore.case=TRUE)]
+      cols_vals <- cols_[grepl('_raw',cols_,ignore.case=TRUE)]
+      cols_vals <- unique(c('validation_status','VALIDATION_STATUS','WS','WD','ws','wd',cols_vals,gsub('_raw','',cols_vals,ignore.case =TRUE)))
+      cols_remove <- c('WEB_STATUS','API_STATUS','')
+
+      cols_remove <- cols_[!cols_ %in% c('DATE_PST','STATION_NAME',cols_instrument,cols_unit,cols_vals)]
+
+      data.result <- data.result %>%
+        RENAME_COLUMN(cols_remove)
+
     }
 
     #stop if there are no result
@@ -608,17 +626,126 @@ importBC_data_<-function(parameter_or_station,
 
     if (pad)
     {
+      try(data.result <- data.result %>%
+            dplyr::select(-DATE,-TIME),silent = TRUE)
       cols_ <- colnames(data.result)
       cols_instrument <- cols_[grepl('_instrument',cols_,ignore.case=TRUE)]
       cols_unit <- cols_[grepl('_units',cols_,ignore.case=TRUE)]
       cols_vals <- cols_[grepl('_raw',cols_,ignore.case=TRUE)]
       cols_vals <- unique(c('validation_status','VALIDATION_STATUS','WS','WD','ws','wd',cols_vals,gsub('_raw','',cols_vals,ignore.case =TRUE)))
 
+      #added to fix duplicated when STATION_NAME_FULL is null in other years
+      #added 2022-11-21
+      #analyze the merge criteria and fix for any problem with merge
 
-      data.result <- data.result %>%
+      #remove DATE and TIME during pad
+      #This will be reintroduced anyways
+      try(data.result <- data.result %>%
+            select(-DATE,-TIME),silent = TRUE)
+
+      #fix for bug, for duplicate data due to NULL STATION_NAME_FULL
+
+      # try({
+      #   if ('STATION_NAME_FULL' %in% cols_ & any(is.na(data.result$STATION_NAME_FULL))) {
+      #
+      #     cols_vals <- cols_[cols_ %in% cols_vals]
+      #
+      #     # data.result <- data.result %>%
+      #     #   ungroup() %>%
+      #     #   dplyr::mutate(dataindex = 1:n())
+      #
+      #     # adding data index
+      #     data.result <- data.result %>%
+      #       ungroup()
+      #
+      #     merge_criteria <- data.result %>%
+      #       filter(STATION_NAME %in% data.result$STATION_NAME[is.na(data.result$STATION_NAME_FULL)]) %>%
+      #       select(-cols_unit,-cols_vals,-cols_instrument,-DATE_PST) %>%
+      #       distinct() %>%
+      #       arrange(STATION_NAME_FULL) %>%
+      #       group_by(STATION_NAME) %>%
+      #       dplyr::mutate(count = n()) %>%
+      #       filter(count>1) %>%
+      #       tidyr::pivot_longer(cols = -c('STATION_NAME'),
+      #                           names_to = "key",
+      #                           values_to = "val",
+      #                           values_transform = list(val = as.character))
+      #
+      #     if (nrow(merge_criteria)>0) {
+      #       remove_criteria <- merge_criteria %>%
+      #         arrange(val) %>%
+      #         group_by(STATION_NAME,key) %>%
+      #         dplyr::mutate(count = n(), index = 1:n()) %>%
+      #         filter(count>1)
+      #
+      #       #separate result into those with issue in STATION_NAME
+      #       data.result0 <- data.result %>%
+      #         filter(!STATION_NAME %in% remove_criteria$STATION_NAME)
+      #
+      #
+      #
+      #       data.result1 <- data.result  %>%
+      #         filter(STATION_NAME %in% remove_criteria$STATION_NAME) %>%
+      #         RENAME_COLUMN(remove_criteria$key)
+      #
+      #       #reinsert the columns, removing the duplicates
+      #       remove_criteria <- remove_criteria %>%
+      #         filter(index==1) %>%
+      #         select(-count,-index) %>%
+      #         tidyr::pivot_wider(names_from = key,values_from = val)
+      #
+      #       data.result1 <- data.result1 %>%
+      #         merge(remove_criteria)
+      #
+      #       #change data types to match with original dataset
+      #
+      #       df_1 <- as.data.frame(data.result0)
+      #       df_2 <- as.data.frame(data.result1)
+      #       common <- names(df_2)[names(df_2) %in% colnames(remove_criteria)]
+      #
+      #       df_1[common] <- lapply(common, function(x) {
+      #         as.character(df_1[[x]])
+      #       })
+      #       df_2[common] <- lapply(common, function(x) {
+      #        as.character(df_2[[x]])
+      #       })
+      #
+      #
+      #       data.result <- df_1 %>%
+      #         dplyr::bind_rows(df_2)
+      #       try(data.result <- data.result %>% select(-count), silent = TRUE)
+      #       try(data.result <- data.result %>% select(-index), silent = TRUE)
+      #
+      #       data.result <-  data.result %>%
+      #
+      #         tidyr::pivot_longer(cols = c(cols_vals,cols_instrument),
+      #                             names_to = "key",
+      #                             values_to = "val",
+      #                             values_transform = list(val = as.character)) %>%
+      #         group_by(STATION_NAME,STATION_NAME_FULL,DATE_PST,key) %>%
+      #         arrange(val) %>%
+      #         dplyr::mutate(count =n(), index =1:n()) %>%
+      #         filter(index==1) %>%
+      #         ungroup() %>%
+      #         select(-index,-count) %>%
+      #         tidyr::pivot_wider(names_from = key, values_from = val) %>%
+      #         arrange(STATION_NAME,DATE_PST) %>%
+      #         COLUMN_REORDER(cols_)
+      #
+      #
+      #     }
+
+#
+#         }
+#       })
+
+      # data.result <-
+      data.result %>%
         pad_data(date_time= c('date','DATE_PST')[c('date','DATE_PST') %in% cols_],
                  values = c(cols_vals,cols_instrument,cols_unit),
-                 add_DATETIME = !use_openairformat)
+                 add_DATETIME = !use_openairformat) %>%
+        View()
+
     }
 
   }
