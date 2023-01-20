@@ -115,6 +115,10 @@ get_npri <- function(URL_emissions = NULL, URL_sources = NULL) {
   if (0) {
     URL_emissions <- NULL
     URL_sources <- NULL
+
+    for (files in list.files()) {
+      try(source(files))
+    }
   }
   require(dplyr)
   #Emission Sources
@@ -135,42 +139,62 @@ get_npri <- function(URL_emissions = NULL, URL_sources = NULL) {
 
   df_NPRI_source <- readr::read_csv(URL_sources,
                                     locale = readr::locale(encoding = "windows-1252"))
-  #common ID
-  index_column <- c('NPRI_ID / No_INRP','NpriID')
+
+
+  #rename columns to the standardized column names
+  cols_names <- c('NPRI_ID','Year','Company','Facility','Latitude','Longitude','Substance','Quantity','Units','Sector','Province')
   cols_emission <- colnames(df_NPRI_emissions)
   cols_source <- colnames(df_NPRI_source)
 
-  #rename index_column to "NPRI_ID"
-  cols_emission_index <- cols_emission[tolower(cols_emission) %in% tolower(index_column)]
-  cols_source_index <- cols_source[tolower(cols_source) %in% tolower(index_column)]
+  df_cols_emission <- NULL
+  df_cols_source <- NULL
 
+
+  #scan one column name at a time, create a list to be renamed later
+  for (cols_ in cols_names) {
+    cols_emission_index <- cols_emission[grepl(cols_,cols_emission,ignore.case = TRUE)]
+    cols_source_index <- cols_source[grepl(cols_,cols_source,ignore.case = TRUE)]
+
+    if (length(cols_emission_index)>0) {
+      df_cols_emission <- df_cols_emission %>%
+        bind_rows(
+          tibble(
+            new_names = cols_,
+            old_names = cols_emission_index[1]
+          )
+        )
+    }
+    if (length(cols_source_index)>0) {
+      df_cols_source <- df_cols_source %>%
+        bind_rows(
+          tibble(
+            new_names = cols_,
+            old_names = cols_source_index[1]
+          )
+        )
+    }
+
+  }
+  #rename the columns
   df_NPRI_emissions <- df_NPRI_emissions %>%
-    dplyr::rename('NPRI_ID' =cols_emission_index)
+    RENAME_COLUMN(colname.orig = df_cols_emission$old_names,
+                  colname.new = df_cols_emission$new_names) %>%
+    select(df_cols_emission$new_names)
 
   df_NPRI_source <- df_NPRI_source %>%
-    dplyr::rename('NPRI_ID' =cols_source_index)
+    RENAME_COLUMN(colname.orig = df_cols_source$old_names,
+                  colname.new = df_cols_source$new_names) %>%
+    select(df_cols_source$new_names)
 
-  #define the selected column names
-  cols_emission <- colnames(df_NPRI_emissions)
-  cols_emission_select <- c('NPRI_ID','Reporting_Year / Année','Substance Name (English) / Nom de substance (Anglais)',
-                            'Quantity / Quantité','Units / Unités')
-  cols_emission_select <- cols_emission[cols_emission %in% cols_emission_select]
-  df_NPRI_emissions <- df_NPRI_emissions %>% select(cols_emission_select)
-
-  cols_source <- colnames(df_NPRI_source)
-  cols_source_select <- c('NPRI_ID','CompanyName','FacilityName','Latitude','Longitude',
-                          'SectorDescriptionEn','ProvinceCode')
-  cols_source_select <- cols_source[cols_source %in% cols_source_select]
-  df_NPRI_source <- df_NPRI_source %>% select(cols_source_select)
 
   #combine the two data sets
   df_NPRI <- df_NPRI_emissions %>%
     left_join(df_NPRI_source) %>%
-    dplyr::rename('year' = 'Reporting_Year / Année',
-                  'parameter' ='Substance Name (English) / Nom de substance (Anglais)',
-                  'metric' = 'Quantity / Quantité',
-                  'metric_unit' ='Units / Unités',
-                  'province' = 'ProvinceCode')
+    dplyr::rename('year' = 'Year',
+                  'parameter' ='Substance',
+                  'metric' = 'Quantity',
+                  'metric_unit' ='Units',
+                  'province' = 'Province')
 
   #standardize parameters
 
@@ -185,13 +209,15 @@ get_npri <- function(URL_emissions = NULL, URL_sources = NULL) {
                                             'Sulphur dioxide' = 'so2'))
 
   #get the air zone
-  df_NPRI <- df_NPRI %>%
+  df_NPRI <-  df_NPRI %>%
     dplyr::rename( lat = Latitude, lon = Longitude, ems_id = NPRI_ID) %>%
     dplyr::filter(!is.na(lat),!is.na(lon),abs(lat)<=90) %>%
     rcaaqs::assign_airzone(bcmaps::airzones()) %>%
     dplyr::rename( latitude = lat , longitude = lon, NPRI_ID = ems_id,
-                   sector = SectorDescriptionEn)
+                   sector = Sector)
 
 
   return(df_NPRI)
 }
+
+
