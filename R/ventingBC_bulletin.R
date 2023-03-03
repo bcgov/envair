@@ -697,6 +697,7 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE,isCOVID = FALSE,fireban=NULL)
 
 
 
+
 #' Retrieves the venting index FLCN 39 from ECCC data mart
 #'
 #' This function connects to ECCC datamart and retrieves venting data
