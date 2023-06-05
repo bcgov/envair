@@ -135,8 +135,8 @@ importBC_data_<-function(parameter_or_station,
   #debug
   if (0)
   {
-    parameter_or_station <-"Crofton Substation"
-    years <- 2019:2021
+    parameter_or_station <-"SO2"
+    years <- 2020:2021
 
 
 
@@ -144,7 +144,7 @@ importBC_data_<-function(parameter_or_station,
     parameter_or_station <- 'smithers'
     years <- 2020
     pad = TRUE
-    use_openairformat <- FALSE
+    use_openairformat <- TRUE
 
     use_ws_vector <- FALSE
   }
@@ -739,13 +739,11 @@ importBC_data_<-function(parameter_or_station,
 #         }
 #       })
 
-      # data.result <-
+      data.result <-
       data.result %>%
         pad_data(date_time= c('date','DATE_PST')[c('date','DATE_PST') %in% cols_],
                  values = c(cols_vals,cols_instrument,cols_unit),
-                 add_DATETIME = !use_openairformat) %>%
-        View()
-
+                 add_DATETIME = !use_openairformat)
     }
 
   }

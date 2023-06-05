@@ -36,6 +36,7 @@ if (0) {
   header_row <- NULL
   data_row <- NULL
   ExcelURL <- woodstove_file
+  silent = FALSE
 
 }
   require(dplyr)
@@ -100,6 +101,8 @@ for (sheet_ in sheet)
 
 
   df <- readxl::read_excel(Mytmpfile,sheet=sheet_,skip=header_row_ - 1)
+
+  colnames_df <- colnames(df)
 
   if (data_row_ != header_row_ + 1)
   {
