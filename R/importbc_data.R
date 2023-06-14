@@ -242,6 +242,11 @@ importBC_data <- function(parameter_or_station,
 
         df_ <- arrow::read_parquet(a)
 
+        try({
+          df_ <- df_ %>%
+            mutate(STATION_NAME = gsub('[^[:alnum:]]',' ',STATION_NAME))
+        })
+
         if (is_parameter) {
           df_ <- df_ %>%
             filter(tolower(PARAMETER) %in% parameter_or_station) %>%
@@ -257,6 +262,10 @@ importBC_data <- function(parameter_or_station,
         df_ <- readr::read_csv(a) %>%
           mutate(DATE_PST = as.character((DATE_PST)))
 
+        try({
+          df_ <- df_ %>%
+            mutate(STATION_NAME = gsub('[^[:alnum:]]',' ',STATION_NAME))
+        })
           if (is_parameter) {
             df_ <- df_ %>%
               select(any_of(cols_selected))

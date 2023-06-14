@@ -145,6 +145,7 @@ get_tfee <- function(ExcelURL = NULL) {
   df <- get_excel_table(ExcelURL = ExcelURL, sheet = sheets, silent = TRUE)
 
   df <- df %>%
+    mutate(STATION_NAME = gsub('[^[:alnum:]]',' ',STATION_NAME)) %>%
     dplyr::rename(PARAMETER = sheet) %>%
     dplyr::mutate(PARAMETER = gsub('TFEE','',PARAMETER)) %>%
     dplyr::mutate(PARAMETER = gsub('_','',PARAMETER)) %>%
