@@ -28,15 +28,20 @@ pad_data <- function(df,date_time = NULL,padby='hour' ,values = NULL,time_ending
 
     df <- readRDS('./test_data/raw_data.Rds')
     df <- readRDS('./test_data/raw_data_day.Rds')
+
+
      # saveRDS(test,'./test_data/raw_data.Rds')
-    # df <- envair::importBC_data('no2',2020)
+    df <- envair::importBC_data('o3',2020:2021)
     # df <- data.result
+    df0 <- df
     date_time <- NULL
-    values <- NULL
+    values <- c('RAW_VALUE','ROUNDED_VALUE','flag_tfee',
+                'VALIDATION_STATUS','STATION_NAME_FULL',
+                'INSTRUMENT')
     time_ending <- TRUE
     add_DATETIME = TRUE
-    padby <- 'day'
-    df <- data.result
+    padby <- 'hour'
+    # df <- data.result
     date_time <-  c('date','DATE_PST')[c('date','DATE_PST') %in% cols_]
     values = c(cols_vals,cols_instrument,cols_unit)
     time_ending = !use_openairformat
