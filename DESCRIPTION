@@ -1,7 +1,7 @@
 Type: Package
 Package: envair
 Title: BC ENV Air Quality Monitoring Data Access
-Version: 0.3.0.100
+Version: 0.2.2.200
 Authors@R: 
     c(person(given = "Jerome", 
              family = "Robles", 
@@ -32,8 +32,7 @@ Imports:
      readxl (>= 1.4.0),
      httr (>= 1.4.4),
      tidyr (>= 1.2.0),
-     sf (>= 1.0-8),
-     arrow (>= 12.0.0)
+     sf (>= 1.0-8)
 Suggests:
      rmarkdown,
      bcmaps,

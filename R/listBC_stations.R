@@ -32,7 +32,6 @@ listBC_stations <- function(year=NULL,use_CAAQS = FALSE,merge_Stations = FALSE)
 {
   if (0) {
     source('./r/get_caaqs_Stn_history.R')
-    source('./r/envairfunctions.R')
     year <- 2005
     use_CAAQS = FALSE
   merge_Stations = FALSE
@@ -49,7 +48,6 @@ year <- NULL
                     sheet = 'Monitoring Station',header_row = 2)
 
     df_result <- df_result %>%
-      mutate(STATION_NAME = gsub('[^[:alnum:]]',' ',STATION_NAME)) %>%
       select(STATION_NAME,STATION_NAME_FULL) %>%
       left_join(result)
 
@@ -157,8 +155,7 @@ listBC_stations_<-function(year=NULL)
                                        "OFF"="INACTIVE",
                                        "1" = "ACTIVE",
                                        "0" = "INACTIVE")
-    ) %>%
-    mutate(STATION_NAME = gsub('[^[:alnum:]]',' ',STATION_NAME))
+    )
 
 
   #fix if there are no NOTES column

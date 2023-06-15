@@ -36,7 +36,6 @@ if (0) {
   header_row <- NULL
   data_row <- NULL
   ExcelURL <- woodstove_file
-  silent = FALSE
 
 }
   require(dplyr)
@@ -102,8 +101,6 @@ for (sheet_ in sheet)
 
   df <- readxl::read_excel(Mytmpfile,sheet=sheet_,skip=header_row_ - 1)
 
-  colnames_df <- colnames(df)
-
   if (data_row_ != header_row_ + 1)
   {
     df2 <- readxl::read_excel(Mytmpfile,sheet=sheet_,skip=header_row_ - 1,col_names=colnames(df))
@@ -145,7 +142,6 @@ get_tfee <- function(ExcelURL = NULL) {
   df <- get_excel_table(ExcelURL = ExcelURL, sheet = sheets, silent = TRUE)
 
   df <- df %>%
-    mutate(STATION_NAME = gsub('[^[:alnum:]]',' ',STATION_NAME)) %>%
     dplyr::rename(PARAMETER = sheet) %>%
     dplyr::mutate(PARAMETER = gsub('TFEE','',PARAMETER)) %>%
     dplyr::mutate(PARAMETER = gsub('_','',PARAMETER)) %>%
