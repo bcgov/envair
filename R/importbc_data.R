@@ -58,13 +58,13 @@ importBC_data <- function(parameter_or_station,
     source('./r/get_caaqs_stn_history.R')
     source('./r/importbc_data.R')
     parameter_or_station <- c('pm25')
-    parameter_or_station <- 'smithers'
+    # parameter_or_station <- 'smithers'
     years <- c(2021:2022)
     pad = TRUE
     use_openairformat <- TRUE
     use_ws_vector <- FALSE
-    flag_TFEE = FALSE
-    merge_Stations = FALSE
+    flag_TFEE = TRUE
+    merge_Stations = TRUE
 
   }
 
@@ -232,7 +232,7 @@ importBC_data <- function(parameter_or_station,
     }
     print(paste('reading the file:',lst_))
     #read file, need to identify if parquet or csv
-
+    years_selected <- df_datasource$year[df_datasource$URL %in% lst_]
     try({
       a <- tempfile()
       curl::curl_download(lst_,a,quiet = FALSE)
@@ -241,10 +241,15 @@ importBC_data <- function(parameter_or_station,
       if (grepl('.parquet',lst_,ignore.case = TRUE)) {
 
         df_ <- arrow::read_parquet(a)
-
+        df_ <- df_ %>%
+          mutate(TIME = format(ymd_hms(DATE_PST),format = '%H:%M')) %>%
+          mutate(TIME = ifelse(TIME == '00:00','24:00',TIME))
         try({
           df_ <- df_ %>%
-            mutate(STATION_NAME = gsub('[^[:alnum:]]',' ',STATION_NAME))
+            mutate(STATION_NAME = gsub('[^[:alnum:]]',' ',STATION_NAME)) %>%
+            mutate(year = year(DATE)) %>%
+            filter(year %in% years_selected) %>%
+            select(-year)
         })
 
         if (is_parameter) {
@@ -259,21 +264,35 @@ importBC_data <- function(parameter_or_station,
       }
 
       if (grepl('.csv',lst_,ignore.case = TRUE)) {
-        df_ <- readr::read_csv(a) %>%
-          mutate(DATE_PST = as.character((DATE_PST)))
+        df_ <- readr::read_csv(a)
 
+
+        df_ <-df_ %>%
+          mutate(date_time = DATE_PST - hours(1)) %>%
+          mutate(year = year(date_time)) %>%
+          filter(year %in% years_selected) %>%
+          mutate(DATE = date(date_time),
+                 TIME = format(DATE_PST,  '%H:%M')) %>%
+          mutate(TIME = ifelse(TIME == '00:00','24:00', TIME),
+                 DATE_PST = format(DATE_PST,'%Y-%m-%d %H:%M:%S')) %>%
+          select(-date_time,-year)
+
+        if (!('VALIDATION_STATUS' %in% colnames(df_))) {
+          df_ <- df_ %>%
+            mutate(VALIDATION_STATUS = 'Level 0')
+        }
         try({
           df_ <- df_ %>%
             mutate(STATION_NAME = gsub('[^[:alnum:]]',' ',STATION_NAME))
         })
-          if (is_parameter) {
-            df_ <- df_ %>%
-              select(any_of(cols_selected))
-          } else {
-            #station query, so select station only
-            df_ <- df_ %>%
-              select(any_of(cols_nonaqhi))
-          }
+        if (is_parameter) {
+          df_ <- df_ %>%
+            select(any_of(cols_selected))
+        } else {
+          #station query, so select station only
+          df_ <- df_ %>%
+            select(any_of(cols_nonaqhi))
+        }
 
 
 
@@ -285,8 +304,8 @@ importBC_data <- function(parameter_or_station,
         }
       }
 
-      df_data <- df_data %>%
-        bind_rows(df_)
+
+
 
       #add if duplicate removal needed
       if (0) {#remove duplicate data entries
@@ -307,13 +326,10 @@ importBC_data <- function(parameter_or_station,
 
 
     })
+    df_data <-  df_data %>%
+      bind_rows(df_)
   }
 
-  #filter from the data
-  df_data <- df_data %>%
-    mutate(year = lubridate::year(lubridate::ymd(DATE))) %>%
-    filter(year %in% years) %>%
-    select(-year)
 
   #convert to datetime
   df_data$DATE_PST <- lubridate::ymd_hms(df_data$DATE_PST)
@@ -349,24 +365,34 @@ importBC_data <- function(parameter_or_station,
                        'INSTRUMENT','INSTRUMENT_ORIGINAL'))
   }
 
+  df_data$STATION_NAME_FULL <- toupper(df_data$STATION_NAME_FULL)
   if (pad) {
 
+    if (0) {
+      df0 <- df_data
+      colnames(df0)
+    }
+    df_data <- df_data %>%
+      select(PARAMETER,DATE_PST,DATE,TIME,STATION_NAME,STATION_NAME_FULL,INSTRUMENT,
+             RAW_VALUE,ROUNDED_VALUE,VALIDATION_STATUS,flag_tfee)
 
-    df_data <- pad_data(df_data,date_time = 'DATE_PST')
+    df_data <- pad_data(df_data,date_time = 'DATE_PST',values = c('RAW_VALUE','ROUNDED_VALUE','flag_tfee',
+                                                                  'VALIDATION_STATUS'))
   }
   #perform options
   #more process if station is selected
   if (is_parameter) {
 
     df_data <- df_data %>%
-      arrange(PARAMETER,STATION_NAME,INSTRUMENT,DATE_PST)
+      arrange(PARAMETER,STATION_NAME,INSTRUMENT,DATE_PST) %>%
+      COLUMN_REORDER(c('PARAMETER','DATE_PST','DATE','TIME','STATION_NAME','STATION_NAME_FULL','INSTRUMENT'))
     #done, sending results
     return(df_data)
   } else
   {
     #station was selected
     df_data <- df_data %>%
-    filter(grepl(paste(parameter_or_station,collapse = '|'),STATION_NAME,ignore.case = TRUE))
+      filter(grepl(paste(parameter_or_station,collapse = '|'),STATION_NAME,ignore.case = TRUE))
 
     return(df_data)
 
