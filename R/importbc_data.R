@@ -34,8 +34,10 @@
 #' This function retrieves TFEE from the CAAQS station history excel file
 #' ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/
 #' @param merge_Stations default is FALSE. it will combine data from stations and alternative stations
+#' @param isCAAQS default is FALSE. If TRUE, column names will be compatible to the rcaaqs package
 #' This function retrieves thsoe details from the CAAQS station history excel file
 #'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/
+#'
 #'
 #'@examples
 #' importBC_data('Prince George Plaza 400')
@@ -46,7 +48,8 @@
 importBC_data <- function(parameter_or_station,
                           years=NULL,use_openairformat=TRUE,
                           use_ws_vector = FALSE,pad = TRUE,
-                          flag_TFEE = FALSE, merge_Stations = FALSE) {
+                          flag_TFEE = FALSE, merge_Stations = FALSE,
+                          isCAAQS=FALSE) {
 
   #debug
   if (0)
@@ -412,6 +415,18 @@ importBC_data <- function(parameter_or_station,
       arrange(PARAMETER,STATION_NAME,INSTRUMENT,DATE_PST) %>%
       COLUMN_REORDER(c('PARAMETER','DATE_PST','DATE','TIME','STATION_NAME','STATION_NAME_FULL','INSTRUMENT'))
     #done, sending results
+
+
+    if (isCAAQS) {
+      df_data <- df_data %>%
+      mutate(date_tume = DATE_PST - hours(1)) %>%
+      rename(site = STATION_NAME,
+             instrument = INSTRUMENT,
+             value = RAW_VALUE,
+             date = DATE)
+    colnames(df_data) <- tolower(colnames(df_data))
+    }
+
     return(df_data)
   } else
   {
