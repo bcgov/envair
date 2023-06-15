@@ -45,7 +45,7 @@
 #' @export
 importBC_data <- function(parameter_or_station,
                           years=NULL,use_openairformat=TRUE,
-                          use_ws_vector = FALSE,pad = TRUE,
+                          use_ws_vector = FALSE,pad = FALSE,
                           flag_TFEE = FALSE, merge_Stations = FALSE) {
 
   #debug
