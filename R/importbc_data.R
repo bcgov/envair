@@ -57,7 +57,7 @@ importBC_data <- function(parameter_or_station,
     source('./r/envairfunctions.R')
     source('./r/get_caaqs_stn_history.R')
     source('./r/importbc_data.R')
-    parameter_or_station <- c('pm25')
+    parameter_or_station <- c('no2')
     # parameter_or_station <- 'smithers'
     years <- c(2021:2022)
     pad = TRUE
@@ -382,6 +382,26 @@ importBC_data <- function(parameter_or_station,
   }
   #perform options
   #more process if station is selected
+
+
+  #special case fix
+  #invalidation for Williams Lake 20230615
+  df_data <-  df_data %>%
+    mutate(year = year(DATE)) %>%
+    mutate(RAW_VALUE = ifelse(
+      (year %in% c(2021,2022) &
+         grepl('Williams Lake',STATION_NAME,ignore.case = TRUE) &
+                           PARAMETER %in% c('NO2','O3','SO2')),
+      NA,RAW_VALUE)) %>%
+    mutate(ROUNDED_VALUE = ifelse(
+      (year %in% c(2021,2022) &
+         grepl('Williams Lake',STATION_NAME,ignore.case = TRUE) &
+         PARAMETER %in% c('NO2','O3','SO2')),
+      NA,ROUNDED_VALUE)) %>%
+    select(-year)
+
+
+
   if (is_parameter) {
 
     df_data <- df_data %>%
