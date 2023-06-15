@@ -377,7 +377,8 @@ importBC_data <- function(parameter_or_station,
              RAW_VALUE,ROUNDED_VALUE,VALIDATION_STATUS,flag_tfee)
 
     df_data <- pad_data(df_data,date_time = 'DATE_PST',values = c('RAW_VALUE','ROUNDED_VALUE','flag_tfee',
-                                                                  'VALIDATION_STATUS'))
+                                                                  'VALIDATION_STATUS','STATION_NAME_FULL',
+                                                                  'INSTRUMENT'))
   }
   #perform options
   #more process if station is selected
