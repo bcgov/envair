@@ -583,12 +583,18 @@ round3_old<-function(x,num_format=5.2)
 #' @param path.ftp the ftp path
 GET_FTP_DETAILS<-function(path.ftp)
 {
+  if (0) {
+    path.ftp <- "ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/AnnualSummary/"
+  }
+
+
   data.filedetails<-
     data.frame(FILEALL=unlist(strsplit(x=
                                          RCurl::getURL(url=path.ftp,verbose=FALSE,
                                                 ftp.use.epsv=TRUE
                                          ),
-                                       split='\r\n')))%>%
+                                       split='\n')))%>%
+    mutate(FILEALL = gsub('\r','',FILEALL,ignore.case = TRUE)) %>%
     tidyr::separate(FILEALL,c('DATE','TIME','INDEX','FILENAME'),sep=' +',extra='drop')%>%
     dplyr::mutate(URL=paste(path.ftp,FILENAME,sep=''))%>%
     dplyr::mutate(CREATION_TIME=paste(DATE,TIME))%>%
