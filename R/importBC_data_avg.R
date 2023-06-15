@@ -49,10 +49,11 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
     source('./r/get_caaqs_stn_history.R')
     source('./r/envairfunctions.R')
     source('./r/importBC_data_avg.R')
-    parameter <- 'no2'
+    parameter <- 'O3'
     parameter <- df
-    years <- NULL
-    averaging_type <- c('annual mean 1hr','annual mean 24h')
+    years <- 2016
+    # averaging_type <- c('annual mean 1hr','annual mean 24h')
+    averaging_type = 'd8hm'
     data_threshold <- 0.75
     merge_Stations <- TRUE
     flag_TFEE = TRUE
@@ -156,9 +157,9 @@ importBC_data_avg0 <- function(parameter, years = NULL, averaging_type =  NULL, 
     source('./r/get_caaqs_stn_history.R')
     source('./r/envairfunctions.R')
     # parameter <- 'pm25'
-    parameter <- df
+    parameter <- 'o3'
     years <- 2018
-    averaging_type <- 'annual 4th 1hr'
+    averaging_type <- 'd8hm'
     data_threshold <- 0.75
     merge_Stations <- TRUE
     flag_tfee = TRUE
@@ -405,7 +406,7 @@ return(ungroup(df_result))
 importBC_data_avg_ <- function(parameter, years = NULL, averaging_type =  NULL, data_threshold = 0.75) {
 
   if (0) {
-    paramter <- df
+    parameter <- importBC_data('o3',2015)
     years = 2018
     averaging_type =  'd8hm'
     data_threshold = 0.75
@@ -560,10 +561,10 @@ importBC_data_avg_ <- function(parameter, years = NULL, averaging_type =  NULL, 
 
 
     # get the daily maximum
-    df <-  df %>%
+    df <- df %>%
       ungroup() %>%
       dplyr::mutate(datetime = DATE_PST-lubridate::hours(1)) %>%
-      dplyr::mutate(DATE = as.character(datetime,format='%Y-%m-%d')) %>%
+      dplyr::mutate(DATE = format(datetime,'%Y-%m-%d')) %>%
       dplyr::group_by(dplyr::across(c('DATE',cols_select))) %>%
       dplyr::summarise(RAW_VALUE_D8HM = max(RAW_VALUE_8h),
                        ROUNDED_VALUE_D8HM = max(ROUNDED_VALUE_8h),
