@@ -419,7 +419,7 @@ importBC_data <- function(parameter_or_station,
 
     if (isCAAQS) {
       df_data <- df_data %>%
-      mutate(date_tume = DATE_PST - hours(1)) %>%
+      mutate(date_time = DATE_PST - hours(1)) %>%
       rename(site = STATION_NAME,
              instrument = INSTRUMENT,
              value = RAW_VALUE,
