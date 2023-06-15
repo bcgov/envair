@@ -228,7 +228,7 @@ importBC_data <- function(parameter_or_station,
   df_data <- NULL
   for (lst_ in lst_source) {
     if (0) {
-      lst_ <- lst_source[[6]]
+      lst_ <- lst_source[[1]]
     }
     print(paste('reading the file:',lst_))
     #read file, need to identify if parquet or csv
