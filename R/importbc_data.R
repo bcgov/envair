@@ -62,7 +62,7 @@ importBC_data <- function(parameter_or_station,
     source('./r/importbc_data.R')
     parameter_or_station <- c('o3','no2')
     # parameter_or_station <- 'smithers'
-    years <- c(2021:2022)
+    years <- c(2019:2022)
     pad = TRUE
     use_openairformat <- TRUE
     use_ws_vector <- FALSE
@@ -360,14 +360,26 @@ importBC_data <- function(parameter_or_station,
     lst_history <- get_station_history() %>%
       select(STATION_NAME,INSTRUMENT,`Merged Station Name`,`Merged Instrument Name`)
 
+    #note that instrument matching only applies to PM
+    #but renaming of station names applies to all
+
+    #change the instrument name
     df_data <- df_data %>%
       left_join(lst_history) %>%
-      mutate(STATION_NAME_NEW = ifelse(is.na(`Merged Station Name`),STATION_NAME,`Merged Station Name`),
-             INSTRUMENT_NEW = ifelse(is.na(`Merged Instrument Name`),INSTRUMENT,`Merged Instrument Name`)) %>%
+      mutate(INSTRUMENT_NEW = ifelse(is.na(`Merged Instrument Name`),INSTRUMENT,`Merged Instrument Name`)) %>%
       select(-`Merged Station Name`,-`Merged Instrument Name`) %>%
-      dplyr::rename(STATION_NAME_ORIGINAL = STATION_NAME,
-                    INSTRUMENT_ORIGINAL = INSTRUMENT) %>%
-      dplyr::rename(STATION_NAME = STATION_NAME_NEW,INSTRUMENT = INSTRUMENT_NEW) %>%
+      dplyr::rename(INSTRUMENT_ORIGINAL = INSTRUMENT) %>%
+      dplyr::rename(INSTRUMENT = INSTRUMENT_NEW)
+
+    #change the station name
+    df_data <- df_data %>%
+      left_join(lst_history %>%
+                  select(-INSTRUMENT ,-`Merged Instrument Name`) %>%
+                  distinct()) %>%
+      mutate(STATION_NAME_NEW = ifelse(is.na(`Merged Station Name`),STATION_NAME,`Merged Station Name`)) %>%
+      select(-`Merged Station Name`) %>%
+      dplyr::rename(STATION_NAME_ORIGINAL = STATION_NAME) %>%
+      dplyr::rename(STATION_NAME = STATION_NAME_NEW) %>%
       COLUMN_REORDER(c('PARAMETER','DATE_PST','DATE','TIME','STATION_NAME','STATION_NAME_ORIGINAL',
                        'INSTRUMENT','INSTRUMENT_ORIGINAL'))
   }
