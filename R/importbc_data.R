@@ -60,14 +60,15 @@ importBC_data <- function(parameter_or_station,
     source('./r/envairfunctions.R')
     source('./r/get_caaqs_stn_history.R')
     source('./r/importbc_data.R')
-    parameter_or_station <- c('o3')
+    parameter_or_station <- c('o3','no2')
     # parameter_or_station <- 'smithers'
-    years <- c(2021)
+    years <- c(2021:2022)
     pad = TRUE
     use_openairformat <- TRUE
     use_ws_vector <- FALSE
     flag_TFEE = TRUE
     merge_Stations = TRUE
+    isCAAQS <- TRUE
 
   }
 
@@ -149,7 +150,7 @@ importBC_data <- function(parameter_or_station,
 
 
   if (any(parameter_or_station %in% check_datalist)) {
-    print('parameter/s entered. retrieving data....')
+    print(paste('Retrieving data from the following parameters:',paste(parameter_or_station,collapse = ',')))
     is_parameter <- TRUE
 
 
@@ -162,7 +163,7 @@ importBC_data <- function(parameter_or_station,
 
   #ensure the
   #no padding, quick query if flag_TFEE or merge_station
-  if (flag_TFEE | merge_Stations){
+  if (flag_TFEE | merge_Stations | isCAAQS){
     #better remove duplicates, and fix names
     pad <- TRUE
   }
@@ -381,7 +382,7 @@ importBC_data <- function(parameter_or_station,
 
     df_data <-   df_data %>%
       select(any_of(c('PARAMETER','DATE_PST','DATE','TIME','STATION_NAME','STATION_NAME_FULL','INSTRUMENT',
-             'RAW_VALUE','ROUNDED_VALUE','VALIDATION_STATUS','flag_tfee')))
+                      'RAW_VALUE','ROUNDED_VALUE','VALIDATION_STATUS','flag_tfee')))
 
     df_data <- pad_data(df_data,date_time = 'DATE_PST',values = c('RAW_VALUE','ROUNDED_VALUE','flag_tfee',
                                                                   'VALIDATION_STATUS','STATION_NAME_FULL',
@@ -398,7 +399,7 @@ importBC_data <- function(parameter_or_station,
     mutate(RAW_VALUE = ifelse(
       (year %in% c(2021,2022) &
          grepl('Williams Lake',STATION_NAME,ignore.case = TRUE) &
-                           PARAMETER %in% c('NO2','O3','SO2')),
+         PARAMETER %in% c('NO2','O3','SO2')),
       NA,RAW_VALUE)) %>%
     mutate(ROUNDED_VALUE = ifelse(
       (year %in% c(2021,2022) &
@@ -418,13 +419,13 @@ importBC_data <- function(parameter_or_station,
 
 
     if (isCAAQS) {
+      #standardize the column names
+      colnames(df_data) <- tolower(colnames(df_data))
       df_data <- df_data %>%
-      mutate(date_time = DATE_PST - hours(1)) %>%
-      rename(site = STATION_NAME,
-             instrument = INSTRUMENT,
-             value = RAW_VALUE,
-             date = DATE)
-    colnames(df_data) <- tolower(colnames(df_data))
+        mutate(date_time = date_pst - hours(1)) %>%
+        rename(site = station_name,
+               value = raw_value) %>%
+        COLUMN_REORDER(c('parameter','date_time','date_pst','date','time','site','instrument','value'))
     }
 
     return(df_data)

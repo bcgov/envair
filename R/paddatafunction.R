@@ -28,13 +28,15 @@ pad_data <- function(df,date_time = NULL,padby='hour' ,values = NULL,time_ending
 
     df <- readRDS('./test_data/raw_data.Rds')
     df <- readRDS('./test_data/raw_data_day.Rds')
-
+    df_data <- pad_data(df_data,date_time = 'DATE_PST',values = c('RAW_VALUE','ROUNDED_VALUE','flag_tfee',
+                                                                  'VALIDATION_STATUS','STATION_NAME_FULL',
+                                                                  'INSTRUMENT'))
 
      # saveRDS(test,'./test_data/raw_data.Rds')
     df <- envair::importBC_data('o3',2020:2021)
     # df <- data.result
-    df0 <- df
-    date_time <- NULL
+    df <- df0
+    date_time <- 'DATE_PST'
     values <- c('RAW_VALUE','ROUNDED_VALUE','flag_tfee',
                 'VALIDATION_STATUS','STATION_NAME_FULL',
                 'INSTRUMENT')
@@ -56,7 +58,9 @@ pad_data <- function(df,date_time = NULL,padby='hour' ,values = NULL,time_ending
   require(dplyr)
 
   print('padding the data')
-
+   if (0) {
+     # df1 <- df
+   }
   df <- ungroup(df)
   cols_ <- colnames(df)
 
@@ -115,8 +119,8 @@ pad_data <- function(df,date_time = NULL,padby='hour' ,values = NULL,time_ending
     lst_datetime <- df %>%
       pull(date_time)
 
-    start_date <- lubridate::ymd_hm(paste(lubridate::year(min(lst_datetime)),'-01-01 00:00',sep=''), tz='etc/GMT+8')
-    end_date <- lubridate::ymd_hm(paste(lubridate::year(max(lst_datetime)),'-12-31 23:00',sep=''), tz='etc/GMT+8')
+    start_date <- lubridate::ymd_hm(paste(lubridate::year(min(lst_datetime)),'-01-01 00:00',sep=''))
+    end_date <- lubridate::ymd_hm(paste(lubridate::year(max(lst_datetime)),'-12-31 23:00',sep=''))
 
     df_datetime <- dplyr::tibble(!!date_time := seq.POSIXt(from = start_date, to=end_date , by='hour'))
 
