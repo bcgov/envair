@@ -11,6 +11,35 @@
 # See the License for the specific language governing permissions and limitations under the License.
 
 
+#' Extracts the date time string into a format YYYY-MM-DD hh:mm
+#'
+#' @param dateTimeString is a vector containing datetime string
+#'
+#' @export
+extractDateTime <- function(dateTimeString) {
+
+  if (0) {
+    dateTimeString <- c(df_data$DATE_PST)
+    dateTimeString <- c(df_data$DATE_PST,
+                        paste(df_$DATE_PST,'00',sep=':'))
+  }
+
+
+  if (is.POSIXct(dateTimeString)) {
+    dateTimeString <- format(dateTimeString,'%Y-%m-%d %H:%M')
+  }
+  df_datetime <- tibble(
+    datetime = dateTimeString) %>%
+    # mutate(length = nchar(datetime)) %>%
+    mutate(result =gsub("^([^:]*:[^:]*):.*", "\\1", datetime))
+
+
+
+
+  return(df_datetime$result)
+
+}
+
 #' Import Hourly BC Data from station or parameter
 #'
 #' This function retrieves station or parameter hourly data from the BC open data portal
@@ -60,9 +89,9 @@ importBC_data <- function(parameter_or_station,
     source('./r/envairfunctions.R')
     source('./r/get_caaqs_stn_history.R')
     source('./r/importbc_data.R')
-    parameter_or_station <- c('o3','no2')
+    parameter_or_station <- c('so2')
     # parameter_or_station <- 'smithers'
-    years <- c(2019:2022)
+    years <- c(2021:2023)
     pad = TRUE
     use_openairformat <- TRUE
     use_ws_vector <- FALSE
@@ -213,6 +242,8 @@ importBC_data <- function(parameter_or_station,
   #for DIRECTORIES, check for the parquet files
   lst_dirs <- unique(df_datasource$URL[grepl('dir',df_datasource$INDEX,ignore.case = TRUE)])
   lst_dirs <- paste(lst_dirs,'/',sep='')
+
+
   for (dirs_ in lst_dirs) {
     try({
       df_ <- GET_FTP_DETAILS(dirs_) %>%
@@ -232,6 +263,8 @@ importBC_data <- function(parameter_or_station,
     lst_source <- lst_source[!grepl('aqhi',lst_source,ignore.case = TRUE)]
   }
 
+  #retrieve data----
+  #scan one file at a time
   df_data <- NULL
   for (lst_ in lst_source) {
     if (0) {
@@ -244,12 +277,27 @@ importBC_data <- function(parameter_or_station,
       a <- tempfile()
       curl::curl_download(lst_,a,quiet = FALSE)
 
+
       #read the parquet or csv file
       if (grepl('.parquet',lst_,ignore.case = TRUE)) {
 
         df_ <- arrow::read_parquet(a)
+        if (0) {
+          df_test <- df_  %>%
+            select(DATE_PST) %>%
+            mutate(nchar = nchar(DATE_PST))
+
+          unique(df_test$nchar)
+        }
+
+
+        df_$DATE_PST <- extractDateTime(df_$DATE_PST )
+
+
         df_ <- df_ %>%
-          mutate(TIME = format(ymd_hms(DATE_PST),format = '%H:%M')) %>%
+          mutate(DATE_PST = ymd_hm(DATE_PST)) %>%
+          mutate(TIME = format(DATE_PST, '%H:%M')) %>%
+
           mutate(TIME = ifelse(TIME == '00:00','24:00',TIME))
         try({
           df_ <- df_ %>%
@@ -273,7 +321,8 @@ importBC_data <- function(parameter_or_station,
       if (grepl('.csv',lst_,ignore.case = TRUE)) {
         df_ <- readr::read_csv(a)
 
-
+        df_$DATE_PST <- extractDateTime(df_$DATE_PST )
+        df_$DATE_PST <- ymd_hm(df_$DATE_PST)
         df_ <-df_ %>%
           mutate(date_time = DATE_PST - hours(1)) %>%
           mutate(year = year(date_time)) %>%
@@ -338,8 +387,7 @@ importBC_data <- function(parameter_or_station,
   }
 
 
-  #convert to datetime
-  df_data$DATE_PST <- lubridate::ymd_hms(df_data$DATE_PST)
+
   #perform other functions
   if (flag_TFEE) {
     print('adding tfee flags')
