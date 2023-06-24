@@ -277,90 +277,51 @@ importBC_data <- function(parameter_or_station,
       a <- tempfile()
       curl::curl_download(lst_,a,quiet = FALSE)
 
-
-      #read the parquet or csv file
+      df_ <- NULL
       if (grepl('.parquet',lst_,ignore.case = TRUE)) {
-
         df_ <- arrow::read_parquet(a)
-        if (0) {
-          df_test <- df_  %>%
-            select(DATE_PST) %>%
-            mutate(nchar = nchar(DATE_PST))
-
-          unique(df_test$nchar)
-        }
-
-
-        df_$DATE_PST <- extractDateTime(df_$DATE_PST )
-
-
-        df_ <- df_ %>%
-          mutate(DATE_PST = ymd_hm(DATE_PST)) %>%
-          mutate(TIME = format(DATE_PST, '%H:%M')) %>%
-
-          mutate(TIME = ifelse(TIME == '00:00','24:00',TIME))
-        try({
-          df_ <- df_ %>%
-            mutate(STATION_NAME = gsub('[^[:alnum:]]',' ',STATION_NAME)) %>%
-            mutate(year = year(DATE)) %>%
-            filter(year %in% years_selected) %>%
-            select(-year)
-        })
-
-        if (is_parameter) {
-          df_ <- df_ %>%
-            filter(tolower(PARAMETER) %in% parameter_or_station) %>%
-            dplyr::select(any_of(cols_selected))
-        } else {
-          #station query, so select station only
-          df_ <- df_ %>%
-            dplyr::select(any_of(cols_nonaqhi))
-        }
       }
-
       if (grepl('.csv',lst_,ignore.case = TRUE)) {
         df_ <- readr::read_csv(a)
-
-        df_$DATE_PST <- extractDateTime(df_$DATE_PST )
-        df_$DATE_PST <- ymd_hm(df_$DATE_PST)
-        df_ <-df_ %>%
-          mutate(date_time = DATE_PST - hours(1)) %>%
-          mutate(year = year(date_time)) %>%
-          filter(year %in% years_selected) %>%
-          mutate(DATE = date(date_time),
-                 TIME = format(DATE_PST,  '%H:%M')) %>%
-          mutate(TIME = ifelse(TIME == '00:00','24:00', TIME),
-                 DATE_PST = format(DATE_PST,'%Y-%m-%d %H:%M:%S')) %>%
-          select(-date_time,-year)
-
-        if (!('VALIDATION_STATUS' %in% colnames(df_))) {
-          df_ <- df_ %>%
-            mutate(VALIDATION_STATUS = 'Level 0')
-        }
-        try({
-          df_ <- df_ %>%
-            mutate(STATION_NAME = gsub('[^[:alnum:]]',' ',STATION_NAME))
-        })
-        if (is_parameter) {
-          df_ <- df_ %>%
-            select(any_of(cols_selected))
-        } else {
-          #station query, so select station only
-          df_ <- df_ %>%
-            select(any_of(cols_nonaqhi))
-        }
-
-
-
-        #add parameter colname if not available
-        if (!'PARAMETER' %in% colnames(df_)) {
-          df_ <- df_ %>%
-            mutate(PARAMETER = gsub('.*/','',lst_)) %>%
-            mutate(PARAMETER = gsub('.csv','',PARAMETER))
-        }
       }
 
+      #filter based on parameter if parameter
+      #or station name if not isparametr
+      if (is_parameter) {
+        df_ <- df_ %>%
+          filter(grepl(paste(parameter_or_station,collapse = '|'),
+                       PARAMETER,ignore.case = TRUE))%>%
+          dplyr::select(any_of(cols_selected))
+      } else {
+        df_ <- df_ %>%
+          filter(!grepl('aqhi',PARAMETER,ignore.case = TRUE)) %>%
+          filter(grepl(paste(parameter_or_station,collapse = '|'),
+                       STATION_NAME,ignore.case = TRUE)) %>%
+          dplyr::select(any_of(cols_nonaqhi))
+      }
 
+      cols_df <- colnames(df_)
+
+
+      #process the datetime from DATE_PST
+      df_$DATE_PST <- extractDateTime(df_$DATE_PST )
+
+      df_ <- df_ %>%
+        mutate(DATE_PST
+               = ymd_hm(DATE_PST)) %>%
+        mutate(datetime = DATE_PST - hours(1)) %>%
+        mutate(DATE = date(datetime)) %>%
+        mutate(TIME = format(DATE_PST, '%H:%M')) %>%
+        mutate(TIME = ifelse(TIME == '00:00','24:00',TIME)) %>%
+        mutate(STATION_NAME = gsub('[^[:alnum:]]',' ',STATION_NAME)) %>%
+        mutate(year = year(DATE)) %>%
+        filter(year %in% years_selected) %>%
+        select(-year,-datetime)
+
+      if (!('VALIDATION_STATUS' %in% cols_df)) {
+        df_ <- df_ %>%
+          mutate(VALIDATION_STATUS = 'Level 0')
+      }
 
 
       #add if duplicate removal needed
