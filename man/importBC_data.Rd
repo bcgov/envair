@@ -11,7 +11,8 @@ importBC_data(
   use_ws_vector = FALSE,
   pad = TRUE,
   flag_TFEE = FALSE,
-  merge_Stations = FALSE
+  merge_Stations = FALSE,
+  isCAAQS = FALSE
 )
 }
 \arguments{
@@ -38,7 +39,9 @@ If not declared, the current year will be used}
 This function retrieves TFEE from the CAAQS station history excel file
 ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/}
 
-\item{merge_Stations}{default is FALSE. it will combine data from stations and alternative stations
+\item{merge_Stations}{default is FALSE. it will combine data from stations and alternative stations}
+
+\item{isCAAQS}{default is FALSE. If TRUE, column names will be compatible to the rcaaqs package
 This function retrieves thsoe details from the CAAQS station history excel file
 ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/}
 }

@@ -20,7 +20,7 @@ parameter can also be a dataframe from  importBC_data(). If dataframe, it will p
 \item{years}{specifies the years to include. Use vector for multiple years. If NULL, it uses the current year.}
 
 \item{averaging_type}{is the sub-annual values of either "1-hour", "24-hour", "8-hour","d1hm", "d8hm"
-You can also request annual summaries, percentiles. Add "annual <annual stat> <on what data>": 'annual 98p 24h','annual 99p d1hm','annual xxp 1hr';'annual mean 1-hr';
+You can also request annual summaries, percentiles. Add "annual \if{html}{\out{<annual stat>}} \if{html}{\out{<on what data>}}": 'annual 98p 24h','annual 99p d1hm','annual xxp 1hr';'annual mean 1-hr';
 'annual mean 24-hr';'annual 4th d1hm'
 It can also calculate the number of exceedance to a specified value "exceedance 25.00 d1hm".
 Function will round off based on the precision of the number entered after exceedance
