@@ -1621,31 +1621,8 @@ GET_RUNNING_AVG <- function(airdata,parameter=NULL,
 }
 
 
-#' Determine if date is DST in BC or not
-#'
-#' @param datetime is the date and time
-isit_DST <- function(datetime = Sys.time())
-{
-  if (0)
-  {
-    datetime <- Sys.time()
-    datetime <- '2020-01-01 01:00'
-  }
 
-  str_time_pst <- as.character(ymd_hm(datetime,tz='etc/gmt+8'),'%Y-%m-%d %H:%M')
-  str_time_local <- as.character(format(ymd_hm(str_time_pst,tz='etc/gmt+8'),
-                                        tz='America/Vancouver','%Y-%m-%d %H:%M'))
-  time_diff <- difftime(ymd_hm(str_time_local),ymd_hm(str_time_pst),units ='hours')
-  if (as.integer(time_diff) ==1)
-  {
-    return(TRUE)
-  } else
-  {
-    return(FALSE)
-  }
-}
-
-#' Forward fills data with orevious value
+#' Forward fills data with previous value
 #'
 #' This addresses the issue where a station has multiple dataloggers
 #' and some dataloggers have not updated recent data
@@ -1834,3 +1811,104 @@ GET_SAS_EXCEL_FILE <- function(filename)
       ))
   return(df_stat_official)
 }
+
+
+#' Determine if date is DST in BC or not
+#'
+#' @param datetimePST can be character string or datetime in PST
+#'                 if NULL, is the current datetime.
+#' @param dateoutput If FALSE returns a boolean. If TRUE, It outputs local time in string format i
+#' @export
+isit_DST <- function(datetimePST = NULL,dateoutput = FALSE)
+{
+
+
+  if (0)
+  {
+    datetimePST <- NULL
+    datetimePST <- '2020-01-01 01:00'
+    datetimePST <- '2020-01-01'
+    dateoutput = FALSE
+
+    datetimePST <- c('2021-02-20 01:00','2023-08-01 01:00')
+
+
+
+    isit_DST('2020-01-01')
+
+    sapply('2020-01-01',function(i) isit_DST(i,dateoutput = TRUE))
+  }
+
+  {
+    # print(str(datetimePST))
+    #refer to datetimePST as datetime from here on out
+    datetime <- datetimePST
+
+
+    #if null datetimePST entry
+    #    - it will use system time
+    #    - system time converted to PST
+    if (is.null(datetime)) {
+      datetime <- format(Sys.time(), tz='etc/gmt+8')
+    }
+
+    #check if entered value is correct format for string
+    if (is.character(datetime)) {
+
+      #fix if no time provided, assume midnight value
+      if (!grepl(':',datetime)) {
+        datetime <- paste(datetime,'00:00',sep=' ')
+      }
+
+      #fix for those ymd_hm or ymd_hms
+      suppressWarnings({
+        datetime_ <- lubridate::ymd_hms(datetime, tz='etc/gmt+8')
+        if (is.na(datetime_)) {
+          datetime_ <- lubridate::ymd_hm(datetime, tz='etc/gmt+8')
+        }
+      })
+      if (is.na(datetime_)) {
+        stop('problem with datetime entry. make sure entry is "yyyy-mm-dd HH:MM"')
+      } else {
+        datetime <- datetime_
+      }
+    }
+
+
+    #
+    datetime = format(datetime,format = '%Y-%m-%d %H:%M')
+
+    str_time_pst <- format(lubridate::ymd_hm(datetime,tz='etc/gmt+8'),'%Y-%m-%d %H:%M')
+    str_time_local <- format(format(ymd_hm(str_time_pst,tz='etc/gmt+8'),
+                                    tz='America/Vancouver','%Y-%m-%d %H:%M'))
+    time_diff <- difftime(ymd_hm(str_time_local),ymd_hm(str_time_pst),units ='hours')
+
+    if (dateoutput) {
+      return(str_time_local)
+    } else {
+      return((as.integer(time_diff) ==1))
+    }
+  }
+
+}
+
+#' Retrieve the local time using PST input
+#'
+#' @param lst_DATEPST is list or dataframe column containing the datetime in PST
+#' @export
+isdf_DST <- function(lst_DATEPST) {
+  if (0) {
+    df <- tibble(
+      id = c(1,2),
+      DATE_PST = c('2021-02-20 01:00','2023-08-01 01:00')
+    )
+    lst_DATEPST <- df$DATE_PST
+
+    df %>%
+      dplyr::mutate(date = isdf_DST(DATE_PST))
+
+  }
+
+  sapply(lst_DATEPST,function(i) isit_DST(i,dateoutput = TRUE))
+}
+

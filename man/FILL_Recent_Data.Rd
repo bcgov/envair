@@ -2,7 +2,7 @@
 % Please edit documentation in R/envairfunctions.R
 \name{FILL_Recent_Data}
 \alias{FILL_Recent_Data}
-\title{Forward fills data with orevious value}
+\title{Forward fills data with previous value}
 \usage{
 FILL_Recent_Data(data_all, threshold = 2)
 }

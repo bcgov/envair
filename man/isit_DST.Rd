@@ -4,10 +4,13 @@
 \alias{isit_DST}
 \title{Determine if date is DST in BC or not}
 \usage{
-isit_DST(datetime = Sys.time())
+isit_DST(datetimePST = NULL, dateoutput = FALSE)
 }
 \arguments{
-\item{datetime}{is the date and time}
+\item{datetimePST}{can be character string or datetime in PST
+if NULL, is the current datetime.}
+
+\item{dateoutput}{If FALSE returns a boolean. If TRUE, It outputs local time in string format i}
 }
 \description{
 Determine if date is DST in BC or not
