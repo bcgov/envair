@@ -990,7 +990,7 @@ GET_DAILY_MAX<-function(data.input,column.name='ROUNDED_VALUE',column.date='DATE
 #' @param year is the year to check for negative and flat,
 #'             if NULL,
 #' @param file.result is the location where resulting file is to be saved
-#' @param exclude_MVRD
+#' @param exclude_MVRD means MVRD data is excluded
 GET_NEGATIVE_FLAT <- function(parameter = NULL, YEAR = NULL,
                               file.result = 'negative_flats.csv',
                               exclude_MVRD = TRUE)

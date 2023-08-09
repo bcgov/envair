@@ -17,6 +17,8 @@ or vector listing all parameters}
 
 \item{file.result}{is the location where resulting file is to be saved}
 
+\item{exclude_MVRD}{means MVRD data is excluded}
+
 \item{year}{is the year to check for negative and flat,
 if NULL,}
 }
