@@ -34,7 +34,7 @@ listBC_stations <- function(year=NULL,use_CAAQS = FALSE,merge_Stations = FALSE)
     source('./r/get_caaqs_Stn_history.R')
     source('./r/envairfunctions.R')
     year <- 2005
-    use_CAAQS = FALSE
+    use_CAAQS = TRUE
   merge_Stations = FALSE
 year <- NULL
 }
@@ -42,14 +42,29 @@ year <- NULL
   df_result <- NULL
   require(dplyr)
   df_result <- listBC_stations_()
+  try({
+    df_result$STATION_NAME_FULL = gsub('[^[:alnum:]]',' ',df_result$STATION_NAME_FULL)
+    df_result$STATION_NAME = gsub('[^[:alnum:]]',' ',df_result$STATION_NAME)
+    df_result$STATION_NAME_FULL = gsub('  ',' ',df_result$STATION_NAME_FULL)
+    df_result$STATION_NAME = gsub('  ',' ',df_result$STATION_NAME)
+  })
 
   if (use_CAAQS) {
     print('Retrieving Station List from CAAQS History Table')
     result <- get_excel_table('ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/BC_CAAQS_station_history.xlsx',
                     sheet = 'Monitoring Station',header_row = 2)
 
+    #remove extra spaces and special characters
+    try({
+      result$STATION_NAME_FULL = gsub('[^[:alnum:]]',' ',result$STATION_NAME_FULL)
+      result$STATION_NAME = gsub('[^[:alnum:]]',' ',result$STATION_NAME)
+      result$STATION_NAME_FULL = gsub('  ',' ',result$STATION_NAME_FULL)
+      result$STATION_NAME = gsub('  ',' ',result$STATION_NAME)
+    })
+
     df_result <- df_result %>%
-      mutate(STATION_NAME = gsub('[^[:alnum:]]',' ',STATION_NAME)) %>%
+      mutate(STATION_NAME = gsub('[^[:alnum:]]',' ',STATION_NAME),
+             STATION_NAME_FULL = gsub('[^[:alnum:]]',' ',STATION_NAME_FULL)) %>%
       select(STATION_NAME,STATION_NAME_FULL) %>%
       left_join(result)
 
