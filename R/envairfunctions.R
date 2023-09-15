@@ -584,10 +584,12 @@ round3_old<-function(x,num_format=5.2)
 GET_FTP_DETAILS<-function(path.ftp)
 {
   if (0) {
-    path.ftp <- "ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/AnnualSummary/"
+    path.ftp <- "ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/AnnualSummary/1980/"
   }
 
-
+  #force string to end with "/"
+  path.ftp <- paste(path.ftp,'/',sep='')
+  path.ftp <- gsub('\\//$','/',path.ftp)
   data.filedetails<-
     data.frame(FILEALL=unlist(strsplit(x=
                                          RCurl::getURL(url=path.ftp,verbose=FALSE,
