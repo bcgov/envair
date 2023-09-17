@@ -41,14 +41,6 @@
 #' importBC_data('Prince George Plaza 400')
 #' importBC_data('pm25',2015:2016,use_openairformat = FALSE)
 #' importBC_data(c('Prince George','Kamloops'),c(2010,2015))
-<<<<<<< HEAD
-=======
-#'
-#' @export
-
-
-#' deprecated CSV version
->>>>>>> f70c6590c7914bfcd2d996c19902472466711177
 importBC_data0 <- function(parameter_or_station,
                           years=NULL,use_openairformat=TRUE,
                           use_ws_vector = FALSE,pad = TRUE,
