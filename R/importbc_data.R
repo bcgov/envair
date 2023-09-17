@@ -10,6 +10,7 @@
 # See the License for the specific language governing permissions and limitations under the License.
 
 
+
 #' Extracts the date time string into a format YYYY-MM-DD hh:mm
 #'
 #' @param dateTimeString is a vector containing datetime string
