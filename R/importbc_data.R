@@ -59,13 +59,9 @@ extractDateTime <- function(dateTimeString) {
 #' sequential years, use c(2010,2015,2018)
 #' If not declared, the current year will be used
 #' @param use_openairformat is boolean,if TRUE, output is compatible with openair. Applies only to station queries
-#' @param use_ws_vector use vector wind speed? default is FALSE, if TRUE and use_openairformat is TRUE, ws is the vector wind speed
-#' @param pad default is TRUE. if FALSE, it removes all NaNs
 #' @param flag_TFEE default is FALSE. If TRUE, it will add TFEE flags on days TFEE were verified
-#' This function retrieves TFEE from the CAAQS station history excel file
-#' ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/
 #' @param merge_Stations default is FALSE. it will combine data from stations and alternative stations
-#' @param isCAAQS default is FALSE. If TRUE, column names will be compatible to the rcaaqs package
+#' @param clean_names makes the output columns in lower case letters as acceptable with tidyverse
 #' This function retrieves thsoe details from the CAAQS station history excel file
 #'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/
 #'
