@@ -76,11 +76,12 @@ extractDateTime <- function(dateTimeString) {
 #' importBC_data(c('Prince George','Kamloops'),c(2010,2015))
 #'
 #' @export
+
 importBC_data <- function(parameter_or_station,
-                          years=NULL,use_openairformat=TRUE,
-                          use_ws_vector = FALSE,pad = TRUE,
-                          flag_TFEE = FALSE, merge_Stations = FALSE,
-                          isCAAQS=FALSE) {
+                          years=NULL,
+                          flag_TFEE = TRUE,
+                          merge_Stations = TRUE,
+                          clean_names = TRUE,use_openairformat = TRUE) {
 
   #debug
   if (0)
@@ -93,14 +94,14 @@ importBC_data <- function(parameter_or_station,
     source('./r/importbc_data.R')
     parameter_or_station <- c('pm25')
     # parameter_or_station <- 'smithers'
-    years <- c(2022)
-    pad = TRUE
-    use_openairformat <- TRUE
-    use_ws_vector <- FALSE
+    years <- c(2015)
+    pad = NULL
+    use_openairformat <- NULL
+    use_ws_vector <- NULL
     flag_TFEE = TRUE
     merge_Stations = TRUE
-    isCAAQS <- TRUE
-
+    isCAAQS <- NULL
+    clean_names = TRUE
     #default
     parameter_or_station <- 'prince george'
     years=2018
@@ -118,12 +119,12 @@ importBC_data <- function(parameter_or_station,
   library(dplyr)
   library(tibble)
   library(arrow)
-
+  library(janitor)
 
   parameter_or_station <- tolower(parameter_or_station)
 
-  #default parameter list
-  #list will still be populated from year_to_date csv
+  # initial parameter list
+  # list will still be populated from year_to_date csv
   lst_params <- c('aqhi','co','h2s','hf','humidity','no','no2','nox',
                   'o3','pm10','pm25','precip','pressure','snow','so2','temp_mean','trs',
                   'vapour_pressure','wdir_uvec','wdir_vect','wspd_sclr','wspd_vect')
@@ -145,8 +146,8 @@ importBC_data <- function(parameter_or_station,
       View()
   }
 
-  #parameter name into their standard names
-  #note that ^xxxyyy$ means start and end is xxxyyy
+  # -change parameter name into their standard names
+  #     -note that ^xxxyyy$ means start and end is xxxyyy
   parameter_or_station <- tolower(parameter_or_station)
   parameter_or_station <- gsub('^pm2.5$','pm25',parameter_or_station,ignore.case=TRUE)
   parameter_or_station <- gsub('^ozone$','o3',parameter_or_station,ignore.case=TRUE)
@@ -162,16 +163,6 @@ importBC_data <- function(parameter_or_station,
 
   #remove other options if parameter_or_station is selected
 
-
-  if (all(tolower(parameter_or_station) %in% c('aqhi'))) {
-    print('AQHI only')
-    use_openairformat=FALSE
-    use_ws_vector = FALSE
-
-    flag_TFEE = FALSE
-    merge_Stations = FALSE
-    isCAAQS=FALSE
-  }
   #primary data location
   data_source1<-'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/AnnualSummary/'
   data_source2<-'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/Year_to_Date/'
@@ -212,13 +203,6 @@ importBC_data <- function(parameter_or_station,
   }
 
 
-
-  #ensure the
-  #no padding, quick query if flag_TFEE or merge_station
-  if (flag_TFEE | merge_Stations | isCAAQS){
-    #better remove duplicates, and fix names
-    pad <- TRUE
-  }
 
   #get FTP details frr all datasources
   suppressWarnings({
@@ -264,7 +248,7 @@ importBC_data <- function(parameter_or_station,
     filter(year %in% years)
 
 
-  #get parquest files
+  # get list of all parquet files
 
   df_datasource_result <- NULL
   for (urls in unique(df_datasource$URL)) {
@@ -406,6 +390,7 @@ importBC_data <- function(parameter_or_station,
   #perform other functions
   if (flag_TFEE) {
     print('adding tfee flags')
+
     df_tfee <- get_tfee() %>%
       select(PARAMETER,STATION_NAME,DATE) %>%
       mutate(DATE = as.Date(DATE)) %>%
@@ -420,12 +405,49 @@ importBC_data <- function(parameter_or_station,
 
   if (merge_Stations) {
 
+    #add index to data to make reference easy
+    df_data <- ungroup(df_data) %>%
+      mutate(index = 1:n())
+
     lst_history <- get_station_history() %>%
-      select(STATION_NAME,INSTRUMENT,`Merged Station Name`,`Merged Instrument Name`)
+      select(STATION_NAME,INSTRUMENT,`Merged Station Name`,`Merged Instrument Name`,`Start Date`,`End Date`) %>%
+      mutate(start = date(`Start Date`),
+             end =date(`End Date`))
 
     #note that instrument matching only applies to PM
     #but renaming of station names applies to all
 
+    lst_remove <- NULL  #start of indexing
+
+    # -remove station and instrument before start date
+    lst_remove_start <- lst_history %>%
+      filter(!is.na(`Start Date`))
+    for (i in 1:nrow(lst_remove_start)) {
+      index_remove <- df_data %>%
+        filter(STATION_NAME == lst_remove_start$STATION_NAME[i],
+               INSTRUMENT == lst_remove_start$INSTRUMENT[i],
+               DATE < lst_remove_start$start[i]) %>%
+        pull(index)
+
+      lst_remove <- c(lst_remove,index_remove)
+    }
+
+    # -remove station and instrument after end date
+    lst_remove_end <- lst_history %>%
+      filter(!is.na(`End Date`))
+    for (i in 1:nrow(lst_remove_end)) {
+      index_remove <- df_data %>%
+        filter(STATION_NAME == lst_remove_end$STATION_NAME[i],
+               INSTRUMENT == lst_remove_end$INSTRUMENT[i],
+               DATE >= lst_remove_end$end[i]) %>%
+        pull(index)
+
+      lst_remove <- c(lst_remove,index_remove)
+    }
+
+    # -remove from data
+    df_data <- df_data %>%
+      filter(!index %in% lst_remove)
     #change the instrument name
     df_data <- df_data %>%
       left_join(lst_history) %>%
@@ -455,42 +477,20 @@ importBC_data <- function(parameter_or_station,
     df_data$STATION_NAME_FULL = df_data$STATION_NAME
   }
 
-  if (pad) {
 
-    if (0) {
-      df0 <- df_data
-      colnames(df0)
-    }
-
-    df_data <-   df_data %>%
-      select(any_of(c('PARAMETER','DATE_PST','DATE','TIME','STATION_NAME','STATION_NAME_FULL','INSTRUMENT',
-                      'RAW_VALUE','ROUNDED_VALUE','VALIDATION_STATUS','flag_tfee')))
-
-    df_data <- pad_data(df_data,date_time = 'DATE_PST',values = c('RAW_VALUE','ROUNDED_VALUE','flag_tfee',
-                                                                  'VALIDATION_STATUS','STATION_NAME_FULL',
-                                                                  'INSTRUMENT'))
+  # - pad data to have all date_times
+  if (0) {
+    df0 <- df_data
+    colnames(df0)
   }
-  #perform options
-  #more process if station is selected
 
+  df_data <-   df_data %>%
+    select(any_of(c('PARAMETER','DATE_PST','DATE','TIME','STATION_NAME','STATION_NAME_FULL','INSTRUMENT',
+                    'RAW_VALUE','ROUNDED_VALUE','VALIDATION_STATUS','flag_tfee')))
 
-  #special case fix
-  #invalidation for Williams Lake 20230615
-  # try(
-  #   {df_data <-  df_data %>%
-  #     mutate(year = year(DATE)) %>%
-  #     mutate(RAW_VALUE = ifelse(
-  #       (year %in% c(2021,2022) &
-  #          grepl('Williams Lake',STATION_NAME,ignore.case = TRUE) &
-  #          PARAMETER %in% c('NO2','O3','SO2')),
-  #       NA,RAW_VALUE)) %>%
-  #     mutate(ROUNDED_VALUE = ifelse(
-  #       (year %in% c(2021,2022) &
-  #          grepl('Williams Lake',STATION_NAME,ignore.case = TRUE) &
-  #          PARAMETER %in% c('NO2','O3','SO2')),
-  #       NA,ROUNDED_VALUE)) %>%
-  #     select(-year)}
-  # )
+  df_data <- pad_data(df_data,date_time = 'DATE_PST',values = c('RAW_VALUE','ROUNDED_VALUE','flag_tfee',
+                                                                'VALIDATION_STATUS'))
+
 
   try({
     if (is_parameter) {
@@ -499,18 +499,6 @@ importBC_data <- function(parameter_or_station,
         arrange(PARAMETER,STATION_NAME,INSTRUMENT,DATE_PST) %>%
         COLUMN_REORDER(c('PARAMETER','DATE_PST','DATE','TIME','STATION_NAME','STATION_NAME_FULL','INSTRUMENT'))
       #done, sending results
-
-
-      if (isCAAQS) {
-        #standardize the column names
-        colnames(df_data) <- tolower(colnames(df_data))
-        df_data <- df_data %>%
-          mutate(date_time = date_pst - hours(1)) %>%
-          rename(site = station_name,
-                 value = raw_value) %>%
-          COLUMN_REORDER(c('parameter','date_time','date_pst','date','time','site','instrument','value'))
-      }
-
 
     } else
     {
@@ -548,10 +536,13 @@ importBC_data <- function(parameter_or_station,
       }
     }
   })
+
+  if (clean_names) {
+    df_data <- clean_names(df_data)
+  }
   return(df_data)
 
 }
-
 
 
 

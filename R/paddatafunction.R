@@ -29,7 +29,7 @@ pad_data <- function(df,date_time = NULL,padby='hour' ,values = NULL,time_ending
     df <- readRDS('./test_data/raw_data.Rds')
     df <- readRDS('./test_data/raw_data_day.Rds')
     df_data <- pad_data(df_data,date_time = 'DATE_PST',values = c('RAW_VALUE','ROUNDED_VALUE','flag_tfee',
-                                                                  'VALIDATION_STATUS','STATION_NAME_FULL',
+                                                                  'VALIDATION_STATUS',
                                                                   'INSTRUMENT'))
 
      # saveRDS(test,'./test_data/raw_data.Rds')
