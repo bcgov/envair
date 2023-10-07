@@ -89,7 +89,7 @@ importBC_data <- function(parameter_or_station,
     source('./r/importbc_data.R')
     parameter_or_station <- c('pm25')
     # parameter_or_station <- 'smithers'
-    years <- c(2015)
+    years <- c(2019)
     pad = NULL
     use_openairformat <- NULL
     use_ws_vector <- NULL
@@ -406,8 +406,8 @@ importBC_data <- function(parameter_or_station,
 
     lst_history <- get_station_history() %>%
       select(STATION_NAME,INSTRUMENT,`Merged Station Name`,`Merged Instrument Name`,`Start Date`,`End Date`) %>%
-      mutate(start = date(`Start Date`),
-             end =date(`End Date`))
+      mutate(start = lubridate::date(`Start Date`),
+             end =lubridate::date(`End Date`))
 
     #note that instrument matching only applies to PM
     #but renaming of station names applies to all
