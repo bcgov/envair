@@ -7,12 +7,10 @@
 importBC_data(
   parameter_or_station,
   years = NULL,
-  use_openairformat = TRUE,
-  use_ws_vector = FALSE,
-  pad = TRUE,
-  flag_TFEE = FALSE,
-  merge_Stations = FALSE,
-  isCAAQS = FALSE
+  flag_TFEE = TRUE,
+  merge_Stations = TRUE,
+  clean_names = TRUE,
+  use_openairformat = TRUE
 )
 }
 \arguments{
@@ -29,21 +27,15 @@ Mutliple stations can be specified}
 sequential years, use c(2010,2015,2018)
 If not declared, the current year will be used}
 
-\item{use_openairformat}{is boolean,if TRUE, output is compatible with openair. Applies only to station queries}
-
-\item{use_ws_vector}{use vector wind speed? default is FALSE, if TRUE and use_openairformat is TRUE, ws is the vector wind speed}
-
-\item{pad}{default is TRUE. if FALSE, it removes all NaNs}
-
-\item{flag_TFEE}{default is FALSE. If TRUE, it will add TFEE flags on days TFEE were verified
-This function retrieves TFEE from the CAAQS station history excel file
-ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/}
+\item{flag_TFEE}{default is FALSE. If TRUE, it will add TFEE flags on days TFEE were verified}
 
 \item{merge_Stations}{default is FALSE. it will combine data from stations and alternative stations}
 
-\item{isCAAQS}{default is FALSE. If TRUE, column names will be compatible to the rcaaqs package
+\item{clean_names}{makes the output columns in lower case letters as acceptable with tidyverse
 This function retrieves thsoe details from the CAAQS station history excel file
 ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/}
+
+\item{use_openairformat}{is boolean,if TRUE, output is compatible with openair. Applies only to station queries}
 }
 \description{
 This function retrieves station or parameter hourly data from the BC open data portal
