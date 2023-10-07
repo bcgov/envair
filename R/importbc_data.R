@@ -444,24 +444,27 @@ importBC_data <- function(parameter_or_station,
     df_data <- df_data %>%
       filter(!index %in% lst_remove)
     #change the instrument name
-    df_data <- df_data %>%
-      left_join(lst_history) %>%
-      mutate(INSTRUMENT_NEW = ifelse(is.na(`Merged Instrument Name`),INSTRUMENT,`Merged Instrument Name`)) %>%
-      select(-`Merged Station Name`,-`Merged Instrument Name`) %>%
-      dplyr::rename(INSTRUMENT_ORIGINAL = INSTRUMENT) %>%
-      dplyr::rename(INSTRUMENT = INSTRUMENT_NEW)
-
+    suppressMessages(
+      df_data <- df_data %>%
+        left_join(lst_history) %>%
+        mutate(INSTRUMENT_NEW = ifelse(is.na(`Merged Instrument Name`),INSTRUMENT,`Merged Instrument Name`)) %>%
+        select(-`Merged Station Name`,-`Merged Instrument Name`) %>%
+        dplyr::rename(INSTRUMENT_ORIGINAL = INSTRUMENT) %>%
+        dplyr::rename(INSTRUMENT = INSTRUMENT_NEW)
+    )
     #change the station name
-    df_data <- df_data %>%
-      left_join(lst_history %>%
-                  select(-INSTRUMENT ,-`Merged Instrument Name`) %>%
-                  distinct()) %>%
-      mutate(STATION_NAME_NEW = ifelse(is.na(`Merged Station Name`),STATION_NAME,`Merged Station Name`)) %>%
-      select(-`Merged Station Name`) %>%
-      dplyr::rename(STATION_NAME_ORIGINAL = STATION_NAME) %>%
-      dplyr::rename(STATION_NAME = STATION_NAME_NEW) %>%
-      COLUMN_REORDER(c('PARAMETER','DATE_PST','DATE','TIME','STATION_NAME','STATION_NAME_ORIGINAL',
-                       'INSTRUMENT','INSTRUMENT_ORIGINAL'))
+    suppressMessages(
+      df_data <- df_data %>%
+        left_join(lst_history %>%
+                    select(-INSTRUMENT ,-`Merged Instrument Name`) %>%
+                    distinct()) %>%
+        mutate(STATION_NAME_NEW = ifelse(is.na(`Merged Station Name`),STATION_NAME,`Merged Station Name`)) %>%
+        select(-`Merged Station Name`) %>%
+        dplyr::rename(STATION_NAME_ORIGINAL = STATION_NAME) %>%
+        dplyr::rename(STATION_NAME = STATION_NAME_NEW) %>%
+        COLUMN_REORDER(c('PARAMETER','DATE_PST','DATE','TIME','STATION_NAME','STATION_NAME_ORIGINAL',
+                         'INSTRUMENT','INSTRUMENT_ORIGINAL'))
+    )
   }
 
 
@@ -482,10 +485,10 @@ importBC_data <- function(parameter_or_station,
   df_data <-   df_data %>%
     select(any_of(c('PARAMETER','DATE_PST','DATE','TIME','STATION_NAME','STATION_NAME_FULL','INSTRUMENT',
                     'RAW_VALUE','ROUNDED_VALUE','VALIDATION_STATUS','flag_tfee')))
-
-  df_data <- pad_data(df_data,date_time = 'DATE_PST',values = c('RAW_VALUE','ROUNDED_VALUE','flag_tfee',
-                                                                'VALIDATION_STATUS'))
-
+  suppressMessages(
+    df_data <- pad_data(df_data,date_time = 'DATE_PST',values = c('RAW_VALUE','ROUNDED_VALUE','flag_tfee',
+                                                                  'VALIDATION_STATUS'))
+  )
 
   try({
     if (is_parameter) {
