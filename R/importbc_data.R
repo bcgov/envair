@@ -72,7 +72,6 @@ extractDateTime <- function(dateTimeString) {
 #' importBC_data(c('Prince George','Kamloops'),c(2010,2015))
 #'
 #' @export
-
 importBC_data <- function(parameter_or_station,
                           years=NULL,
                           flag_TFEE = TRUE,
