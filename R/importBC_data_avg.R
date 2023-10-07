@@ -216,7 +216,8 @@ importBC_data_avg0 <- function(parameter, years = NULL, averaging_type =  NULL, 
     df <- importBC_data(parameter = parameter,
                         years = years_,
                         flag_TFEE = flag_tfee,
-                        merge_Stations = merge_Stations)
+                        merge_Stations = merge_Stations,
+                        clean_names = FALSE)
   } else {
 
     print('Dataframe entered')

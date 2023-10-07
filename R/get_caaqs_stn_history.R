@@ -47,7 +47,7 @@ if (0) {
 
   #retrieves list of sheets
 
-  sheetlist <- readxl::excel_sheets(Mytmpfile)
+  suppressWarnings(suppressMessages(sheetlist <- readxl::excel_sheets(Mytmpfile)))
 
   if (is.null(sheet)) {
     # return with list of sheets or the only sheet
@@ -140,9 +140,9 @@ get_tfee <- function(ExcelURL = NULL) {
     ExcelURL <- 'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/BC_CAAQS_station_history.xlsx'
   }
 
-  sheets <- get_excel_table(ExcelURL = ExcelURL,silent = TRUE)
+  suppressWarnings(suppressMessages(sheets <- get_excel_table(ExcelURL = ExcelURL,silent = TRUE)))
   sheets <- sheets[grepl('TFEE',sheets)]
-  df <- get_excel_table(ExcelURL = ExcelURL, sheet = sheets, silent = TRUE)
+  suppressWarnings(suppressMessages(df <- get_excel_table(ExcelURL = ExcelURL, sheet = sheets, silent = TRUE)))
 
   df <- df %>%
     mutate(STATION_NAME = gsub('[^[:alnum:]]',' ',STATION_NAME)) %>%
@@ -174,7 +174,7 @@ get_station_history <- function(ExcelURL=NULL) {
   }
 
 
-  df_excel <- get_excel_table(ExcelURL,sheet = 'Data Merge',silent=TRUE)
+  suppressWarnings(suppressMessages(df_excel <- get_excel_table(ExcelURL,sheet = 'Data Merge',silent=TRUE)))
 
   return(as.data.frame(df_excel))
 
