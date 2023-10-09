@@ -87,9 +87,9 @@ importBC_data <- function(parameter_or_station,
     source('./r/envairfunctions.R')
     source('./r/get_caaqs_stn_history.R')
     source('./r/importbc_data.R')
-    parameter_or_station <- c('pm25')
+    parameter_or_station <- c('no2')
     # parameter_or_station <- 'smithers'
-    years <- c(2019)
+    years <- c(2018)
     pad = NULL
     use_openairformat <- NULL
     use_ws_vector <- NULL
@@ -442,11 +442,14 @@ importBC_data <- function(parameter_or_station,
 
     # -remove from data
     df_data <- df_data %>%
-      filter(!index %in% lst_remove)
+      filter(!index %in% lst_remove) %>%
+      select(-index)
     #change the instrument name
     suppressMessages(
       df_data <- df_data %>%
-        left_join(lst_history) %>%
+        left_join(lst_history %>%
+                    select(STATION_NAME,INSTRUMENT,`Merged Station Name`,
+                           `Merged Instrument Name`)) %>%
         mutate(INSTRUMENT_NEW = ifelse(is.na(`Merged Instrument Name`),INSTRUMENT,`Merged Instrument Name`)) %>%
         select(-`Merged Station Name`,-`Merged Instrument Name`) %>%
         dplyr::rename(INSTRUMENT_ORIGINAL = INSTRUMENT) %>%
@@ -454,11 +457,11 @@ importBC_data <- function(parameter_or_station,
     )
     #change the station name
     suppressMessages(
-      df_data <- df_data %>%
+      df_data <-  df_data %>%
         left_join(lst_history %>%
-                    select(-INSTRUMENT ,-`Merged Instrument Name`) %>%
+                    select(STATION_NAME,`Merged Station Name`) %>%
                     distinct()) %>%
-        mutate(STATION_NAME_NEW = ifelse(is.na(`Merged Station Name`),STATION_NAME,`Merged Station Name`)) %>%
+      mutate(STATION_NAME_NEW = ifelse(is.na(`Merged Station Name`),STATION_NAME,`Merged Station Name`)) %>%
         select(-`Merged Station Name`) %>%
         dplyr::rename(STATION_NAME_ORIGINAL = STATION_NAME) %>%
         dplyr::rename(STATION_NAME = STATION_NAME_NEW) %>%
