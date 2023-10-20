@@ -87,25 +87,15 @@ importBC_data <- function(parameter_or_station,
     source('./r/envairfunctions.R')
     source('./r/get_caaqs_stn_history.R')
     source('./r/importbc_data.R')
-    parameter_or_station <- c('no2')
-    # parameter_or_station <- 'smithers'
-    years <- c(2018)
-    pad = NULL
-    use_openairformat <- NULL
-    use_ws_vector <- NULL
+
+    parameter_or_station <- 'aqhi'
+
+    years=2021
     flag_TFEE = TRUE
     merge_Stations = TRUE
-    isCAAQS <- NULL
     clean_names = TRUE
-    #default
-    parameter_or_station <- 'prince george'
-    years=2018
-    use_openairformat=TRUE
-    use_ws_vector = FALSE
-    pad = TRUE
-    flag_TFEE = FALSE
-    merge_Stations = FALSE
-    isCAAQS=FALSE
+    use_openairformat = TRUE
+
 
   }
 
@@ -371,7 +361,24 @@ importBC_data <- function(parameter_or_station,
     }
   }
 
-  #DEBUG_____
+  # -for aqhi data-----
+  # return results immediately
+  if (tolower(parameter_or_station) == 'aqhi') {
+    try(df_data <- df_data %>%
+          select(-flag_tfee), silent = TRUE)
+    try(df_data <- df_data %>%
+          select(-VALIDATION_STATUS), silent = TRUE)
+    try(
+      df_data <- df_data %>%
+        select(PARAMETER,DATE_PST,DATE,TIME,everything()),
+      silent = TRUE
+    )
+
+    return(df_data)
+  }
+
+  # -for non-aqhi data-----
+  #DEBUG
   #when hour is 24, seems to be blank
   if (0) {
     # df0 <- df_data
