@@ -76,7 +76,7 @@ importBC_data <- function(parameter_or_station,
                           years=NULL,
                           flag_TFEE = TRUE,
                           merge_Stations = TRUE,
-                          clean_names = TRUE,use_openairformat = TRUE) {
+                          clean_names = FALSE,use_openairformat = TRUE) {
 
   #debug
   if (0)
