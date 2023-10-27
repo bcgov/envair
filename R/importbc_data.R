@@ -116,8 +116,9 @@ importBC_data <- function(parameter_or_station,
 
   #list of columns based on pollutant
   cols_aqhi <- c('PARAMETER','DATE_PST','DATE','TIME','AQHI_AREA','CGNDB_NAME',
-                 'STATION_NAME','REPORTED_AQHI','REPORTED_AQHI_CHAR',
-                 'AQHI_CLASSIC','AQHI_PLUS_PARAMETER','SO2_GT_36')
+                 'STATION_NAME','REPORTED_AQHI','REPORTED_AQHI_CHAR','AQHI_VALUE',
+                 'AQHI_CLASSIC','AQHI_PLUS_PARAMETER','SO2_GT_36','AQHI_PLUS_PM25_VALUE',
+                 'VALIDATION_STATUS','AQHI_SO2')
   cols_nonaqhi <- c('PARAMETER','DATE_PST','DATE','TIME','STATION_NAME',
                     'STATION_NAME_FULL','EMS_ID','NAPS_ID','UNIT','INSTRUMENT',
                     'OWNER','REGION','RAW_VALUE','ROUNDED_VALUE','VALIDATION_STATUS')
@@ -223,10 +224,10 @@ importBC_data <- function(parameter_or_station,
   #added due to validation issue
   #it will always include the current year (unverified)
   #this also includes the station lookup
-  if (grepl('WDIR|WSPD',paste(parameter_or_station,collapse = ','),ignore.case = TRUE)) {
+  #2021 onwards
+  if (grepl('WDIR|WSPD',paste(parameter_or_station,collapse = ','),ignore.case = TRUE) & years >= 2021) {
     years <- c(years,current_year)
   }
-
 
 
   df_datasource <- df_datasource %>%
@@ -238,7 +239,7 @@ importBC_data <- function(parameter_or_station,
   df_datasource_result <- NULL
   for (urls in unique(df_datasource$URL)) {
     if (0) {
-      urls <- df_datasource$URL[2]
+      urls <- df_datasource$URL[1]
     }
     df_meta <- df_datasource[df_datasource$URL == urls,] %>%
       select(year) %>% distinct()
@@ -272,9 +273,9 @@ importBC_data <- function(parameter_or_station,
   df_data <- NULL
   for (lst_ in lst_source) {
     if (0) {
-      lst_ <- lst_source[[2]]
+      lst_ <- lst_source[[1]]
     }
-    print(paste('reading the file:',lst_))
+    message(paste('reading the file:',lst_))
 
 
     #read parquet file
