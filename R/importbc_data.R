@@ -108,6 +108,14 @@ importBC_data <- function(parameter_or_station,
 
   parameter_or_station <- tolower(parameter_or_station)
 
+  # check for aqhi
+  # -if aqhi is selected, it will not combine with other parameters
+  if ('aqhi' %in% parameter_or_station) {
+    parameter_or_station <- 'aqhi'
+    message(paste('AQHI selected. Note that all other parameters are ignored.'))
+  }
+
+
   # initial parameter list
   # list will still be populated from year_to_date csv
   lst_params <- c('aqhi','co','h2s','hf','humidity','no','no2','nox',
@@ -179,12 +187,12 @@ importBC_data <- function(parameter_or_station,
 
 
   if (any(parameter_or_station %in% check_datalist)) {
-    print(paste('Retrieving data from the following parameters:',paste(parameter_or_station,collapse = ',')))
+    message(paste('Retrieving data from the following parameters:',paste(parameter_or_station,collapse = ',')))
     is_parameter <- TRUE
 
 
   } else {
-    print('station name entered. retrieving data....')
+    message('station name entered. retrieving data....')
     is_parameter <- FALSE
   }
 
@@ -225,9 +233,11 @@ importBC_data <- function(parameter_or_station,
   #it will always include the current year (unverified)
   #this also includes the station lookup
   #2021 onwards
-  if (grepl('WDIR|WSPD',paste(parameter_or_station,collapse = ','),ignore.case = TRUE) & years >= 2021) {
-    years <- c(years,current_year)
-  }
+
+     if (grepl('WDIR|WSPD',paste(parameter_or_station,collapse = ','),ignore.case = TRUE) & any(years >= 2021)) {
+      years <- c(years,current_year)
+    }
+
 
 
   df_datasource <- df_datasource %>%
@@ -364,7 +374,7 @@ importBC_data <- function(parameter_or_station,
 
   # -for aqhi data-----
   # return results immediately
-  if (tolower(parameter_or_station) == 'aqhi') {
+  if ('aqhi' %in% tolower(parameter_or_station)) {
     try(df_data <- df_data %>%
           select(-flag_tfee), silent = TRUE)
     try(df_data <- df_data %>%
@@ -469,7 +479,7 @@ importBC_data <- function(parameter_or_station,
         left_join(lst_history %>%
                     select(STATION_NAME,`Merged Station Name`) %>%
                     distinct()) %>%
-      mutate(STATION_NAME_NEW = ifelse(is.na(`Merged Station Name`),STATION_NAME,`Merged Station Name`)) %>%
+        mutate(STATION_NAME_NEW = ifelse(is.na(`Merged Station Name`),STATION_NAME,`Merged Station Name`)) %>%
         select(-`Merged Station Name`) %>%
         dplyr::rename(STATION_NAME_ORIGINAL = STATION_NAME) %>%
         dplyr::rename(STATION_NAME = STATION_NAME_NEW) %>%
