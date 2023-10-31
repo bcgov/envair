@@ -370,6 +370,9 @@ importBC_data <- function(parameter_or_station,
       df_data <-  df_data %>%
         bind_rows(df_)
     }
+
+    # -clear memory
+    gc()
   }
 
   # -for aqhi data-----
@@ -402,7 +405,7 @@ importBC_data <- function(parameter_or_station,
 
   #perform other functions
   if (flag_TFEE) {
-    print('adding tfee flags')
+    message('adding tfee flags')
 
     df_tfee <- get_tfee() %>%
       select(PARAMETER,STATION_NAME,DATE) %>%

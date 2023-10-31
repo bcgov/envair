@@ -40,7 +40,7 @@
 #' that specified if 24hour, and if adjusted for tfee
 #' @export
 importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, data_threshold = 0.75,
-                               flag_TFEE = FALSE,merge_Stations = FALSE) {
+                              flag_TFEE = FALSE,merge_Stations = FALSE) {
 
   if (0) {
     source('./r/importBC_data.R')
@@ -50,14 +50,14 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
     source('./r/envairfunctions.R')
     source('./r/importBC_data_avg.R')
     parameter <- 'O3'
-    parameter <- df
-    years <- 2016:2022
+
+    years <- 1990:2022
     # averaging_type <- c('annual mean 1hr','annual mean 24h')
     averaging_type = 'd8hm'
     data_threshold <- 0.75
     merge_Stations <- TRUE
     flag_TFEE = TRUE
-    year_ <- 2018
+
 
   }
 
@@ -116,7 +116,7 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
 
 
       for (avg_ in averaging_type) {
-        print(paste('Calculating:',parameter,year,avg_))
+        message(paste('Calculating:',parameter,year,avg_))
         df_ <- importBC_data_avg0(df_data,averaging_type = avg_,data_threshold = data_threshold,
                                   flag_TFEE = flag_TFEE, merge_Stations = merge_Stations) %>%
           filter(YEAR == year)
@@ -136,7 +136,7 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
 
   } else {
     df_result <- importBC_data_avg0(parameter = parameter, years = years,averaging_type = averaging_type,data_threshold = data_threshold,
-                              flag_TFEE = flag_TFEE, merge_Stations = merge_Stations)
+                                    flag_TFEE = flag_TFEE, merge_Stations = merge_Stations)
   }
 
   return(df_result)
@@ -149,7 +149,7 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
 #' But not ideal for multiple years or parameters
 #'
 importBC_data_avg0 <- function(parameter, years = NULL, averaging_type =  NULL, data_threshold = 0.75,
-                              flag_TFEE = FALSE,merge_Stations = FALSE)
+                               flag_TFEE = FALSE,merge_Stations = FALSE)
 {
   if (0) {
     source('./r/importBC_data.R')
@@ -220,7 +220,7 @@ importBC_data_avg0 <- function(parameter, years = NULL, averaging_type =  NULL, 
                         clean_names = FALSE)
   } else {
 
-    print('Dataframe entered')
+    message('Dataframe entered')
     df <- parameter
 
     #get years based on the dataframe
@@ -229,7 +229,7 @@ importBC_data_avg0 <- function(parameter, years = NULL, averaging_type =  NULL, 
       pull(year) %>% unique()
     #check if averaging_type is null
     if (is.null(averaging_type)) {
-      print('Dataframe entry, please specify averaging_type')
+      message('Dataframe entry, please specify averaging_type')
       return(NULL) #stops if averaging_type not defined
     }
   }
@@ -238,25 +238,25 @@ importBC_data_avg0 <- function(parameter, years = NULL, averaging_type =  NULL, 
   #then redefine add_TFEE
   flag_tfee <- 'flag_tfee' %in% colnames(df)
 
-#identify if it is annual summary, exceedance, or regular data query
-#re-define averaging_type based on the
-averaging_type <- gsub('excess','EXCEED',averaging_type,ignore.case = TRUE)
-averaging_type <- gsub('over','EXCEED',averaging_type,ignore.case = TRUE)
-averaging_type <- gsub('more','EXCEED',averaging_type,ignore.case = TRUE)
+  #identify if it is annual summary, exceedance, or regular data query
+  #re-define averaging_type based on the
+  averaging_type <- gsub('excess','EXCEED',averaging_type,ignore.case = TRUE)
+  averaging_type <- gsub('over','EXCEED',averaging_type,ignore.case = TRUE)
+  averaging_type <- gsub('more','EXCEED',averaging_type,ignore.case = TRUE)
   #rename the averaging type
   if (grepl('annual',averaging_type,ignore.case = TRUE) | grepl('exceed',averaging_type,ignore.case = TRUE))
   {
-     is_annual <- TRUE
-     is_exceedance <- grepl('exceed',averaging_type,ignore.case = TRUE)
-     #splits the averaging _type, separated by space
-     str_avg <- unlist(stringr::str_split(averaging_type,' '))
-     if (length(str_avg) !=3)
-     {
-       print('Please check averaging_type= value. Type ?importBC_data_avg for details')
-       return(NULL)
-     }
-     averaging_type <- str_avg[3]
-     annual_summary <- str_avg[2]
+    is_annual <- TRUE
+    is_exceedance <- grepl('exceed',averaging_type,ignore.case = TRUE)
+    #splits the averaging _type, separated by space
+    str_avg <- unlist(stringr::str_split(averaging_type,' '))
+    if (length(str_avg) !=3)
+    {
+      message('Please check averaging_type= value. Type ?importBC_data_avg for details')
+      return(NULL)
+    }
+    averaging_type <- str_avg[3]
+    annual_summary <- str_avg[2]
 
 
   } else
@@ -272,7 +272,7 @@ averaging_type <- gsub('more','EXCEED',averaging_type,ignore.case = TRUE)
     importBC_data_avg_(years = years, averaging_type =  averaging_type, data_threshold = data_threshold)
 
   if (!flag_tfee) {
-    print('sending result with no TFEE')
+    message('sending result with no TFEE')
     df_result <- df_no_tfee
   } else {
 
@@ -282,8 +282,8 @@ averaging_type <- gsub('more','EXCEED',averaging_type,ignore.case = TRUE)
       importBC_data_avg_(years = years, averaging_type =  averaging_type, data_threshold = data_threshold)
 
     colnames(df_tfee)[grepl('_VALUE',colnames(df_tfee))] <- paste(colnames(df_tfee)[grepl('_VALUE',colnames(df_tfee))],
-                                                                 '_TFEE',sep='')
-    print('sending result with TFEE')
+                                                                  '_TFEE',sep='')
+    message('sending result with TFEE')
     # print(colnames(df_tfee))
     df_result <- df_no_tfee %>%
       dplyr::left_join(df_tfee)
@@ -298,7 +298,7 @@ averaging_type <- gsub('more','EXCEED',averaging_type,ignore.case = TRUE)
   averaging_type <- gsub('RAW_VALUE_','',averaging_type,ignore.case = TRUE)
 
   if (is_annual) {
-    print('processing annual statistics')
+    message('processing annual statistics')
     df_result <- ungroup(df_result) %>%
       dplyr::mutate(YEAR = lubridate::year(DATE))
 
@@ -313,14 +313,14 @@ averaging_type <- gsub('more','EXCEED',averaging_type,ignore.case = TRUE)
       #check if user entered a period on the value
       annual_summary <- as.character(annual_summary)
       if (grepl('.',annual_summary)) {
-          precision <- unlist(stringr::str_split(annual_summary,pattern = '\\.'))[2]
-          precision <- length(precision)
+        precision <- unlist(stringr::str_split(annual_summary,pattern = '\\.'))[2]
+        precision <- length(precision)
       } else {
         #take only whole numbers
         precision <- 0
       }
 
-      print(paste('Calculating the number of times above',annual_summary,'with precision of',precision))
+      message(paste('Calculating the number of times above',annual_summary,'with precision of',precision))
       cols_widen <- cols[grepl('value',cols,ignore.case = TRUE)]
       annual_summary <- as.numeric(annual_summary)
       df_result <- df_result %>%
@@ -340,7 +340,7 @@ averaging_type <- gsub('more','EXCEED',averaging_type,ignore.case = TRUE)
       #if this is NOT calculation of exceedances
       #for percentiles
       if (grepl('p',annual_summary,ignore.case = TRUE)) {
-        print('Calculating the percentiles of the year')
+        message('Calculating the percentiles of the year')
         quantile <- as.numeric(gsub('p','',annual_summary,ignore.case = TRUE))/100
 
         df_result <- df_result %>%
@@ -358,7 +358,7 @@ averaging_type <- gsub('more','EXCEED',averaging_type,ignore.case = TRUE)
       annual_summary <- gsub('avg','mean',annual_summary)
       annual_summary <- gsub('average','mean',annual_summary)
       if (grepl('mean',annual_summary,ignore.case = TRUE)) {
-        print('Calculating the average values of the year')
+        message('Calculating the average values of the year')
         df_result <- df_result %>%
           tidyr::pivot_longer(cols =cols_values) %>%
           group_by(PARAMETER,YEAR,STATION_NAME,INSTRUMENT,name) %>%
@@ -376,7 +376,7 @@ averaging_type <- gsub('more','EXCEED',averaging_type,ignore.case = TRUE)
 
         nth_order <- stringr::str_extract(annual_summary,'\\d+')
         nth_order <- as.numeric(nth_order)
-        print(paste('Calculating the nth highest of the year. nth =',nth_order))
+        message(paste('Calculating the nth highest of the year. nth =',nth_order))
         cols_remove <- cols[!cols %in% c('STATION_NAME','INSTRUMENT','PARAMETER','YEAR',cols_values)]
 
         df_result <-   df_result %>%
@@ -398,7 +398,7 @@ averaging_type <- gsub('more','EXCEED',averaging_type,ignore.case = TRUE)
     }
   }
 
-return(ungroup(df_result))
+  return(ungroup(df_result))
 }
 
 
@@ -456,17 +456,17 @@ importBC_data_avg_ <- function(parameter, years = NULL, averaging_type =  NULL, 
   #convert averaging_type to standard format
 
   if (!averaging_type %in% c('d1hm','d8hm','24hr','1hr','8hr')) {
-  for (i in 1:nrow(df_avg_types)) {
-    if (grepl(df_avg_types$alias[i],averaging_type,ignore.case=TRUE)) {
-      averaging_type <- df_avg_types$averaging_type_std[i]
-      break
-    }
-  }}
+    for (i in 1:nrow(df_avg_types)) {
+      if (grepl(df_avg_types$alias[i],averaging_type,ignore.case=TRUE)) {
+        averaging_type <- df_avg_types$averaging_type_std[i]
+        break
+      }
+    }}
 
 
   if (averaging_type %in% c('1hr'))
   {
-    print('Calculating 1-hour values')
+    message('Calculating 1-hour values')
     df <-   df %>%
       pad_data() %>%
       dplyr::rename(RAW_VALUE_1HR = RAW_VALUE,
@@ -477,7 +477,7 @@ importBC_data_avg_ <- function(parameter, years = NULL, averaging_type =  NULL, 
   if (averaging_type %in% c('24hr'))
   {
 
-    print('Calculating 24-hour values')
+    message('Calculating 24-hour values')
     df <- df %>%
       ungroup() %>%
       filter(!is.na(RAW_VALUE)) %>%
@@ -498,7 +498,7 @@ importBC_data_avg_ <- function(parameter, years = NULL, averaging_type =  NULL, 
   }
 
   if (averaging_type %in% c('d1hm')){
-    print('Calculating daily 1-hour maximum values')
+    message('Calculating daily 1-hour maximum values')
     df <- df %>%
       ungroup() %>%
       filter(!is.na(RAW_VALUE)) %>%
@@ -518,7 +518,7 @@ importBC_data_avg_ <- function(parameter, years = NULL, averaging_type =  NULL, 
   }
 
   if (averaging_type %in% c('d8hm')){
-    print('Calculating daily 8-hour maximums')
+    message('Calculating daily 8-hour maximums')
     cols <- colnames(df)
 
     #pre-defined column for grouping
@@ -540,7 +540,7 @@ importBC_data_avg_ <- function(parameter, years = NULL, averaging_type =  NULL, 
     #duplicate previous 7 hours to group together
     for (i in 1:7) {
 
-      print(paste('Calculating running average:',i,'/7',sep=''))
+      message(paste('Calculating running average:',i,'/7',sep=''))
       gc()
       df_ <- df_ %>%
         dplyr::bind_rows(
@@ -550,6 +550,7 @@ importBC_data_avg_ <- function(parameter, years = NULL, averaging_type =  NULL, 
         )
     }
 
+    gc() #-clear memory
 
     #calculate running average
     df <- df_ %>%
@@ -561,7 +562,7 @@ importBC_data_avg_ <- function(parameter, years = NULL, averaging_type =  NULL, 
       dplyr::filter(valid_n>=6) %>%  #6 hrs at least
       dplyr::select(-valid_n)
 
-
+    gc()
 
     # get the daily maximum
     df <- df %>%
@@ -582,6 +583,7 @@ importBC_data_avg_ <- function(parameter, years = NULL, averaging_type =  NULL, 
         select(-valid_hrs)
     }
 
+    gc()
     df <- df %>%
       pad_data(date_time = 'DATE',
                values =c('RAW_VALUE_D8HM','ROUNDED_VALUE_D8HM','valid_hrs'),
@@ -594,7 +596,7 @@ importBC_data_avg_ <- function(parameter, years = NULL, averaging_type =  NULL, 
 
   if (averaging_type %in% c('8hr')) {
 
-    print('Calculating 8-hour running average')
+    message('Calculating 8-hour running average')
     cols <- colnames(df)
 
     #pre-defined column for grouping
@@ -616,7 +618,7 @@ importBC_data_avg_ <- function(parameter, years = NULL, averaging_type =  NULL, 
     #duplicate previous 7 hours to group together
     for (i in 1:7) {
 
-      print(paste('Calculating running average:',i,'/7',sep=''))
+      message(paste('Calculating running average:',i,'/7',sep=''))
       df_ <- df_ %>%
         dplyr::bind_rows(
           df %>%
@@ -652,7 +654,7 @@ importBC_data_avg_ <- function(parameter, years = NULL, averaging_type =  NULL, 
 
   #function would have exit before this point
 
-  print(paste(averaging_type,'is not in the list of averaging types. Use d1hm, d8hm, 1-hour, or 24-hour'))
+  message(paste(averaging_type,'is not in the list of averaging types. Use d1hm, d8hm, 1-hour, or 24-hour'))
   return(NULL)
 
 }
