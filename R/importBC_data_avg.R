@@ -51,7 +51,7 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
     source('./r/importBC_data_avg.R')
     parameter <- 'O3'
     parameter <- df
-    years <- 2016
+    years <- 2016:2022
     # averaging_type <- c('annual mean 1hr','annual mean 24h')
     averaging_type = 'd8hm'
     data_threshold <- 0.75
@@ -541,6 +541,7 @@ importBC_data_avg_ <- function(parameter, years = NULL, averaging_type =  NULL, 
     for (i in 1:7) {
 
       print(paste('Calculating running average:',i,'/7',sep=''))
+      gc()
       df_ <- df_ %>%
         dplyr::bind_rows(
           df %>%
