@@ -33,7 +33,7 @@ get_apei <- function(categorytype = 'Source',pollutant=NULL,df=NULL,URL=NULL) {
     URL <- '././test_data/EN_APEI-Can-Prov_Terr.csv'
   }
   if (is.null(URL)) {
-    URL <- 'https://data-donnees.ec.gc.ca/data/substances/monitor/canada-s-air-pollutant-emissions-inventory/EN_APEI-Can-Prov_Terr.csv'
+    URL <- 'https://data-donnees.az.ec.gc.ca/api/file?path=/substances%2Fmonitor%2Fcanada-s-air-pollutant-emissions-inventory%2FEN_APEI-Can-Prov_Terr.csv'
   }
 
   #These will be the static  portion of the data, to be included in all queries
