@@ -32,6 +32,10 @@ get_apei <- function(categorytype = 'Source',pollutant=NULL,df=NULL,URL=NULL) {
     URL <- NULL
     URL <- '././test_data/EN_APEI-Can-Prov_Terr.csv'
   }
+
+  require(dplyr)
+  require(tidyr)
+
   if (is.null(URL)) {
     URL <- 'https://data-donnees.az.ec.gc.ca/api/file?path=/substances%2Fmonitor%2Fcanada-s-air-pollutant-emissions-inventory%2FEN_APEI-Can-Prov_Terr.csv'
   }
