@@ -96,7 +96,9 @@ importBC_data <- function(parameter_or_station,
     clean_names = TRUE
     use_openairformat = TRUE
 
-
+    parameter_or_station = c("wdir_vect")
+    years = 2020:2021
+    use_openairformat = FALSE
   }
 
 
@@ -233,15 +235,15 @@ importBC_data <- function(parameter_or_station,
   #it will always include the current year (unverified)
   #this also includes the station lookup
   #2021 onwards
-
-     if (grepl('WDIR|WSPD',paste(parameter_or_station,collapse = ','),ignore.case = TRUE) & any(years >= 2021)) {
-      years <- c(years,current_year)
-    }
+  years_source <- years
+  if (grepl('WDIR|WSPD',paste(parameter_or_station,collapse = ','),ignore.case = TRUE) & any(years >= 2021)) {
+    years_source <- c(years,current_year)
+  }
 
 
 
   df_datasource <- df_datasource %>%
-    filter(year %in% years)
+    filter(year %in% years_source)
 
 
   # get list of all parquet files
@@ -376,6 +378,7 @@ importBC_data <- function(parameter_or_station,
     gc()
   }
 
+
   # -for aqhi data-----
   # return results immediately
   if ('aqhi' %in% tolower(parameter_or_station)) {
@@ -388,7 +391,10 @@ importBC_data <- function(parameter_or_station,
         select(PARAMETER,DATE_PST,DATE,TIME,everything()),
       silent = TRUE
     )
-
+    # -filter the correct year
+    df_data$year = lubridate::year(df_data$DATE)
+    df_data <- df_data[df_data$year %in% years,]
+    gc()
     return(df_data)
   }
 
@@ -501,33 +507,52 @@ importBC_data <- function(parameter_or_station,
   }
 
 
-  # - pad data to have all date_times
+  # - select columns
   if (0) {
     df0 <- df_data
     colnames(df0)
-
+    unique(df0$VALIDATION_STATUS)
     df_data %>%
       filter(STATION_NAME == 'Warfield Haley Park') %>%
       View()
-      group_by(PARAMETER,DATE_PST,STATION_NAME) %>%
+    group_by(PARAMETER,DATE_PST,STATION_NAME) %>%
       dplyr::mutate(count =n()) %>%
       filter(count>1)
+
+
+    df_data %>%
+      filter(is.na(RAW_VALUE)) %>%
+      View()
   }
 
-
+  cols_select <- unique(c('PARAMETER','DATE_PST','DATE','TIME','STATION_NAME','STATION_NAME_FULL','INSTRUMENT',
+                          'RAW_VALUE','ROUNDED_VALUE','VALIDATION_STATUS','flag_tfee',cols_nonaqhi))
   df_data <-   df_data %>%
-    select(any_of(c('PARAMETER','DATE_PST','DATE','TIME','STATION_NAME','STATION_NAME_FULL','INSTRUMENT',
-                    'RAW_VALUE','ROUNDED_VALUE','VALIDATION_STATUS','flag_tfee')))
+    select(any_of(cols_select))
 
 
+  # -filter the correct year
+  message('removing extra data')
+  df_data <- ungroup(df_data)
+  df_data$year = lubridate::year(df_data$DATE)
+  df_data <- df_data[df_data$year %in% years,]
+  df_data <- df_data %>% select(-year)
+  gc()
+
+
+  # -pad data
   suppressMessages({
 
     df_data <- df_data %>%
       filter(!is.na(RAW_VALUE))
 
-    df_data <- pad_data(df_data,date_time = 'DATE_PST',values = c('RAW_VALUE','ROUNDED_VALUE','flag_tfee',
-                                                                  'VALIDATION_STATUS'))
+    df_data <- pad_data(df_data,date_time = 'DATE_PST',values = c('RAW_VALUE','ROUNDED_VALUE','flag_tfee'))
+
+    df_data$flag_tfee[is.na(df_data$flag_tfee)] <- FALSE
+    gc()
   })
+
+
 
   try({
     if (is_parameter) {
