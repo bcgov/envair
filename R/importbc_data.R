@@ -88,7 +88,7 @@ importBC_data <- function(parameter_or_station,
     source('./r/get_caaqs_stn_history.R')
     source('./r/importbc_data.R')
 
-    parameter_or_station <- 'pm25'
+    parameter_or_station <- 'temp_mean'
 
     years=2022
     flag_TFEE = TRUE
@@ -505,15 +505,29 @@ importBC_data <- function(parameter_or_station,
   if (0) {
     df0 <- df_data
     colnames(df0)
+
+    df_data %>%
+      filter(STATION_NAME == 'Warfield Haley Park') %>%
+      View()
+      group_by(PARAMETER,DATE_PST,STATION_NAME) %>%
+      dplyr::mutate(count =n()) %>%
+      filter(count>1)
   }
+
 
   df_data <-   df_data %>%
     select(any_of(c('PARAMETER','DATE_PST','DATE','TIME','STATION_NAME','STATION_NAME_FULL','INSTRUMENT',
                     'RAW_VALUE','ROUNDED_VALUE','VALIDATION_STATUS','flag_tfee')))
-  suppressMessages(
+
+
+  suppressMessages({
+
+    df_data <- df_data %>%
+      filter(!is.na(RAW_VALUE))
+
     df_data <- pad_data(df_data,date_time = 'DATE_PST',values = c('RAW_VALUE','ROUNDED_VALUE','flag_tfee',
                                                                   'VALIDATION_STATUS'))
-  )
+  })
 
   try({
     if (is_parameter) {
