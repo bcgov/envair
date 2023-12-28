@@ -88,10 +88,10 @@ importBC_data <- function(parameter_or_station,
     source('./r/get_caaqs_stn_history.R')
     source('./r/importbc_data.R')
 
-    parameter_or_station <- 'temp_mean'
+    parameter_or_station <- c('smithers')
 
     years=2022
-    flag_TFEE = TRUE
+    flag_TFEE = FALSE
     merge_Stations = TRUE
     clean_names = TRUE
     use_openairformat = TRUE
@@ -109,6 +109,8 @@ importBC_data <- function(parameter_or_station,
   library(janitor)
 
   parameter_or_station <- tolower(parameter_or_station)
+
+
 
   # check for aqhi
   # -if aqhi is selected, it will not combine with other parameters
@@ -188,14 +190,31 @@ importBC_data <- function(parameter_or_station,
   }
 
 
+  # -determine if parameter or station was specified
   if (any(parameter_or_station %in% check_datalist)) {
+    # -parameter entered
     message(paste('Retrieving data from the following parameters:',paste(parameter_or_station,collapse = ',')))
     is_parameter <- TRUE
 
 
   } else {
-    message('station name entered. retrieving data....')
+    # -identify what station was specified
+    lstBC_stations <- listBC_stations() %>%
+      pull(STATION_NAME) %>%
+      unique()
+    parameter_or_station <- paste(parameter_or_station,collapse ='|')
+    parameter_or_station <- lstBC_stations[grepl(parameter_or_station,lstBC_stations,ignore.case = TRUE)]
+
+    # -check if there are no entries
+    if (length(parameter_or_station) == 0) {
+      message('parameter/station not found: check parameter_or_station')
+      return(NULL)
+    }
+    message(paste('station name entered. stations found:',length(parameter_or_station)))
+
     is_parameter <- FALSE
+
+
   }
 
 
@@ -498,7 +517,7 @@ importBC_data <- function(parameter_or_station,
     )
   }
 
-
+  gc()
   if ('STATION_NAME_FULL' %in% colnames(df_data)) {
     df_data$STATION_NAME_FULL <- toupper(df_data$STATION_NAME_FULL)
 
@@ -548,15 +567,25 @@ importBC_data <- function(parameter_or_station,
 
     df_data <- pad_data(df_data,date_time = 'DATE_PST',values = c('RAW_VALUE','ROUNDED_VALUE','flag_tfee'))
 
-    df_data$flag_tfee[is.na(df_data$flag_tfee)] <- FALSE
+    # -add flagtfee column values
+    # -adds NA column if flag_TFEE is FALSE
+    if (flag_TFEE) {
+      df_data$flag_tfee[is.na(df_data$flag_tfee)] <- FALSE
+    } else {
+      df_data$flag_tfee <- NA
+    }
+
     gc()
   })
 
 
-
+ # -select the columns, remove unneeded ones
   try({
     if (is_parameter) {
 
+      if (0) {
+        df_data0 <- df_data
+      }
       df_data <- df_data %>%
         arrange(PARAMETER,STATION_NAME,INSTRUMENT,DATE_PST) %>%
         COLUMN_REORDER(c('PARAMETER','DATE_PST','DATE','TIME','STATION_NAME','STATION_NAME_FULL','INSTRUMENT'))
@@ -564,15 +593,12 @@ importBC_data <- function(parameter_or_station,
 
     } else
     {
-      #station was selected
-      df_data <- df_data %>%
-        filter(grepl(paste(parameter_or_station,collapse = '|'),STATION_NAME,ignore.case = TRUE))
 
       if (use_openairformat) {
         if (0) {
           # df_data <- test
         }
-        colnames(df_data) <- tolower(colnames(df_data))
+        df_data <- clean_names(df_data)
         df_data$parameter <- tolower(df_data$parameter)
         df_data <- df_data %>%
           mutate(date_time = date_pst - hours(1)) %>%
@@ -593,14 +619,32 @@ importBC_data <- function(parameter_or_station,
           df_data <- df_data %>%
             rename(ws = wspd_sclr,
                    wd = wdir_vect)
-        })
+        },silent = TRUE)
 
       }
+
+      # -sort results
+      # -incorporate different column options
+      try({df_data <- df_data %>%
+        arrange(STATION_NAME,DATE_PST)},
+        silent = TRUE)
+      try({df_data <- df_data %>%
+        arrange(site,date)},
+        silent = TRUE)
+
     }
   })
 
   if (clean_names) {
     df_data <- clean_names(df_data)
+  }
+
+  # -fix for flag_TFEE is false
+  if (!flag_TFEE) {
+    try({
+      df_data <- df_data %>%
+        select(-flag_tfee)
+    })
   }
   return(df_data)
 

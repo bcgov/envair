@@ -50,7 +50,7 @@ year <- NULL
   })
 
   if (use_CAAQS) {
-    print('Retrieving Station List from CAAQS History Table')
+    message('Retrieving Station List from CAAQS History Table')
     result <- get_excel_table('ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/BC_CAAQS_station_history.xlsx',
                     sheet = 'Monitoring Station',header_row = 2)
 
@@ -159,7 +159,7 @@ listBC_stations_<-function(year=NULL)
                        year,"/bc_air_monitoring_stations.csv",sep="")
   }
 
-  print('Retrieving station details from FTP...')
+  message('Retrieving station details from FTP...')
   #  dir.temp<-paste(getwd(),'/TEMP',sep="")
   # file.temp<-paste(dir.temp,'/stationdetails.csv',sep="")
   #temp<-RCurl::getURL(ftp.station,ftp.use.epsv=FALSE,header=TRUE)
@@ -294,12 +294,19 @@ listBC_stations_<-function(year=NULL)
 #' @export
 list_parameters <- function()
 {
+  # initial parameter list
+  # list will still be populated from year_to_date csv
+  lst_params <- c('aqhi','co','h2s','hf','humidity','no','no2','nox',
+                  'o3','pm10','pm25','precip','pressure','snow','so2','temp_mean','trs',
+                  'vapour_pressure','wdir_uvec','wdir_vect','wspd_sclr','wspd_vect')
   # RUN_PACKAGE(c('RCurl','dplyr','stringi'))
-  ftpsource_ <- 'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/Year_to_Date/'
+  ftpsource_ <- 'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/Year_to_Date/binary/'
   temp_<-as.character(unlist(stringi::stri_split_lines(RCurl::getURL(ftpsource_,dirlistonly=TRUE))))
   temp_ <- temp_[!grepl('station',temp_,ignore.case=TRUE)]
-  temp_ <- tolower(gsub('.csv','',temp_,ignore.case=TRUE))
+  temp_ <- tolower(gsub('.csv|.parquet','',temp_,ignore.case=TRUE))
   temp_ <- sort(temp_)
   temp_ <- temp_[temp_ !=""]
+  temp_ <- sort(unique(c(lst_params,temp_)))
+
   return(temp_)
 }

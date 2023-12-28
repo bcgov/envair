@@ -4,12 +4,7 @@
 \alias{importBC_data_avg_}
 \title{Backend function of importBC_data_avg_}
 \usage{
-importBC_data_avg_(
-  parameter,
-  years = NULL,
-  averaging_type = NULL,
-  data_threshold = 0.75
-)
+importBC_data_avg_(df, averaging_type, data_threshold = 0.75)
 }
 \description{
 Note that averaging_type here is the simple (not compounded) format.

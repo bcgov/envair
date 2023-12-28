@@ -7,10 +7,10 @@
 importBC_data_avg0(
   parameter,
   years = NULL,
-  averaging_type = NULL,
+  averaging_type,
   data_threshold = 0.75,
-  flag_TFEE = FALSE,
-  merge_Stations = FALSE
+  flag_tfee = FALSE,
+  merge_stations = FALSE
 )
 }
 \description{

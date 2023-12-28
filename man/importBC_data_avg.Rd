@@ -10,7 +10,7 @@ importBC_data_avg(
   averaging_type = NULL,
   data_threshold = 0.75,
   flag_TFEE = FALSE,
-  merge_Stations = FALSE
+  merge_stations = FALSE
 )
 }
 \arguments{
@@ -33,7 +33,7 @@ If data_threshold=0, it will include ALL values of that averaging type and will 
 \item{flag_TFEE}{default is FALSE. If TRUE, it will evaluate data with TFEE adjustment and include it in the result.
 The resultig column will have _TFEE for the TFEE-adjusted result}
 
-\item{merge_Stations}{default is FALSE. If TRUE, data from stations and their alternatives are merged. Alternative stations
+\item{merge_stations}{default is FALSE. If TRUE, data from stations and their alternatives are merged. Alternative stations
 are defined when station has relocated to a nearby area}
 }
 \value{

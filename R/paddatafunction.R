@@ -57,7 +57,7 @@ pad_data <- function(df,date_time = NULL,padby='hour' ,values = NULL,time_ending
 
   require(dplyr)
 
-  print('padding the data')
+  message('padding the data')
    if (0) {
      # df1 <- df
    }
@@ -158,7 +158,7 @@ pad_data <- function(df,date_time = NULL,padby='hour' ,values = NULL,time_ending
         dplyr::rename(date = date_pst)
     }
 
-    print(paste('Added/padded rows:',nrow(df_result) - nrow(df)))
+    message(paste('Added/padded rows:',nrow(df_result) - nrow(df)))
   }
 
 
@@ -203,7 +203,7 @@ pad_data <- function(df,date_time = NULL,padby='hour' ,values = NULL,time_ending
           distinct()
       ) %>%
       dplyr::left_join(df)
-    print(paste('Added/padded rows:',nrow(df_result) - nrow(df)))
+    message(paste('Added/padded rows:',nrow(df_result) - nrow(df)))
   }
 
   return(df_result)
