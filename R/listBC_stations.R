@@ -38,34 +38,42 @@ listBC_stations <- function(year=NULL,use_CAAQS = FALSE,merge_Stations = FALSE)
   merge_Stations = FALSE
 year <- NULL
 }
-
-  df_result <- NULL
   require(dplyr)
-  df_result <- listBC_stations_()
-  try({
-    df_result$STATION_NAME_FULL = gsub('[^[:alnum:]]',' ',df_result$STATION_NAME_FULL)
-    df_result$STATION_NAME = gsub('[^[:alnum:]]',' ',df_result$STATION_NAME)
-    df_result$STATION_NAME_FULL = gsub('  ',' ',df_result$STATION_NAME_FULL)
-    df_result$STATION_NAME = gsub('  ',' ',df_result$STATION_NAME)
-  })
 
+  # -retrieve initial value from station list
+  df_result <- NULL
+  df_result <- listBC_stations_()
+  df_result <- clean_stationnames(df_result)
+
+
+  # -if CAAQS is specified, more details from the BC_CAAQS_station_history.xlsx file
   if (use_CAAQS) {
     message('Retrieving Station List from CAAQS History Table')
-    result <- get_excel_table('ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/BC_CAAQS_station_history.xlsx',
-                    sheet = 'Monitoring Station',header_row = 2)
 
-    #remove extra spaces and special characters
-    try({
-      result$STATION_NAME_FULL = gsub('[^[:alnum:]]',' ',result$STATION_NAME_FULL)
-      result$STATION_NAME = gsub('[^[:alnum:]]',' ',result$STATION_NAME)
-      result$STATION_NAME_FULL = gsub('  ',' ',result$STATION_NAME_FULL)
-      result$STATION_NAME = gsub('  ',' ',result$STATION_NAME)
-    })
+    # -retrieve data from the CAAQS station excel sheet
+    result <- get_excel_table('ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/BC_CAAQS_station_history.xlsx',
+                    sheet = 'Monitoring Station',header_row = 2) %>%
+      clean_stationnames()
+
+
+    resultpurpose <- get_excel_table('ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/BC_CAAQS_station_history.xlsx',
+                              sheet = 'Station Purpose',header_row = 2)%>%
+      clean_stationnames()
+
+    # -remove any conflicting columns
+    cols_result <- colnames(result)
+    cols_resultpurpose <- colnames(resultpurpose)
+
+    cols_result_remove <- cols_result[cols_result %in% cols_resultpurpose]
+    cols_result_remove <- cols_result_remove[!grepl('STATION_NAME',cols_result_remove)]
+
+    result <- result %>%
+      select(-one_of(cols_result_remove)) %>%
+      left_join(resultpurpose)
 
     df_result <- df_result %>%
-      mutate(STATION_NAME = gsub('[^[:alnum:]]',' ',STATION_NAME),
-             STATION_NAME_FULL = gsub('[^[:alnum:]]',' ',STATION_NAME_FULL)) %>%
       select(STATION_NAME,STATION_NAME_FULL) %>%
+      distinct() %>%
       left_join(result)
 
     df_result <- dplyr::filter(df_result,!is.na(STATION_NAME))
@@ -81,7 +89,7 @@ year <- NULL
       left_join(df_merge) %>%
       mutate(site = ifelse(is.na(site),STATION_NAME,site)) %>%
       mutate(Label = ifelse(is.na(Label),site,Label)) %>%
-      COLUMN_REORDER(c('STATION_NAME','site','Label'))
+      COLUMN_REORDER(c('STATION_NAME','STATION_NAME_FULL','site','Label'))
   }
 
 
@@ -280,6 +288,7 @@ listBC_stations_<-function(year=NULL)
   station.details <- station.details %>%
     dplyr::left_join(airzone_details)
 
+  station.details <- clean_stationnames(station.details)
   return(station.details)
 
 }
@@ -309,4 +318,29 @@ list_parameters <- function()
   temp_ <- sort(unique(c(lst_params,temp_)))
 
   return(temp_)
+}
+
+#' This function clean up station names
+#' Removes extra spaces, and non-alphanumeric characters
+clean_stationnames <- function(df,cols = c('STATION_NAME','STATION_NAME_FULL')) {
+  # -function cleans up stations names by removing spaces, non-alphanumeric characters
+  if (0) {
+    df <- importBC_data('pm25',2020)
+    cols = c('station_name','station_name_full')
+  }
+
+  # -ensure specified column is there
+  cols_ <- colnames(df)
+  cols <- paste(cols,collapse ='|')
+  cols <- cols_[grepl(cols,cols_,ignore.case = TRUE)]
+
+  for (cols_ in cols) {
+    df <- df %>%
+      mutate(!!cols_ := gsub('[^[:alnum:]]',' ',!!sym(cols_)))
+    df <- df %>%
+      mutate(!!cols_ := gsub('  ',' ',!!sym(cols_)))
+  }
+
+  return(df)
+
 }
