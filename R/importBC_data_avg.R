@@ -410,7 +410,7 @@ importBC_data_avg0 <- function(parameter, years = NULL, averaging_type, data_thr
     # parameter <- 'pm25'
     parameter <- 'pm25'
     years <- 2020
-    averaging_type <- 'annual mean 24hour'
+    averaging_type <- 'annual 98p 24hour'
     data_threshold <- 0.75
     merge_stations <- FALSE
     flag_tfee = FALSE
@@ -622,21 +622,32 @@ importBC_data_avg0 <- function(parameter, years = NULL, averaging_type, data_thr
 
     }
 
-    #if this is NOT calculation of exceedances
-    #for percentiles
+    # -calculatio for percentiles
+    # -follows the procedures outlined in the CCME, which is based on ranked order
     if (grepl('p',annual_summary,ignore.case = TRUE)) {
       message('Calculating the percentiles of the year')
       quantile <- as.numeric(gsub('p','',annual_summary,ignore.case = TRUE))/100
 
-      df_result <- df_result %>%
+
+      df_result <-  df_result %>%
         tidyr::pivot_longer(cols =cols_values) %>%
         group_by(parameter,year,station_name,instrument,name) %>%
-        dplyr::summarise(value = stats::quantile(value,probs = quantile,na.rm = TRUE,type = 2)) %>%
+        filter(!is.na(value)) %>%
+        arrange(desc(value)) %>%
+        dplyr::mutate(quant_idx=ceiling(n()*(1-quantile)),count=n(),index=1:n()) %>%
+        filter(index == quant_idx) %>%
+        select(-c(quant_idx,count,index,date)) %>%
+
+        # -old method using quantile() replaced by CCME method
+        # arrange(parameter,station_name,instrument,year,name)
+        # dplyr::summarise(value = stats::quantile(value,probs = quantile,na.rm = TRUE,type = 2)) %>%
+
         dplyr::mutate(name = gsub('value',annual_summary,name,ignore.case = TRUE)) %>%
         dplyr::mutate(name = gsub(annual_summary,
                                   paste(tolower(annual_summary),sep='_'),
                                   name,ignore.case = TRUE)) %>%
-        tidyr::pivot_wider()
+        tidyr::pivot_wider() %>%
+        arrange(parameter,station_name,instrument,year)
     }
 
     #for mean
