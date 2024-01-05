@@ -9,7 +9,7 @@ importBC_data(
   years = NULL,
   flag_TFEE = TRUE,
   merge_Stations = TRUE,
-  clean_names = TRUE,
+  clean_names = FALSE,
   use_openairformat = TRUE
 )
 }

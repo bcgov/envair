@@ -1914,3 +1914,26 @@ isdf_DST <- function(lst_DATEPST) {
   sapply(lst_DATEPST,function(i) isit_DST(i,dateoutput = TRUE))
 }
 
+#' round off columns to the precision
+#'
+#' This function rounds off specified columns in a dataframe to a specified precision
+#'
+#' @param data is a data frame
+#' @param cols_round is vector of string listing the columns to round to specified precision
+#' @param n is the precision or number of decimal places
+#'
+#' @examples
+#' df <- importBC_data_avg('pm25',2020,averaging_type = 'annual mean 24h')
+#' df_rounded <- roundall(df_rounded,cols_round = c('rounded_mean_24h'),n=1)
+roundall <- function(data,cols_round,n=0) {
+  if (0) {
+    data <- pm25_table
+    cols_round <- c('perc_25_1hr','perc_50_1hr')
+    n <- 0
+  }
+
+  for (cols_ in cols_round) {
+    data[[cols_]] <- round2(data[[cols_]],n=n)
+  }
+  return(data)
+}
