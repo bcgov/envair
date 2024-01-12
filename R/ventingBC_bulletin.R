@@ -1138,7 +1138,7 @@ readLines(srch_api)
 #' @param date_to is the end dates, as string in yyyy-mm-dd
 #'
 #' @export
-get_venting_summary <- function(dates) {
+get_venting_summary <- function(date_from,date_to) {
   if (0) {
     source('../envair/R/envairfunctions.R')
     date_from <- '2023-10-01'
