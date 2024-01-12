@@ -139,6 +139,8 @@ library(envair)
 
 -   `importECCC_forecast()` Retrieves AQHI, PM2.5, PM10, O3, and NO2 forecasts from the ECCC datamart
 
+-   `get_venting_summary()` Summarizes the ventilation index, counting the number of GOOD, FAIR, or POOR days for the month
+
 -   `GET_VENTING_ECCC()` Retrieve the venting index FLCN39 from Environment and Climate Change Canada datamart or from the B.C.'s Open Data Portal
 
 -   `ventingBC_kml()` Creates a kml or shape file based on the 2019 OBSCR rules.

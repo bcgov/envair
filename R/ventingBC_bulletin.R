@@ -1142,12 +1142,13 @@ get_venting_summary <- function(date_from,date_to) {
   if (0) {
     source('../envair/R/envairfunctions.R')
     date_from <- '2023-10-01'
-    date_to <- '2023-12-31'
+    date_to <- '2023-10-31'
   }
 
   require(lubridate)
   require(janitor)
   require(tidyr)
+  require(dplyr)
   dates_included <- seq.Date(from = ymd(date_from) , to =ymd(date_to), by='day')
 
   venting_data <- GET_VENTING_ECCC(dates = dates_included)
@@ -1194,7 +1195,10 @@ get_venting_summary <- function(date_from,date_to) {
 
 result <- today_vi %>%
   left_join(tomorrow_vi) %>%
-  left_join(current_vi)
+  left_join(current_vi) %>%
+  mutate(month_year = paste(month.abb[month],year,sep='-')) %>%
+  select(-month,-year) %>%
+  select(month_year,everything())
 
 return(result)
 }

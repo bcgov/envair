@@ -215,6 +215,9 @@ library(envair)
 - `importECCC_forecast()` Retrieves AQHI, PM2.5, PM10, O3, and NO2
   forecasts from the ECCC datamart
 
+- `get_venting_summary()` Summarizes the ventilation index, counting the
+  number of GOOD, FAIR, or POOR days for the month
+
 - `GET_VENTING_ECCC()` Retrieve the venting index FLCN39 from
   Environment and Climate Change Canada datamart or from the B.C.’s Open
   Data Portal
@@ -259,7 +262,7 @@ PG_data <- importBC_data('Prince George Plaza 400',2010:2012)
 pollutionRose(PG_data,pollutant='pm25')
 ```
 
-![](importBC_data.png)<!-- -->
+<img src="importBC_data.png" width="532" />
 
 ##### Other features for station data retrieval
 
@@ -388,10 +391,10 @@ GET_VENTING_ECCC((dates = seq(from = lubridate::ymd('2021-01-01'),
 
 | VENTING_INDEX_ABBREV | DATE_ISSUED | CURRENT_VI | CURRENT_VI_DESC | CURRENT_WSPD | CURRENT_MIX_HEIGHT | TODAY_VI | TODAY_VI_DESC | TODAY_WSPD | TODAY_MIX_HEIGHT | TOMORROW_VI | TOMORROW_VI_DESC | TOMORROW_WSPD | TOMORROW_MIX_HEIGHT | NAME           | REGION           |      LAT |      LONG |
 |:---------------------|:------------|:-----------|:----------------|:-------------|:-------------------|:---------|:--------------|:-----------|:-----------------|:------------|:-----------------|:--------------|:--------------------|:---------------|:-----------------|---------:|----------:|
-| 100 MILE             | 2022-11-02  | 47         | FAIR            | 23           | 1298               | 58       | GOOD          | 14         | 1762             | 73          | GOOD             | 33            | 1456                | 100 Mile House | CENTRAL INTERIOR | 51.63915 | -121.2945 |
-| ATLIN                | 2022-11-02  | 17         | POOR            | 16           | 789                | 40       | FAIR          | 32         | 900              | 20          | POOR             | 20            | 800                 | Atlin          | NORTHERN BC      | 59.57000 | -133.7000 |
-| BELLA COOLA          | 2022-11-02  | 15         | POOR            | 9            | 163                | 36       | FAIR          | 7          | 840              | 38          | FAIR             | 20            | 340                 | Bella Coola    | COAST            | 52.38000 | -126.7500 |
-| BURNS LAKE           | 2022-11-02  | 27         | POOR            | 16           | 935                | 53       | FAIR          | 15         | 1386             | 38          | FAIR             | 20            | 1015                | Burns Lake     | CENTRAL INTERIOR | 54.23142 | -125.7597 |
+| 100 MILE             | 2024-01-12  | 73         | GOOD            | 23           | 1686               | 48       | FAIR          | 16         | 1474             | 23          | POOR             | 15            | 1124                | 100 Mile House | CENTRAL INTERIOR | 51.63915 | -121.2945 |
+| ATLIN                | 2024-01-12  | 11         | POOR            | 10           | 742                | 11       | POOR          | 10         | 745              | 15          | POOR             | 10            | 817                 | Atlin          | NORTHERN BC      | 59.57000 | -133.7000 |
+| BELLA COOLA          | 2024-01-12  | 37         | FAIR            | 13           | 480                | 34       | FAIR          | 21         | 283              | 21          | POOR             | 11            | 256                 | Bella Coola    | COAST            | 52.38000 | -126.7500 |
+| BURNS LAKE           | 2024-01-12  | 10         | POOR            | 6            | 748                | 20       | POOR          | 8          | 987              | 25          | POOR             | 10            | 1026                | Burns Lake     | CENTRAL INTERIOR | 54.23142 | -125.7597 |
 
 #### `importECCC_forecast()`
 
