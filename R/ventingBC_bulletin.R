@@ -101,13 +101,13 @@ ventingBC_bulletin <- function(date.start=NULL,
 
       if (!is.null(temp.download))
       {
-        print(temp.download)
+        message(temp.download)
         for (temp.download.url in temp.download$URL)
         {
           if (is.null(venting.content))
           {
             #check the files in the url folder
-            print(paste('scanning content of',temp.download.url))
+            message(paste('scanning content of',temp.download.url))
             temp<-GET_URL_FOLDERS(temp.download.url)%>%
               filter(grepl('FLCN39',FOLDER,ignore.case=TRUE))
             if (nrow(temp)>0)
@@ -115,7 +115,7 @@ ventingBC_bulletin <- function(date.start=NULL,
               temp.result <- NULL
               for (j in 1:20)
               {
-                print(paste('Attempt:',j,'on',temp.download.url))
+                message(paste('Attempt:',j,'on',temp.download.url))
                 #we'll just try both http and https, whichever works
                 try(temp.result<-unlist(readLines(paste(gsub('https://','http://',temp.download.url,ignore.case=TRUE)
                                                         ,temp$FOLDER,sep=''))))
@@ -130,7 +130,7 @@ ventingBC_bulletin <- function(date.start=NULL,
 
               if (length(temp.result)>0)
               {
-                print (paste('found Venting file in',temp$FOLDER))
+                message (paste('found Venting file in',temp$FOLDER))
                 venting.content<-temp.result
                 #scan date from path
                 venting.date_ <- unlist(strsplit(temp.download.url,split='/'))
@@ -155,7 +155,7 @@ ventingBC_bulletin <- function(date.start=NULL,
   if (venting.date == as.character(lubridate::ymd(date.start),'%Y-%m-%d'))
   {
 
-    print(paste('Found Venting of date',venting.date))
+    message(paste('Found Venting of date',venting.date))
     #create a string of the venting content
     ventECCC_<-venting.content[1]
     for (i in 2:length(venting.content))
@@ -199,7 +199,7 @@ ventingBC_bulletin <- function(date.start=NULL,
         dir.create(tempdir())
         write(ventECCC_,filename_$TEMP_FILE[1])
 
-        print(paste('Saving to ',filename_$FINAL_FILE[1]))
+        message(paste('Saving to ',filename_$FINAL_FILE[1]))
         key<-ENVAIR_CONNECTION_CHECK()
         key.ftpuser<-as.character(key$VALUE[key$ITEM=='FTP_USER'])
         key.ftppwd<-as.character(key$VALUE[key$ITEM=='FTP_PASSWORD'])
@@ -227,7 +227,7 @@ ventingBC_bulletin <- function(date.start=NULL,
       try(temp_<-curl(venting.template))
       if (is.null(temp_))
       {
-        print(paste('WEBSITE MISSING:',venting.template))
+        message(paste('WEBSITE MISSING:',venting.template))
         try(temp_ <- curl('venting_template.html_'))
       } else
       {
@@ -269,13 +269,13 @@ ventingBC_bulletin <- function(date.start=NULL,
         data.table::fwrite(vent_,file=savefile)
       } else
       {
-        print('There were no venting data retrieved from ECCC')
+        message('There were no venting data retrieved from ECCC')
 
       }
     }
   } else
   {
-    print(paste('Venting of the date not found, only found',venting.date, 'and today is', date.start))
+    message(paste('Venting of the date not found, only found',venting.date, 'and today is', date.start))
   }
 }
 
@@ -335,7 +335,7 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE,isCOVID = FALSE,fireban=NULL)
   URL.inserfile<-'https://envistaweb.env.gov.bc.ca/aqo/files/Venting_format.xml'
 
 
-  print(paste('Downloading blank shapefile to:',file.temp))
+  message(paste('Downloading blank shapefile to:',file.temp))
   download.file(URL.shapefile,file.temp)
 
   if (0)
@@ -376,13 +376,13 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE,isCOVID = FALSE,fireban=NULL)
 
   if (is.null(venting.data))
   {
-    print(paste('No venting map data for:',date_today))
+    message(paste('No venting map data for:',date_today))
     return()
   }
 
   if (as.character(venting.data$DATE_ISSUED) != date_today)
   {
-    print(paste('Date needed and available did not match, exiting',
+    message(paste('Date needed and available did not match, exiting',
                 'Date in ECCC:',as.character(venting.data$DATE_ISSUED),
                 'Date Requested:',date_today))
     return()
@@ -497,7 +497,7 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE,isCOVID = FALSE,fireban=NULL)
     #make sure path.output has '/' at the end of name
     if (substr(path.output,nchar(path.output),nchar(path.output)) != '/')
     {path.output <- paste(path.output,'/',sep='')}
-    print(paste('saving file to:',path.output))
+    message(paste('saving file to:',path.output))
     #configure the description field
     venting.shapefile$Description<-paste('<p><b>Sensitivity Zone:</b> ',venting.shapefile$SENSI,
                                          '<br/><b>Issued:</b>',format(as.Date(venting.shapefile$DATE_ISSUED),'%a %d %b %Y'),
@@ -525,7 +525,7 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE,isCOVID = FALSE,fireban=NULL)
 
 
     #write temporarilty into a KML file
-    print(paste('Writing temporary kml file (unmodded) into:',path.temp))
+    message(paste('Writing temporary kml file (unmodded) into:',path.temp))
     writeOGR(obj=venting.shapefile,dsn=paste(path.temp,'/vent_temp.kml',sep=''),
              driver='KML',layer="Venting",
              dataset_options = c("NameField=name",
@@ -536,7 +536,7 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE,isCOVID = FALSE,fireban=NULL)
     #insert the styleURL definition that defines polygon styles
     #this will be inserted at the <Document> line
     venting.text<-readLines(paste(path.temp,'/vent_temp.kml',sep=''))
-    print(paste('Created temp kml and extracting content',path.temp))
+    message(paste('Created temp kml and extracting content',path.temp))
 
     #insert styleURL linespath.temp
     #remove default style lines, replace with actual style
@@ -570,7 +570,7 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE,isCOVID = FALSE,fireban=NULL)
           {
 
             polygon.name<-unlist(strsplit(tolower(polygon.temp[j]),split='</name>'))[1]
-            print(paste('scanning kml entry for:',toupper(polygon.name)))
+            message(paste('scanning kml entry for:',toupper(polygon.name)))
           }
         }
       }
@@ -627,7 +627,7 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE,isCOVID = FALSE,fireban=NULL)
         {
           temp.line<-'<styleUrl>#NA</styleUrl>'
         }
-        print(paste('inserting the style:',temp.line,'for',venting.temp[1,]$SENSI))
+        message(paste('inserting the style:',temp.line,'for',venting.temp[1,]$SENSI))
         if (0)
         {
           #this crashes
@@ -650,7 +650,7 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE,isCOVID = FALSE,fireban=NULL)
       #insert the style template
       if (!temp.found & grepl('<Document',temp.line,ignore.case=TRUE))
       {
-        print(paste('Inserting the style files:',
+        message(paste('Inserting the style files:',
                     length(venting.insert),'rows in row number',
                     i))
         temp.found<-TRUE
@@ -669,7 +669,7 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE,isCOVID = FALSE,fireban=NULL)
       filename_<-'Venting_Index.kml'
     }
 
-    print(paste('Writing the index file in temp location:',
+    message(paste('Writing the index file in temp location:',
                 path.temp))
     #delete the N/A VI value
     temp <- gsub('N/A (N/A)','N/A',temp,ignore.case = TRUE)
@@ -677,7 +677,7 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE,isCOVID = FALSE,fireban=NULL)
     write(x=temp,file=paste(path.temp,'/Venting_Index.kml',sep=''))
 
     #move to final location in temp file name, then rename to final name
-    print(paste('Copying the file to final location',path.output,filename_))
+    message(paste('Copying the file to final location',path.output,filename_))
 
 
     file.copy(from=paste(path.temp,'/Venting_Index.kml',sep=''),
@@ -722,12 +722,12 @@ GET_VENTING_ECCC <- function(dates = NULL) {
   }
 
   #convert dates to character
-  dates <- as.character(dates,'%Y-%m-%d')
+  try(dates <- format(dates,'%Y-%m-%d'))
 
   df_result <- NULL
 
   for (date_ in dates) {
-    print(paste('=======Retrieving Venting Index from:',date_,'========'))
+    message(paste('=======Retrieving Venting Index from:',date_,'========'))
     df <- GET_VENTING_ECCC0(date.start = date_)
     df_result <- df_result %>%
       bind_rows(df)
@@ -829,14 +829,14 @@ GET_VENTING_ECCC0 <-function(date.start=NULL)
             if (is.null(venting.content))
             {
               #check the files in the url folder
-              print(paste('scanning content of',temp.download.url))
+              message(paste('scanning content of',temp.download.url))
               temp<-GET_URL_FOLDERS(temp.download.url)%>%
                 filter(grepl('FLCN39',FOLDER,ignore.case=TRUE))
 
 
               if (nrow(temp)>0)
               {
-                print(paste('processing content:',paste(temp.download.url,temp$FOLDER,sep='')))
+                message(paste('processing content:',paste(temp.download.url,temp$FOLDER,sep='')))
                 temp.result <- NULL
                 temp.download.url <- gsub('http://','https://',temp.download.url)
                 try(temp.result <- unlist(readr::read_lines(paste(temp.download.url,temp$FOLDER,sep=''))),silent = TRUE)
@@ -857,7 +857,7 @@ GET_VENTING_ECCC0 <-function(date.start=NULL)
     #if ECCC does not have data, located from ENV ftp, venting.url2
 
     ftp.url <- paste(venting.url2,lubridate::year(lubridate::ymd(date.start)),'/',sep='')
-    print(paste('Retrieving data from:',ftp.url))
+    message(paste('Retrieving data from:',ftp.url))
     lst_ventfiles <- RCurl::getURL(ftp.url,verbose=TRUE,
                                    ftp.use.epsv=TRUE, dirlistonly = TRUE
     )
@@ -887,7 +887,7 @@ GET_VENTING_ECCC0 <-function(date.start=NULL)
     if (is.null(venting.content))
     {
 
-      print(paste('There are no folders from ECCC for this date:',date.start))
+      message(paste('There are no folders from ECCC for this date:',date.start))
       return(NULL)
 
     }
@@ -962,7 +962,7 @@ GET_VENTING_ECCC0 <-function(date.start=NULL)
   {
     venting.table<-venting.table%>%
       merge(venting.meta,all.x=TRUE)
-    print(paste('OK.',nrow(venting.table),'rows'))
+    message(paste('OK.',nrow(venting.table),'rows'))
 
 
   }
@@ -970,7 +970,7 @@ GET_VENTING_ECCC0 <-function(date.start=NULL)
 
   if (nrow(venting.table)>0)
   {
-    print('Success. Ignore warnings and errors')
+    message('Success. Ignore warnings and errors')
     venting.table <- tibble::as.tibble(venting.table)
   }
   return(venting.table)
@@ -1016,7 +1016,7 @@ importECCC_forecast<-function(parameter=NULL)
   for (i in 1:nrow(source.files))
   {
     temp.file<-source.files[i,]
-    print(paste('Analysing the file:',temp.file$FOLDER))
+    message(paste('Analysing the file:',temp.file$FOLDER))
     temp<-read.table(file=paste(source.url,temp.file$FOLDER,sep=''),
                      sep=',',header=TRUE)%>%
       RENAME_COLUMN('stationId','NAPS_ID')%>%
@@ -1037,7 +1037,7 @@ importECCC_forecast<-function(parameter=NULL)
                                   !grepl('CGNDB',colnames(temp))
     ])
     {
-      print(paste('Retrieving from',column))
+      message(paste('Retrieving from',column))
 
       temp.result.date<-temp%>%
         RENAME_COLUMN(column,'FORECAST_VALUE')%>%
@@ -1128,4 +1128,72 @@ get_CGNDB <- function(lat,lon,radius = 50) {
   srch_api <- gsub('<rad>',as.character(radius),srch_api)
 
 readLines(srch_api)
+}
+
+#' get_venting_monthly_summary
+#'
+#' @description retrieves the monthly summary of today's ventilation index forecast
+#'
+#' @param date_from is a the starting dates, as string in yyyy-mm-dd
+#' @param date_to is the end dates, as string in yyyy-mm-dd
+#'
+#' @export
+get_venting_summary <- function(dates) {
+  if (0) {
+    source('../envair/R/envairfunctions.R')
+    date_from <- '2023-10-01'
+    date_to <- '2023-12-31'
+  }
+
+  require(lubridate)
+  require(janitor)
+  dates_included <- seq.Date(from = ymd(date_from) , to =ymd(date_to), by='day')
+
+  venting_data <- GET_VENTING_ECCC(dates = dates_included)
+
+  venting_data <- clean_names(venting_data) %>%
+    mutate(month = month(ymd(date_issued)),
+           year = year(ymd(date_issued)))
+
+  cols_vi <- colnames(venting_data)
+
+  cols_vi_select <- cols_vi[grepl('venting_index_abbrev|desc|year|month|date_issued',cols_vi)]
+
+  venting_data_select <- venting_data %>%
+    select(all_of(cols_vi_select))
+
+  # -factor so that these value can be ordered
+
+  venting_data_select$current_vi_desc <- factor(venting_data_select$current_vi_desc, levels = c("GOOD","FAIR","POOR","NA"))
+  venting_data_select$today_vi_desc <- factor(venting_data_select$today_vi_desc, levels = c("GOOD","FAIR","POOR","NA"))
+  venting_data_select$tomorrow_vi_desc <- factor(venting_data_select$tomorrow_vi_desc, levels = c("GOOD","FAIR","POOR","NA"))
+
+  # -create summary for each VI (current,today,tomorrow)
+  current_vi <- venting_data_select %>%
+    group_by(venting_index_abbrev,month,year,current_vi_desc) %>%
+    summarise(count = n()) %>%
+    filter(!is.na(current_vi_desc)) %>%
+    mutate(current_vi_desc = paste(current_vi_desc,'(current)',sep='')) %>%
+    pivot_wider(names_from = current_vi_desc, values_from = count,values_fill =0)
+
+
+  today_vi <- venting_data_select %>%
+    group_by(venting_index_abbrev,month,year,today_vi_desc) %>%
+    summarise(count = n()) %>%
+    filter(!is.na(today_vi_desc)) %>%
+    mutate(today_vi_desc = paste(today_vi_desc,'(today)',sep='')) %>%
+    pivot_wider(names_from = today_vi_desc, values_from = count,values_fill =0)
+
+  tomorrow_vi <- venting_data_select %>%
+    group_by(venting_index_abbrev,month,year,tomorrow_vi_desc) %>%
+    summarise(count = n()) %>%
+    filter(!is.na(tomorrow_vi_desc)) %>%
+    mutate(tomorrow_vi_desc = paste(tomorrow_vi_desc,'(tomorrow)',sep='')) %>%
+    pivot_wider(names_from = tomorrow_vi_desc, values_from = count,values_fill =0)
+
+result <- today_vi %>%
+  left_join(tomorrow_vi) %>%
+  left_join(current_vi)
+
+return(result)
 }
