@@ -1147,6 +1147,7 @@ get_venting_summary <- function(date_from,date_to) {
 
   require(lubridate)
   require(janitor)
+  require(tidyr)
   dates_included <- seq.Date(from = ymd(date_from) , to =ymd(date_to), by='day')
 
   venting_data <- GET_VENTING_ECCC(dates = dates_included)
