@@ -1197,6 +1197,7 @@ result <- today_vi %>%
   left_join(tomorrow_vi) %>%
   left_join(current_vi) %>%
   mutate(month_year = paste(month.abb[month],year,sep='-')) %>%
+  ungroup() %>%
   select(-month,-year) %>%
   select(month_year,everything())
 
