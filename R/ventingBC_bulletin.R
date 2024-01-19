@@ -1134,27 +1134,34 @@ readLines(srch_api)
 #'
 #' @description retrieves the monthly summary of today's ventilation index forecast
 #'
-#' @param date_from is a the starting dates, as string in yyyy-mm-dd
-#' @param date_to is the end dates, as string in yyyy-mm-dd
+#' @param date_from is a the starting dates, as string in yyyy-mm
+#' @param date_to is the end dates, as string in yyyy-mm
 #'
 #' @export
 get_venting_summary <- function(date_from,date_to) {
   if (0) {
     source('../envair/R/envairfunctions.R')
-    date_from <- '2023-10-01'
-    date_to <- '2023-10-31'
+    date_from <- '2023-10'
+    date_to <- '2023-12'
   }
 
   require(lubridate)
   require(janitor)
   require(tidyr)
   require(dplyr)
+
+
+  date_from <- ymd(paste(date_from,'01',sep='-'))
+  date_to <- ymd(paste(date_to,'01',sep='-')) + months(1) - days(1)
+
+  message(paste('retrieving data from:',date_from, ' to ',date_to,sep=''))
+
   dates_included <- seq.Date(from = ymd(date_from) , to =ymd(date_to), by='day')
 
   venting_data <- GET_VENTING_ECCC(dates = dates_included)
 
   venting_data <- clean_names(venting_data) %>%
-    mutate(month = month(ymd(date_issued)),
+    mutate(month = format((ymd(date_issued)),'%b'),
            year = year(ymd(date_issued)))
 
   cols_vi <- colnames(venting_data)
@@ -1170,36 +1177,49 @@ get_venting_summary <- function(date_from,date_to) {
   venting_data_select$today_vi_desc <- factor(venting_data_select$today_vi_desc, levels = c("GOOD","FAIR","POOR","NA"))
   venting_data_select$tomorrow_vi_desc <- factor(venting_data_select$tomorrow_vi_desc, levels = c("GOOD","FAIR","POOR","NA"))
 
-  # -create summary for each VI (current,today,tomorrow)
-  current_vi <- venting_data_select %>%
-    group_by(venting_index_abbrev,month,year,current_vi_desc) %>%
-    summarise(count = n()) %>%
-    filter(!is.na(current_vi_desc)) %>%
-    mutate(current_vi_desc = paste(current_vi_desc,'(current)',sep='')) %>%
-    pivot_wider(names_from = current_vi_desc, values_from = count,values_fill =0)
+  venting_data_select <-  venting_data_select %>%
+    rename(today = today_vi_desc,
+           tomorrow=tomorrow_vi_desc,
+           venting_area = venting_index_abbrev) %>%
+    select(venting_area,date_issued ,month,year,today,tomorrow)
+
+  # - apply burning rules
+  # - the following combination are allowed
+  df_rules <- tribble(
+    ~burning_rules,~today,~tomorrow,
+    'LSSZ(<6-day)','GOOD','GOOD',
+    'LSSZ(<6-day)','GOOD','FAIR',
+    'LSSZ(<6-day)','FAIR','GOOD',
+    'LSSZ(<6-day)','FAIR','FAIR',
+
+    'MSSZ(<1-day)','GOOD','GOOD',
+    'MSSZ(<1-day)','GOOD','FAIR',
+    'MSSZ(<1-day)','GOOD','POOR',
+
+    'MSSZ(<4-day)','GOOD','GOOD',
+    'MSSZ(<4-day)','GOOD','FAIR',
+
+    'HSSZ(<1-day)','GOOD','GOOD',
+    'HSSZ(<1-day)','GOOD','FAIR',
+    'HSSZ(<1-day)','GOOD','POOR',
+
+    'HSSZ(<2-day)','GOOD','GOOD',
+    'HSSZ(<2-day)','GOOD','FAIR',
+  )
+
+  venting_data_rules <-  venting_data_select %>%
+    left_join(df_rules, by=c('today','tomorrow'),relationship = 'many-to-many')
+
+  result <- venting_data_rules %>%
+    group_by(venting_area,month,year,burning_rules) %>%
+    summarise(count =n()) %>%
+    filter(!is.na(burning_rules)) %>%
+    mutate(burning_rules = factor(burning_rules,levels = unique(df_rules$burning_rules))) %>%
+    arrange(burning_rules) %>%
+    pivot_wider(names_from = burning_rules,values_from = count,values_fill =0)
 
 
-  today_vi <- venting_data_select %>%
-    group_by(venting_index_abbrev,month,year,today_vi_desc) %>%
-    summarise(count = n()) %>%
-    filter(!is.na(today_vi_desc)) %>%
-    mutate(today_vi_desc = paste(today_vi_desc,'(today)',sep='')) %>%
-    pivot_wider(names_from = today_vi_desc, values_from = count,values_fill =0)
 
-  tomorrow_vi <- venting_data_select %>%
-    group_by(venting_index_abbrev,month,year,tomorrow_vi_desc) %>%
-    summarise(count = n()) %>%
-    filter(!is.na(tomorrow_vi_desc)) %>%
-    mutate(tomorrow_vi_desc = paste(tomorrow_vi_desc,'(tomorrow)',sep='')) %>%
-    pivot_wider(names_from = tomorrow_vi_desc, values_from = count,values_fill =0)
-
-result <- today_vi %>%
-  left_join(tomorrow_vi) %>%
-  left_join(current_vi) %>%
-  mutate(month_year = paste(month.abb[month],year,sep='-')) %>%
-  ungroup() %>%
-  select(-month,-year) %>%
-  select(month_year,everything())
 
 return(result)
 }
