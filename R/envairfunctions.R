@@ -1925,6 +1925,7 @@ isdf_DST <- function(lst_DATEPST) {
 #' @examples
 #' df <- importBC_data_avg('pm25',2020,averaging_type = 'annual mean 24h')
 #' df_rounded <- roundall(df_rounded,cols_round = c('rounded_mean_24h'),n=1)
+#' @export
 roundall <- function(data,cols_round,n=0) {
   if (0) {
     data <- pm25_table
