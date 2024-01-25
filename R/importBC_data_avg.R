@@ -52,7 +52,7 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
     source('./r/importBC_data_avg.R')
     parameter <- c('pm25')
 
-    years <- 2022
+    years <- 2023
     # averaging_type <- c('annual mean 1hr','annual mean 24h')
     averaging_type = 'annual mean 1hr'
     data_threshold <- 0.75

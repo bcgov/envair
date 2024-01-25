@@ -34,7 +34,8 @@ Imports:
      tidyr (>= 1.2.0),
      sf (>= 1.0-8),
      arrow (>= 12.0.0),
-     janitor (>= 2.2.0)
+     janitor (>= 2.2.0),
+     rcaaqs (>= 0.3.1.9000)
 Suggests:
      rmarkdown,
      bcmaps,
