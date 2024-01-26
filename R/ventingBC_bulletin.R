@@ -383,8 +383,8 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE,isCOVID = FALSE,fireban=NULL)
   if (as.character(venting.data$DATE_ISSUED) != date_today)
   {
     message(paste('Date needed and available did not match, exiting',
-                'Date in ECCC:',as.character(venting.data$DATE_ISSUED),
-                'Date Requested:',date_today))
+                  'Date in ECCC:',as.character(venting.data$DATE_ISSUED),
+                  'Date Requested:',date_today))
     return()
 
   }
@@ -651,8 +651,8 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE,isCOVID = FALSE,fireban=NULL)
       if (!temp.found & grepl('<Document',temp.line,ignore.case=TRUE))
       {
         message(paste('Inserting the style files:',
-                    length(venting.insert),'rows in row number',
-                    i))
+                      length(venting.insert),'rows in row number',
+                      i))
         temp.found<-TRUE
         temp<-append(temp,venting.insert)
       }
@@ -670,7 +670,7 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE,isCOVID = FALSE,fireban=NULL)
     }
 
     message(paste('Writing the index file in temp location:',
-                path.temp))
+                  path.temp))
     #delete the N/A VI value
     temp <- gsub('N/A (N/A)','N/A',temp,ignore.case = TRUE)
 
@@ -1127,21 +1127,21 @@ get_CGNDB <- function(lat,lon,radius = 50) {
   srch_api <- gsub('<lon>',as.character(lon),srch_api)
   srch_api <- gsub('<rad>',as.character(radius),srch_api)
 
-readLines(srch_api)
+  readLines(srch_api)
 }
 
 #' get_venting_monthly_summary
 #'
 #' @description retrieves the monthly summary of today's ventilation index forecast
 #'
-#' @param date_from is a the starting dates, as string in yyyy-mm
-#' @param date_to is the end dates, as string in yyyy-mm
+#' @param date_from is a the starting dates, as string in yyyy-mm or yyyy-mm-dd
+#' @param date_to is the end dates, as string in yyyy-mm or yyyy-mm-dd
 #'
 #' @export
 get_venting_summary <- function(date_from,date_to) {
   if (0) {
     source('../envair/R/envairfunctions.R')
-    date_from <- '2023-10'
+    date_from <- ymd('2023-10-01')
     date_to <- '2023-12'
   }
 
@@ -1150,9 +1150,35 @@ get_venting_summary <- function(date_from,date_to) {
   require(tidyr)
   require(dplyr)
 
+  # - check the date input
+  num_dash_date_from <- nchar(gsub("[^-]", "", date_from))
+  num_dash_date_to <- nchar(gsub("[^-]", "", date_to))
 
-  date_from <- ymd(paste(date_from,'01',sep='-'))
-  date_to <- ymd(paste(date_to,'01',sep='-')) + months(1) - days(1)
+  # -check if incorrect date format entered
+  if (!num_dash_date_from %in% 1:2) {
+    error_message <- 'An error occurred: Please enter date_from in "yyyy-mm-dd" format'
+    stop(error_message)
+  }
+  if (!num_dash_date_to %in% 1:2) {
+    error_message <- 'An error occurred: Please enter date_to in "yyyy-mm-dd" format'
+    stop(error_message)
+  }
+
+  if (num_dash_date_from == 1) {
+    date_from <- paste(date_from,'01',sep='-')
+  }
+  date_from <- ymd(date_from)
+
+  if (num_dash_date_to== 1) {
+    date_to <- paste(date_to,'01',sep='-')
+    date_to <- ymd(date_to) + months(1) - days(1)
+  } else
+  {
+    date_to = ymd(date_to)
+  }
+
+
+
 
   message(paste('retrieving data from:',date_from, ' to ',date_to,sep=''))
 
@@ -1183,32 +1209,49 @@ get_venting_summary <- function(date_from,date_to) {
            venting_area = venting_index_abbrev) %>%
     select(venting_area,date_issued ,month,year,today,tomorrow)
 
-  # - apply burning rules
+  # - option 1) apply burning rules
   # - the following combination are allowed
-  df_rules <- tribble(
-    ~burning_rules,~today,~tomorrow,
-    'LSSZ(<6-day)','GOOD','GOOD',
-    'LSSZ(<6-day)','GOOD','FAIR',
-    'LSSZ(<6-day)','FAIR','GOOD',
-    'LSSZ(<6-day)','FAIR','FAIR',
+  # df_rules <- tribble(
+  #   ~burning_rules,~today,~tomorrow,
+  #   'LSSZ(<6-day)','GOOD','GOOD',
+  #   'LSSZ(<6-day)','GOOD','FAIR',
+  #   'LSSZ(<6-day)','FAIR','GOOD',
+  #   'LSSZ(<6-day)','FAIR','FAIR',
+  #
+  #   'MSSZ(<1-day)','GOOD','GOOD',
+  #   'MSSZ(<1-day)','GOOD','FAIR',
+  #   'MSSZ(<1-day)','GOOD','POOR',
+  #
+  #   'MSSZ(<4-day)','GOOD','GOOD',
+  #   'MSSZ(<4-day)','GOOD','FAIR',
+  #
+  #   'HSSZ(<1-day)','GOOD','GOOD',
+  #   'HSSZ(<1-day)','GOOD','FAIR',
+  #   'HSSZ(<1-day)','GOOD','POOR',
+  #
+  #   'HSSZ(<2-day)','GOOD','GOOD',
+  #   'HSSZ(<2-day)','GOOD','FAIR',
+  # )
+  #
+  # venting_data_rules <-  venting_data_select %>%
+  #   left_join(df_rules, by=c('today','tomorrow'),relationship = 'many-to-many')
 
-    'MSSZ(<1-day)','GOOD','GOOD',
-    'MSSZ(<1-day)','GOOD','FAIR',
-    'MSSZ(<1-day)','GOOD','POOR',
+  df_rules <- tibble(
+    tomorrow = c('GOOD','FAIR','POOR')) %>%
 
-    'MSSZ(<4-day)','GOOD','GOOD',
-    'MSSZ(<4-day)','GOOD','FAIR',
+    merge(
+      tibble(
+        today = c('GOOD','FAIR','POOR')
+      )
+    ) %>%
+    mutate(burning_rules = paste(today,tomorrow,sep = '/'))
 
-    'HSSZ(<1-day)','GOOD','GOOD',
-    'HSSZ(<1-day)','GOOD','FAIR',
-    'HSSZ(<1-day)','GOOD','POOR',
 
-    'HSSZ(<2-day)','GOOD','GOOD',
-    'HSSZ(<2-day)','GOOD','FAIR',
-  )
 
   venting_data_rules <-  venting_data_select %>%
-    left_join(df_rules, by=c('today','tomorrow'),relationship = 'many-to-many')
+    filter(!is.na(today),!is.na(tomorrow)) %>%
+    mutate(burning_rules = paste(today,tomorrow,sep='/'))
+
 
   result <- venting_data_rules %>%
     group_by(venting_area,month,year,burning_rules) %>%
@@ -1216,10 +1259,13 @@ get_venting_summary <- function(date_from,date_to) {
     filter(!is.na(burning_rules)) %>%
     mutate(burning_rules = factor(burning_rules,levels = unique(df_rules$burning_rules))) %>%
     arrange(burning_rules) %>%
-    pivot_wider(names_from = burning_rules,values_from = count,values_fill =0)
+    ungroup() %>%
+    pivot_wider(names_from = burning_rules,values_from = count,values_fill = 0) %>%
+    mutate(month = factor(month,levels =month.abb)) %>%
+    arrange(venting_area,year,month)
 
 
 
 
-return(result)
+  return(result)
 }

@@ -7,9 +7,9 @@
 get_venting_summary(date_from, date_to)
 }
 \arguments{
-\item{date_from}{is a the starting dates, as string in yyyy-mm}
+\item{date_from}{is a the starting dates, as string in yyyy-mm or yyyy-mm-dd}
 
-\item{date_to}{is the end dates, as string in yyyy-mm}
+\item{date_to}{is the end dates, as string in yyyy-mm or yyyy-mm-dd}
 }
 \description{
 retrieves the monthly summary of today's ventilation index forecast
