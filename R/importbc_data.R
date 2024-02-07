@@ -90,7 +90,7 @@ importBC_data <- function(parameter_or_station,
 
     parameter_or_station <- c('smithers')
 
-    years=2022
+    years=2020:2022
     flag_TFEE = FALSE
     merge_Stations = TRUE
     clean_names = TRUE
@@ -563,9 +563,27 @@ importBC_data <- function(parameter_or_station,
   suppressMessages({
 
     df_data <- df_data %>%
+      ungroup() %>%
       filter(!is.na(RAW_VALUE))
 
-    df_data <- pad_data(df_data,date_time = 'DATE_PST',values = c('RAW_VALUE','ROUNDED_VALUE','flag_tfee'))
+    # -pad data for each year
+    df_data$year = lubridate::year(df_data$DATE)
+    years_pad <- unique(df_data$year)
+
+    df_pad <- NULL
+    for (yr in years_pad) {
+
+      message(paste('padding data  for year:',yr))
+      df_ <- df_data %>%
+        filter(year == yr) %>%
+        select(-year) %>%
+        pad_data(date_time = 'DATE_PST',values = c('RAW_VALUE','ROUNDED_VALUE','flag_tfee'))
+      df_pad <- bind_rows(df_pad,df_)
+      gc()
+    }
+
+    df_data <- df_pad
+    rm(df_pad)
 
     # -add flagtfee column values
     # -adds NA column if flag_TFEE is FALSE
