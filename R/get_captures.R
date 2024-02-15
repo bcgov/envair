@@ -33,7 +33,10 @@ get_captures <- function(param,years=NULL,merge_Stations=FALSE,stop_at_present =
   #seperate years in order to save memory
 
   if (0) {
-    param <- df
+    param <- 'pm25'
+    years <- 2020
+    merge_Stations=FALSE
+    stop_at_present = TRUE
   }
 
   if (is.data.frame(param)) {

@@ -25,8 +25,9 @@
 #' It can also calculate the number of exceedance to a specified value "exceedance 25.00 d1hm".
 #' Function will round off based on the precision of the number entered after exceedance
 #'  If NULL, it applies either the 1-hour, 8-hour, or 24-hour, depending on typical default for
-#' @param data_threshold  value between 0 to 1. This refers to the data capture requirements.
+#' @param data_threshold  value between 0 to 1. This refers to the data capture requirements for the hourly to daily values.
 #' Data will less than that data_threshold are excluded from the output.
+#' This excludes the values
 #' If data_threshold=0, it will include ALL values of that averaging type and will include
 #' @param flag_TFEE default is FALSE. If TRUE, it will evaluate data with TFEE adjustment and include it in the result.
 #' The resultig column will have _TFEE for the TFEE-adjusted result
