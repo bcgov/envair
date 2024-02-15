@@ -33,7 +33,9 @@
 get_data_completeness <- function(parameter,years=NULL,groupby = NULL, merge_Stations=FALSE,stop_at_present = TRUE) {
   if (0) {
     parameter <- 'pm25'
+    merge_Stations=TRUE
     years <- 2020
+    stop_at_present = TRUE
     source('./r/importbc_data.R')
     source('./r/paddatafunction.R')
     source('./r/listBC_stations.R')
@@ -106,7 +108,7 @@ get_data_completeness <- function(parameter,years=NULL,groupby = NULL, merge_Sta
 
   df_complete <- tibble(date_time = datetimerange) %>%
     mutate(date_pst = datetimerange + hours(1)) %>%
-    mutate(date = date(date_time))
+    mutate(date = lubridate::date(date_time))
 
   # -calculate hourly captures
   cap_complete <- df_complete %>%
