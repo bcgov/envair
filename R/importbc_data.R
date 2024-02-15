@@ -88,15 +88,15 @@ importBC_data <- function(parameter_or_station,
     source('./r/get_caaqs_stn_history.R')
     source('./r/importbc_data.R')
 
-    parameter_or_station <- c('smithers')
+    parameter_or_station <- c('aqhi')
 
-    years=2020:2022
+    years=2021
     flag_TFEE = FALSE
     merge_Stations = TRUE
     clean_names = TRUE
     use_openairformat = TRUE
 
-    parameter_or_station = c("wdir_vect")
+    # parameter_or_station = c("wdir_vect")
     years = 2020:2021
     use_openairformat = FALSE
   }
@@ -129,8 +129,8 @@ importBC_data <- function(parameter_or_station,
   #list of columns based on pollutant
   cols_aqhi <- c('PARAMETER','DATE_PST','DATE','TIME','AQHI_AREA','CGNDB_NAME',
                  'STATION_NAME','REPORTED_AQHI','REPORTED_AQHI_CHAR','AQHI_VALUE',
-                 'AQHI_CLASSIC','AQHI_PLUS_PARAMETER','SO2_GT_36','AQHI_PLUS_PM25_VALUE',
-                 'VALIDATION_STATUS','AQHI_SO2')
+                 'AQHI_CLASSIC','AQHI_PLUS_PARAMETER','AQHI_SO2',
+                 'AQHI_SO2','LABEL_TEXT','GEN_POP_TEXT','RISK_POP_TEXT','SPECIAL_MESSAGE')
   cols_nonaqhi <- c('PARAMETER','DATE_PST','DATE','TIME','STATION_NAME',
                     'STATION_NAME_FULL','EMS_ID','NAPS_ID','UNIT','INSTRUMENT',
                     'OWNER','REGION','RAW_VALUE','ROUNDED_VALUE','VALIDATION_STATUS')
@@ -401,6 +401,10 @@ importBC_data <- function(parameter_or_station,
   # -for aqhi data-----
   # return results immediately
   if ('aqhi' %in% tolower(parameter_or_station)) {
+
+    if (0) {
+      a <- df_data
+    }
     try(df_data <- df_data %>%
           select(-flag_tfee), silent = TRUE)
     try(df_data <- df_data %>%
