@@ -34,7 +34,7 @@ get_data_completeness <- function(parameter,years=NULL,groupby = NULL, merge_Sta
   if (0) {
     parameter <- 'pm25'
     merge_Stations=TRUE
-    years <- 2020
+    years <- 2015:2016
     stop_at_present = TRUE
     source('./r/importbc_data.R')
     source('./r/paddatafunction.R')
@@ -106,8 +106,9 @@ get_data_completeness <- function(parameter,years=NULL,groupby = NULL, merge_Sta
   datetimerange <- seq(from = ymd_hm(paste(min_date,'00:00')),
                        to = ymd_hm(paste(max_date,'23:00')), by= 'hour')
 
+
   df_complete <- tibble(date_time = datetimerange) %>%
-    mutate(date_pst = datetimerange + hours(1)) %>%
+    mutate(date_pst = date_time + hours(1)) %>%
     mutate(date = lubridate::date(date_time))
 
   # -calculate hourly captures
