@@ -140,7 +140,7 @@ importBC_data <- function(parameter_or_station,
     orig_name = c('LABEL_TEXT','GEN_POP_TEXT','RISK_POP_TEXT','AQHI_PLUS_PM25_VALUE'),
     new_name = c('HEALTH_RISK','GEN_POP_MESSAGE','RISK_POP_MESSAGE','AQHI_PLUS_PM25')
   )
-  cols_rename
+
   if (0) {
     df_ %>%
       filter(!is.na(AQHI_AREA)) %>%
