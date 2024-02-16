@@ -90,7 +90,7 @@ importBC_data <- function(parameter_or_station,
 
     parameter_or_station <- c('aqhi')
 
-    years=2021
+    years=2019
     flag_TFEE = FALSE
     merge_Stations = TRUE
     clean_names = TRUE
@@ -129,14 +129,18 @@ importBC_data <- function(parameter_or_station,
   #list of columns based on pollutant
   cols_aqhi <- c('PARAMETER','DATE_PST','DATE','TIME','AQHI_AREA','CGNDB_NAME',
                  'STATION_NAME','REPORTED_AQHI','REPORTED_AQHI_CHAR','AQHI_VALUE',
-                 'AQHI_CLASSIC','AQHI_PLUS_PARAMETER','AQHI_SO2',
-                 'AQHI_SO2','LABEL_TEXT','GEN_POP_TEXT','RISK_POP_TEXT','SPECIAL_MESSAGE')
+                 'AQHI_CLASSIC','AQHI_PLUS_PM25_VALUE','AQHI_SO2',
+                 'AQHI_SO2','AQHI_REPORTED','LABEL_TEXT','GEN_POP_TEXT','RISK_POP_TEXT','SPECIAL_MESSAGE')
   cols_nonaqhi <- c('PARAMETER','DATE_PST','DATE','TIME','STATION_NAME',
                     'STATION_NAME_FULL','EMS_ID','NAPS_ID','UNIT','INSTRUMENT',
                     'OWNER','REGION','RAW_VALUE','ROUNDED_VALUE','VALIDATION_STATUS')
 
-
-
+  # -define column names that will be renamed for aqhi
+  cols_aqhi_rename <- tibble(
+    orig_name = c('LABEL_TEXT','GEN_POP_TEXT','RISK_POP_TEXT','AQHI_PLUS_PM25_VALUE'),
+    new_name = c('HEALTH_RISK','GEN_POP_MESSAGE','RISK_POP_MESSAGE','AQHI_PLUS_PM25')
+  )
+  cols_rename
   if (0) {
     df_ %>%
       filter(!is.na(AQHI_AREA)) %>%
@@ -339,13 +343,6 @@ importBC_data <- function(parameter_or_station,
 
       cols_df <- colnames(df_)
 
-      #debug
-      if (0) {
-        # df0 <- df_
-        df_ <- df0
-        df_ %>%
-          filter(TIME == '01:00:00')
-      }
       #process the datetime from DATE_PST
       df_$DATE_PST <- extractDateTime(df_$DATE_PST )
 
@@ -367,6 +364,37 @@ importBC_data <- function(parameter_or_station,
           mutate(VALIDATION_STATUS = 'Level 0')
       }
 
+
+      # -modification for AQHI data retrieval
+      if (tolower(parameter_or_station) == 'aqhi') {
+
+        # -insert value of reported_AQHI
+        if ('REPORTED_AQHI_CHAR' %in% cols_df)   {
+          df_ <- df_ %>%
+            mutate(AQHI_REPORTED = REPORTED_AQHI_CHAR) %>%
+            select(-any_of(c('REPORTED_AQHI_CHAR','REPORTED_AQHI')))
+        }
+
+        # -insert AQHI_REPORTED column if it is not included
+
+        if (!'AQHI_REPORTED' %in% colnames(df_)) {
+          df_ <- df_ %>%
+            mutate(AQHI_REPORTED = round2(AQHI_VALUE,n=0)) %>%
+            mutate(AQHI_REPORTED =ifelse(AQHI_REPORTED>10,'10+',as.character(AQHI_REPORTED)))
+
+        }
+
+        # -ensure AQHI_REPORTED is char
+        if (!is.character(df_$AQHI_REPORTED)) {
+          df_ <- df_ %>%
+            mutate(AQHI_REPORTED = round2(AQHI_REPORTED,n=0)) %>%
+            mutate(AQHI_REPORTED =ifelse(AQHI_REPORTED>10,'10+',as.character(AQHI_REPORTED)))
+        }
+
+
+
+
+      }
 
       #add if duplicate removal needed
       if (0) {#remove duplicate data entries
@@ -418,257 +446,295 @@ importBC_data <- function(parameter_or_station,
     df_data$year = lubridate::year(df_data$DATE)
     df_data <- df_data[df_data$year %in% years,]
     gc()
-    return(df_data)
-  }
-
-  # -for non-aqhi data-----
-  #DEBUG
-  #when hour is 24, seems to be blank
-  if (0) {
-    # df0 <- df_data
-    df_data <- df0   #reset
-
-    df_data %>%
-      filter(TIME == '24:00')
-  }
 
 
-  #perform other functions
-  if (flag_TFEE) {
-    message('adding tfee flags')
+    df_data <-  df_data %>%
+      select(any_of(cols_aqhi))
 
-    df_tfee <- get_tfee() %>%
-      select(PARAMETER,STATION_NAME,DATE) %>%
-      mutate(DATE = as.Date(DATE)) %>%
-      mutate(flag_tfee  = TRUE)
-
-
-    df_data <- df_data %>%
-      left_join(df_tfee, by=c('PARAMETER', 'DATE', 'STATION_NAME')) %>%
-      dplyr::mutate(flag_tfee = ifelse(is.na(flag_tfee),FALSE,flag_tfee))
-
-  }
-
-  if (merge_Stations) {
-
-    #add index to data to make reference easy
-    df_data <- ungroup(df_data) %>%
-      mutate(index = 1:n())
-
-    lst_history <- get_station_history() %>%
-      select(STATION_NAME,INSTRUMENT,`Merged Station Name`,`Merged Instrument Name`,`Start Date`,`End Date`) %>%
-      mutate(start = lubridate::date(`Start Date`),
-             end =lubridate::date(`End Date`))
-
-    #note that instrument matching only applies to PM
-    #but renaming of station names applies to all
-
-    lst_remove <- NULL  #start of indexing
-
-    # -remove station and instrument before start date
-    lst_remove_start <- lst_history %>%
-      filter(!is.na(`Start Date`))
-    for (i in 1:nrow(lst_remove_start)) {
-      index_remove <- df_data %>%
-        filter(STATION_NAME == lst_remove_start$STATION_NAME[i],
-               INSTRUMENT == lst_remove_start$INSTRUMENT[i],
-               DATE < lst_remove_start$start[i]) %>%
-        pull(index)
-
-      lst_remove <- c(lst_remove,index_remove)
-    }
-
-    # -remove station and instrument after end date
-    lst_remove_end <- lst_history %>%
-      filter(!is.na(`End Date`))
-    for (i in 1:nrow(lst_remove_end)) {
-      index_remove <- df_data %>%
-        filter(STATION_NAME == lst_remove_end$STATION_NAME[i],
-               INSTRUMENT == lst_remove_end$INSTRUMENT[i],
-               DATE >= lst_remove_end$end[i]) %>%
-        pull(index)
-
-      lst_remove <- c(lst_remove,index_remove)
-    }
-
-    # -remove from data
-    df_data <- df_data %>%
-      filter(!index %in% lst_remove) %>%
-      select(-index)
-    #change the instrument name
-    suppressMessages(
-      df_data <- df_data %>%
-        left_join(lst_history %>%
-                    select(STATION_NAME,INSTRUMENT,`Merged Station Name`,
-                           `Merged Instrument Name`)) %>%
-        mutate(INSTRUMENT_NEW = ifelse(is.na(`Merged Instrument Name`),INSTRUMENT,`Merged Instrument Name`)) %>%
-        select(-`Merged Station Name`,-`Merged Instrument Name`) %>%
-        dplyr::rename(INSTRUMENT_ORIGINAL = INSTRUMENT) %>%
-        dplyr::rename(INSTRUMENT = INSTRUMENT_NEW)
-    )
-    #change the station name
-    suppressMessages(
-      df_data <-  df_data %>%
-        left_join(lst_history %>%
-                    select(STATION_NAME,`Merged Station Name`) %>%
-                    distinct()) %>%
-        mutate(STATION_NAME_NEW = ifelse(is.na(`Merged Station Name`),STATION_NAME,`Merged Station Name`)) %>%
-        select(-`Merged Station Name`) %>%
-        dplyr::rename(STATION_NAME_ORIGINAL = STATION_NAME) %>%
-        dplyr::rename(STATION_NAME = STATION_NAME_NEW) %>%
-        COLUMN_REORDER(c('PARAMETER','DATE_PST','DATE','TIME','STATION_NAME','STATION_NAME_ORIGINAL',
-                         'INSTRUMENT','INSTRUMENT_ORIGINAL'))
-    )
-  }
-
-  gc()
-  if ('STATION_NAME_FULL' %in% colnames(df_data)) {
-    df_data$STATION_NAME_FULL <- toupper(df_data$STATION_NAME_FULL)
-
-  } else {
-    df_data$STATION_NAME_FULL = df_data$STATION_NAME
-  }
-
-
-  # - select columns
-  if (0) {
-    df0 <- df_data
-    colnames(df0)
-    unique(df0$VALIDATION_STATUS)
-    df_data %>%
-      filter(STATION_NAME == 'Warfield Haley Park') %>%
-      View()
-    group_by(PARAMETER,DATE_PST,STATION_NAME) %>%
-      dplyr::mutate(count =n()) %>%
-      filter(count>1)
-
-
-    df_data %>%
-      filter(is.na(RAW_VALUE)) %>%
-      View()
-  }
-
-  cols_select <- unique(c('PARAMETER','DATE_PST','DATE','TIME','STATION_NAME','STATION_NAME_FULL','INSTRUMENT',
-                          'RAW_VALUE','ROUNDED_VALUE','VALIDATION_STATUS','flag_tfee',cols_nonaqhi))
-  df_data <-   df_data %>%
-    select(any_of(cols_select))
-
-
-  # -filter the correct year
-  message('removing extra data')
-  df_data <- ungroup(df_data)
-  df_data$year = lubridate::year(df_data$DATE)
-  df_data <- df_data[df_data$year %in% years,]
-  df_data <- df_data %>% select(-year)
-  gc()
-
-
-  # -pad data
-  suppressMessages({
-
-    df_data <- df_data %>%
-      ungroup() %>%
-      filter(!is.na(RAW_VALUE))
-
-    # -pad data for each year
-    df_data$year = lubridate::year(df_data$DATE)
-    years_pad <- unique(df_data$year)
-
-    df_pad <- NULL
-    for (yr in years_pad) {
-
-      message(paste('padding data  for year:',yr))
-      df_ <- df_data %>%
-        filter(year == yr) %>%
-        select(-year) %>%
-        pad_data(date_time = 'DATE_PST',values = c('RAW_VALUE','ROUNDED_VALUE','flag_tfee'))
-      df_pad <- bind_rows(df_pad,df_)
-      gc()
-    }
-
-    df_data <- df_pad
-    rm(df_pad)
-
-    # -add flagtfee column values
-    # -adds NA column if flag_TFEE is FALSE
-    if (flag_TFEE) {
-      df_data$flag_tfee[is.na(df_data$flag_tfee)] <- FALSE
-    } else {
-      df_data$flag_tfee <- NA
-    }
-
-    gc()
-  })
-
-
- # -select the columns, remove unneeded ones
-  try({
-    if (is_parameter) {
-
-      if (0) {
-        df_data0 <- df_data
-      }
-      df_data <- df_data %>%
-        arrange(PARAMETER,STATION_NAME,INSTRUMENT,DATE_PST) %>%
-        COLUMN_REORDER(c('PARAMETER','DATE_PST','DATE','TIME','STATION_NAME','STATION_NAME_FULL','INSTRUMENT'))
-      #done, sending results
-
-    } else
-    {
-
-      if (use_openairformat) {
-        if (0) {
-          # df_data <- test
-        }
-        df_data <- clean_names(df_data)
-        df_data$parameter <- tolower(df_data$parameter)
-        df_data <- df_data %>%
-          mutate(date_time = date_pst - hours(1)) %>%
-          rename(site = station_name,
-                 value = raw_value) %>%
-          COLUMN_REORDER(c('parameter','date_time','date_pst','date','time','site','instrument','value'))
-
-        df_data <- df_data %>%
-          select(parameter,date_time,site,parameter,value) %>%
-          filter(!is.na(value)) %>%
-          group_by(date_time,site,parameter) %>%
-          slice(1) %>%
-          tidyr::pivot_wider(names_from = parameter, values_from = value) %>%
-          rename(date = date_time)
-
-        #RENAME WDIR_VECT AND WSPD_SCLR as ws and wd
-        try({
-          df_data <- df_data %>%
-            rename(ws = wspd_sclr,
-                   wd = wdir_vect)
-        },silent = TRUE)
-
-      }
-
-      # -sort results
-      # -incorporate different column options
-      try({df_data <- df_data %>%
-        arrange(STATION_NAME,DATE_PST)},
-        silent = TRUE)
-      try({df_data <- df_data %>%
-        arrange(site,date)},
-        silent = TRUE)
-
-    }
-  })
-
-  if (clean_names) {
-    df_data <- clean_names(df_data)
-  }
-
-  # -fix for flag_TFEE is false
-  if (!flag_TFEE) {
+    # -fix AQHI_VALUE and AQHI_CLASSIC
+    # -all negative values change to NA
     try({
-      df_data <- df_data %>%
-        select(-flag_tfee)
+      df_data$AQHI_VALUE[df_data$AQHI_VALUE<0] <- NA
+      df_data$AQHI_CLASSIC[df_data$AQHI_CLASSIC<0] <- NA
     })
-  }
+
+
+    # -fix AQHI_REPORTED if it is NA but AQHI_VALUE is available
+    # -change value to factor so it can be sorted
+    try({
+
+      lvls_aqhi <- 1:10
+      lvls_aqhi <- c(as.character(lvls_aqhi),'10+',NA)
+      df_data <- df_data %>%
+        mutate(AQHI_REPORTED = ifelse(is.na(AQHI_REPORTED),
+                                      ifelse(AQHI_VALUE == 11,'10+',AQHI_VALUE),
+                                      AQHI_REPORTED)) %>%
+        mutate(AQHI_REPORTED = factor(AQHI_REPORTED, level = lvls_aqhi))
+    })
+
+    # -fix AQHI_PLUS_PM25_VALUE, change to YES, NO for AQHI_PLUS_PM25 value
+     try({
+       df_data <- df_data %>%
+            mutate(AQHI_PLUS_PM25_VALUE = ifelse(round2(AQHI_VALUE,0) == round2(AQHI_CLASSIC,0),
+                                                 'No','Yes'))
+     })
+    # -rename the columns
+    df_data <- RENAME_COLUMN(df_data,cols_aqhi_rename$orig_name,cols_aqhi_rename$new_name)
+
+    message('DONE.AQHI data retrieved')
+
   return(df_data)
+}
+
+# -for non-aqhi data-----
+#DEBUG
+#when hour is 24, seems to be blank
+if (0) {
+  # df0 <- df_data
+  df_data <- df0   #reset
+
+  df_data %>%
+    filter(TIME == '24:00')
+}
+
+
+#perform other functions
+if (flag_TFEE) {
+  message('adding tfee flags')
+
+  df_tfee <- get_tfee() %>%
+    select(PARAMETER,STATION_NAME,DATE) %>%
+    mutate(DATE = as.Date(DATE)) %>%
+    mutate(flag_tfee  = TRUE)
+
+
+  df_data <- df_data %>%
+    left_join(df_tfee, by=c('PARAMETER', 'DATE', 'STATION_NAME')) %>%
+    dplyr::mutate(flag_tfee = ifelse(is.na(flag_tfee),FALSE,flag_tfee))
+
+}
+
+if (merge_Stations) {
+
+  #add index to data to make reference easy
+  df_data <- ungroup(df_data) %>%
+    mutate(index = 1:n())
+
+  lst_history <- get_station_history() %>%
+    select(STATION_NAME,INSTRUMENT,`Merged Station Name`,`Merged Instrument Name`,`Start Date`,`End Date`) %>%
+    mutate(start = lubridate::date(`Start Date`),
+           end =lubridate::date(`End Date`))
+
+  #note that instrument matching only applies to PM
+  #but renaming of station names applies to all
+
+  lst_remove <- NULL  #start of indexing
+
+  # -remove station and instrument before start date
+  lst_remove_start <- lst_history %>%
+    filter(!is.na(`Start Date`))
+  for (i in 1:nrow(lst_remove_start)) {
+    index_remove <- df_data %>%
+      filter(STATION_NAME == lst_remove_start$STATION_NAME[i],
+             INSTRUMENT == lst_remove_start$INSTRUMENT[i],
+             DATE < lst_remove_start$start[i]) %>%
+      pull(index)
+
+    lst_remove <- c(lst_remove,index_remove)
+  }
+
+  # -remove station and instrument after end date
+  lst_remove_end <- lst_history %>%
+    filter(!is.na(`End Date`))
+  for (i in 1:nrow(lst_remove_end)) {
+    index_remove <- df_data %>%
+      filter(STATION_NAME == lst_remove_end$STATION_NAME[i],
+             INSTRUMENT == lst_remove_end$INSTRUMENT[i],
+             DATE >= lst_remove_end$end[i]) %>%
+      pull(index)
+
+    lst_remove <- c(lst_remove,index_remove)
+  }
+
+  # -remove from data
+  df_data <- df_data %>%
+    filter(!index %in% lst_remove) %>%
+    select(-index)
+  #change the instrument name
+  suppressMessages(
+    df_data <- df_data %>%
+      left_join(lst_history %>%
+                  select(STATION_NAME,INSTRUMENT,`Merged Station Name`,
+                         `Merged Instrument Name`)) %>%
+      mutate(INSTRUMENT_NEW = ifelse(is.na(`Merged Instrument Name`),INSTRUMENT,`Merged Instrument Name`)) %>%
+      select(-`Merged Station Name`,-`Merged Instrument Name`) %>%
+      dplyr::rename(INSTRUMENT_ORIGINAL = INSTRUMENT) %>%
+      dplyr::rename(INSTRUMENT = INSTRUMENT_NEW)
+  )
+  #change the station name
+  suppressMessages(
+    df_data <-  df_data %>%
+      left_join(lst_history %>%
+                  select(STATION_NAME,`Merged Station Name`) %>%
+                  distinct()) %>%
+      mutate(STATION_NAME_NEW = ifelse(is.na(`Merged Station Name`),STATION_NAME,`Merged Station Name`)) %>%
+      select(-`Merged Station Name`) %>%
+      dplyr::rename(STATION_NAME_ORIGINAL = STATION_NAME) %>%
+      dplyr::rename(STATION_NAME = STATION_NAME_NEW) %>%
+      COLUMN_REORDER(c('PARAMETER','DATE_PST','DATE','TIME','STATION_NAME','STATION_NAME_ORIGINAL',
+                       'INSTRUMENT','INSTRUMENT_ORIGINAL'))
+  )
+}
+
+gc()
+if ('STATION_NAME_FULL' %in% colnames(df_data)) {
+  df_data$STATION_NAME_FULL <- toupper(df_data$STATION_NAME_FULL)
+
+} else {
+  df_data$STATION_NAME_FULL = df_data$STATION_NAME
+}
+
+
+# - select columns
+if (0) {
+  df0 <- df_data
+  colnames(df0)
+  unique(df0$VALIDATION_STATUS)
+  df_data %>%
+    filter(STATION_NAME == 'Warfield Haley Park') %>%
+    View()
+  group_by(PARAMETER,DATE_PST,STATION_NAME) %>%
+    dplyr::mutate(count =n()) %>%
+    filter(count>1)
+
+
+  df_data %>%
+    filter(is.na(RAW_VALUE)) %>%
+    View()
+}
+
+cols_select <- unique(c('PARAMETER','DATE_PST','DATE','TIME','STATION_NAME','STATION_NAME_FULL','INSTRUMENT',
+                        'RAW_VALUE','ROUNDED_VALUE','VALIDATION_STATUS','flag_tfee',cols_nonaqhi))
+df_data <-   df_data %>%
+  select(any_of(cols_select))
+
+
+# -filter the correct year
+message('removing extra data')
+df_data <- ungroup(df_data)
+df_data$year = lubridate::year(df_data$DATE)
+df_data <- df_data[df_data$year %in% years,]
+df_data <- df_data %>% select(-year)
+gc()
+
+
+# -pad data
+suppressMessages({
+
+  df_data <- df_data %>%
+    ungroup() %>%
+    filter(!is.na(RAW_VALUE))
+
+  # -pad data for each year
+  df_data$year = lubridate::year(df_data$DATE)
+  years_pad <- unique(df_data$year)
+
+  df_pad <- NULL
+  for (yr in years_pad) {
+
+    message(paste('padding data  for year:',yr))
+    df_ <- df_data %>%
+      filter(year == yr) %>%
+      select(-year) %>%
+      pad_data(date_time = 'DATE_PST',values = c('RAW_VALUE','ROUNDED_VALUE','flag_tfee'))
+    df_pad <- bind_rows(df_pad,df_)
+    gc()
+  }
+
+  df_data <- df_pad
+  rm(df_pad)
+
+  # -add flagtfee column values
+  # -adds NA column if flag_TFEE is FALSE
+  if (flag_TFEE) {
+    df_data$flag_tfee[is.na(df_data$flag_tfee)] <- FALSE
+  } else {
+    df_data$flag_tfee <- NA
+  }
+
+  gc()
+})
+
+
+# -select the columns, remove unneeded ones
+try({
+  if (is_parameter) {
+
+    if (0) {
+      df_data0 <- df_data
+    }
+    df_data <- df_data %>%
+      arrange(PARAMETER,STATION_NAME,INSTRUMENT,DATE_PST) %>%
+      COLUMN_REORDER(c('PARAMETER','DATE_PST','DATE','TIME','STATION_NAME','STATION_NAME_FULL','INSTRUMENT'))
+    #done, sending results
+
+  } else
+  {
+
+    if (use_openairformat) {
+      if (0) {
+        # df_data <- test
+      }
+      df_data <- clean_names(df_data)
+      df_data$parameter <- tolower(df_data$parameter)
+      df_data <- df_data %>%
+        mutate(date_time = date_pst - hours(1)) %>%
+        rename(site = station_name,
+               value = raw_value) %>%
+        COLUMN_REORDER(c('parameter','date_time','date_pst','date','time','site','instrument','value'))
+
+      df_data <- df_data %>%
+        select(parameter,date_time,site,parameter,value) %>%
+        filter(!is.na(value)) %>%
+        group_by(date_time,site,parameter) %>%
+        slice(1) %>%
+        tidyr::pivot_wider(names_from = parameter, values_from = value) %>%
+        rename(date = date_time)
+
+      #RENAME WDIR_VECT AND WSPD_SCLR as ws and wd
+      try({
+        df_data <- df_data %>%
+          rename(ws = wspd_sclr,
+                 wd = wdir_vect)
+      },silent = TRUE)
+
+    }
+
+    # -sort results
+    # -incorporate different column options
+    try({df_data <- df_data %>%
+      arrange(STATION_NAME,DATE_PST)},
+      silent = TRUE)
+    try({df_data <- df_data %>%
+      arrange(site,date)},
+      silent = TRUE)
+
+  }
+})
+
+if (clean_names) {
+  df_data <- clean_names(df_data)
+}
+
+# -fix for flag_TFEE is false
+if (!flag_TFEE) {
+  try({
+    df_data <- df_data %>%
+      select(-flag_tfee)
+  })
+}
+message('DONE. Data retrieved.')
+return(df_data)
 
 }
 
