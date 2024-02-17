@@ -27,7 +27,7 @@
 #' @export
 get_captures <- function(parameter,years=NULL,merge_Stations=FALSE,stop_at_present = TRUE) {
   if (0) {
-    parameter <- 'pm25'
+    parameter <- 'no2'
     years <- 2015
     merge_Stations <- TRUE
     stop_at_present = TRUE
@@ -103,6 +103,9 @@ get_captures <- function(parameter,years=NULL,merge_Stations=FALSE,stop_at_prese
   cols <- c(cols,cols_valid)
 
   df_result <- df_result %>%
-    select(any_of(cols))
+    select(any_of(cols)) %>%
+    COLUMN_REORDER(c('parameter','year','station_name','instrument'))
+
+  message('DONE. Data capture and completeness retrieved.')
   return(df_result)
 }
