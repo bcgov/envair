@@ -5,16 +5,14 @@
 \title{Calculate the data capture for the station and parameter}
 \usage{
 get_captures(
-  param,
+  parameter,
   years = NULL,
   merge_Stations = FALSE,
   stop_at_present = TRUE
 )
 }
 \arguments{
-\item{param}{is the pollutant(param). Use list_parameters() to list availble parameters.
-You can use vector for multi-pollutant query.
-param can also be a dataframe retrieved from an importBC_data() function.}
+\item{parameter}{is the pollutant(param). Use list_parameters() to list availble parameters.}
 
 \item{years}{is the year or years. You can use vectors to query multiple years. If NULL, it will be the current year}
 
@@ -29,7 +27,5 @@ NOTE: This will output the valid days, valid days in quarter, valid
 }
 \examples{
 get_captures('o3',years = 2017:2020)
-df <- importBC_data('o3',years = 2017:2020)
-get_captures(df)
 
 }
