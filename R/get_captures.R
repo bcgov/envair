@@ -103,9 +103,13 @@ get_captures <- function(parameter,years=NULL,merge_Stations=FALSE,stop_at_prese
   cols <- c(cols,cols_valid)
 
   df_result <- df_result %>%
-    select(any_of(cols)) %>%
-    COLUMN_REORDER(c('parameter','year','station_name','instrument'))
+    select(any_of(cols))
 
+  # -remove instrument if NA
+  if (all(is.na(df_result$instrument))) {
+    df_result <- df_result %>%
+      select(-instrument)
+  }
   message('DONE. Data capture and completeness retrieved.')
   return(df_result)
 }
