@@ -110,6 +110,13 @@ get_captures <- function(parameter,years=NULL,merge_Stations=FALSE,stop_at_prese
     df_result <- df_result %>%
       select(-instrument)
   }
+
+  # -for q2 and q3, add FALSE if NA
+  try({
+    df_result <- df_result %>%
+      mutate(`perc_q2+q3` = ifelse(is.na(`perc_q2+q3`),0,`perc_q2+q3`),
+             `q2+q3_valid` = ifelse(is.na(`q2+q3_valid`),FALSE,`q2+q3_valid`))
+  })
   message('DONE. Data capture and completeness retrieved.')
   return(df_result)
 }
