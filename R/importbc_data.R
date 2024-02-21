@@ -88,10 +88,10 @@ importBC_data <- function(parameter_or_station,
     source('./r/get_caaqs_stn_history.R')
     source('./r/importbc_data.R')
 
-    parameter_or_station <- c('aqhi')
+    parameter_or_station <- c('pm25')
 
-    years=2019
-    flag_TFEE = FALSE
+    years=2021
+    flag_TFEE = TRUE
     merge_Stations = TRUE
     clean_names = TRUE
     use_openairformat = TRUE
@@ -354,7 +354,7 @@ importBC_data <- function(parameter_or_station,
         mutate(TIME = format(DATE_PST, '%H:%M')) %>%
         mutate(TIME = ifelse(TIME == '00:00','24:00',TIME)) %>%
         mutate(STATION_NAME = gsub('[^[:alnum:]]',' ',STATION_NAME)) %>%
-        mutate(STATION_NAME = gsub('\\s{2,}',' ',STATION_NAME)) %>%
+        mutate(STATION_NAME = gsub('\\s+',' ',STATION_NAME)) %>%
         mutate(year = year(DATE)) %>%
         filter(year %in% years) %>%
         select(-year,-datetime)

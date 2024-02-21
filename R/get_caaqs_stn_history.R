@@ -146,11 +146,13 @@ get_tfee <- function(ExcelURL = NULL) {
 
   df <- df %>%
     mutate(STATION_NAME = gsub('[^[:alnum:]]',' ',STATION_NAME)) %>%
+    mutate(STATION_NAME = gsub('\\s+',' ',STATION_NAME)) %>%
     dplyr::rename(PARAMETER = sheet) %>%
     dplyr::mutate(PARAMETER = gsub('TFEE','',PARAMETER)) %>%
     dplyr::mutate(PARAMETER = gsub('_','',PARAMETER)) %>%
     dplyr::mutate(PARAMETER = gsub('\\.','',PARAMETER)) %>%
-    dplyr::mutate(PARAMETER = gsub(' ','',PARAMETER))
+    dplyr::mutate(PARAMETER = gsub(' ','',PARAMETER)) %>%
+    arrange(DATE)
 
   return(df)
 
