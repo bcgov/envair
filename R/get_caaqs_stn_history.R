@@ -260,6 +260,7 @@ add_TFEE <- function(df,station_column = NULL,date_column = NULL,param_column = 
     dplyr::mutate(STATION_NAME = gsub('\u00A0',' ',STATION_NAME),
                   PARAMETER = gsub('\u00A0',' ',PARAMETER),
                   DATE = gsub('\u00A0',' ',DATE)) %>%
+    mutate(STATION_NAME = gsub('\\s+',' ',STATION_NAME)) %>%
     dplyr::mutate(index = paste(STATION_NAME,PARAMETER,DATE)) %>%
     pull(index)
 
@@ -392,6 +393,7 @@ merge_STATIONS <- function(df,station_column = NULL,data_column = NULL,instrumen
                   `Start Date` = gsub('\u00A0',' ',`Start Date`),
                   `End Date` = gsub('\u00A0',' ',`End Date`)
                   ) %>%
+    mutate(STATION_NAME = gsub('\\s+',' ',STATION_NAME)) %>%
     dplyr::mutate(index = paste(STATION_NAME,INSTRUMENT))
 
   try(df_stn_history$`Start Date` <- lubridate::force_tz(df_stn_history$`Start Date`,tz='etc/Gmt+8'),silent = TRUE)
