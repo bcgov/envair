@@ -119,6 +119,11 @@ importBC_data <- function(parameter_or_station,
     message(paste('AQHI selected. Note that all other parameters are ignored.'))
   }
 
+  # -check for year entry
+  if (is.null(years)) {
+    years <- year(Sys.Date())
+    message('years not specified, retrieving current year')
+  }
 
   # initial parameter list
   # list will still be populated from year_to_date csv
@@ -366,7 +371,7 @@ importBC_data <- function(parameter_or_station,
 
 
       # -modification for AQHI data retrieval
-      if (tolower(parameter_or_station) == 'aqhi') {
+      if ('aqhi' %in% tolower(parameter_or_station)) {
 
         # -insert value of reported_AQHI
         if ('REPORTED_AQHI_CHAR' %in% cols_df)   {
