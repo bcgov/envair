@@ -90,7 +90,7 @@ importBC_data <- function(parameter_or_station,
 
     parameter_or_station <- c('pm25')
 
-    years=2021
+    years=2023
     flag_TFEE = TRUE
     merge_Stations = TRUE
     clean_names = TRUE

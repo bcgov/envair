@@ -179,6 +179,11 @@ get_station_history <- function(ExcelURL=NULL) {
 
   suppressWarnings(suppressMessages(df_excel <- get_excel_table(ExcelURL,sheet = 'Data Merge',silent=TRUE)))
 
+  # -remove hidden space characters
+  try({
+  df_excel$STATION_NAME <- gsub('[^[:alnum:]]',' ',df_excel$STATION_NAME)
+  df_excel$STATION_NAME <- gsub('\\s+',' ',df_excel$STATION_NAME)
+  })
   return(as.data.frame(df_excel))
 
 }
