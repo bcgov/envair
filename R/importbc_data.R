@@ -132,11 +132,11 @@ importBC_data <- function(parameter_or_station,
                   'vapour_pressure','wdir_uvec','wdir_vect','wspd_sclr','wspd_vect')
 
   #list of columns based on pollutant
-  cols_aqhi <- c('PARAMETER','DATE_PST','DATE','TIME','AQHI_AREA','CGNDB_NAME',
+  cols_aqhi <- c('PARAMETER','DATETIME','DATE_PST','DATE','TIME','AQHI_AREA','CGNDB_NAME',
                  'STATION_NAME','REPORTED_AQHI','REPORTED_AQHI_CHAR','AQHI_VALUE',
                  'AQHI_CLASSIC','AQHI_PLUS_PM25_VALUE','AQHI_SO2',
                  'AQHI_SO2','AQHI_REPORTED','LABEL_TEXT','GEN_POP_TEXT','RISK_POP_TEXT','SPECIAL_MESSAGE')
-  cols_nonaqhi <- c('PARAMETER','DATE_PST','DATE','TIME','STATION_NAME',
+  cols_nonaqhi <- c('PARAMETER','DATETIME','DATE_PST','DATE','TIME','STATION_NAME',
                     'STATION_NAME_FULL','EMS_ID','NAPS_ID','UNIT','INSTRUMENT',
                     'OWNER','REGION','RAW_VALUE','ROUNDED_VALUE','VALIDATION_STATUS')
 
@@ -431,6 +431,7 @@ importBC_data <- function(parameter_or_station,
   }
 
 
+
   # -for aqhi data-----
   # return results immediately
   if ('aqhi' %in% tolower(parameter_or_station)) {
@@ -486,6 +487,14 @@ importBC_data <- function(parameter_or_station,
     # -rename the columns
     df_data <- RENAME_COLUMN(df_data,cols_aqhi_rename$orig_name,cols_aqhi_rename$new_name)
 
+    # -add DATETIME time-beginning column
+    df_data <- df_data %>%
+      mutate(DATETIME = DATE_PST - lubridate::hours(1)) %>%
+      select(PARAMETER,DATETIME,everything())
+
+    if (clean_names == TRUE) {
+      df_data <- clean_names(df_data)
+    }
     message('DONE.AQHI data retrieved')
 
   return(df_data)
@@ -726,7 +735,14 @@ try({
 
   }
 })
+# -add DATETIME time-beginning column
+df_data <- df_data %>%
+  mutate(DATETIME = DATE_PST - lubridate::hours(1)) %>%
+  select(PARAMETER,DATETIME,everything())
 
+if (clean_names == TRUE) {
+  df_data <- clean_names(df_data)
+}
 if (clean_names) {
   df_data <- clean_names(df_data)
 }
