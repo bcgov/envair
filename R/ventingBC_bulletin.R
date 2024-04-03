@@ -1136,9 +1136,10 @@ get_CGNDB <- function(lat,lon,radius = 50) {
 #'
 #' @param date_from is a the starting dates, as string in yyyy-mm or yyyy-mm-dd
 #' @param date_to is the end dates, as string in yyyy-mm or yyyy-mm-dd
+#' @param simplified would summarize the results and group together based on OBSCR
 #'
 #' @export
-get_venting_summary <- function(date_from,date_to) {
+get_venting_summary <- function(date_from,date_to, simplified = TRUE) {
   if (0) {
     source('../envair/R/envairfunctions.R')
     date_from <- ymd('2023-10-01')
@@ -1265,7 +1266,48 @@ get_venting_summary <- function(date_from,date_to) {
     arrange(venting_area,year,month)
 
 
+  # -simplified output option
+  if (simplified) {
 
+    messsage('Calculating simplified results....')
+    # -update to simplify results
+    # Add these columns G/F+	G/-	F+/F+	F+/-
+
+    cols_category <- c('G/F+','G/-','F+/F+','F+/-')
+    cols_select <- c(
+      'venting_area','month','year',
+      cols_category, 'TOTAL'
+    )
+
+    colnames(result)
+    # result_simplified <-
+    result_simplified <-  result %>%
+      mutate(`G/F+`= `GOOD/GOOD` + `GOOD/FAIR`,
+             `G/-`= `GOOD/POOR` + `GOOD/FAIR` + `GOOD/GOOD`,
+             `F+/F+`= `FAIR/GOOD` + `FAIR/FAIR` + `GOOD/GOOD` + `GOOD/FAIR`,
+             `F+/-`= `FAIR/POOR` + `FAIR/GOOD` + `FAIR/FAIR` + `GOOD/POOR` + `GOOD/FAIR` + `GOOD/GOOD`,
+             TOTAL=`GOOD/GOOD`+`GOOD/FAIR`+`GOOD/POOR`+`FAIR/GOOD`+`FAIR/FAIR`+`FAIR/POOR`+`POOR/GOOD`+`POOR/FAIR`+`POOR/POOR`)%>%
+      # View()
+      select(any_of(cols_select))
+
+    # - create a summarized result combine all the years
+result_combined <- result_simplified %>%
+  ungroup() %>%
+  pivot_longer(cols = cols_category) %>%
+  # mutate(frac = value/TOTAL) %>%
+  group_by(venting_area, month,name) %>%
+  summarise(value_avg = mean(value,na.rm = TRUE)) %>%
+  mutate(year = 'average') %>%
+  pivot_wider(names_from = name,values_from = value_avg,values_fill =0)
+
+lvls_year <- c(unique(result_simplified$year),'average')
+result <- result_simplified %>%
+  mutate(year = as.character(year)) %>%
+   bind_rows(result_combined) %>%
+  mutate(year = factor(year,levels = lvls_year)) %>%
+  select(-TOTAL) %>%
+  arrange(venting_area,year,month)
+  }
 
   return(result)
 }
