@@ -1269,6 +1269,9 @@ get_venting_summary <- function(date_from,date_to, simplified = TRUE) {
   # -simplified output option
   if (simplified) {
 
+    if (0) {
+      result <- read_csv('C:/temp/venting_summary_all.csv',skip = 1)
+    }
     messsage('Calculating simplified results....')
     # -update to simplify results
     # Add these columns G/F+	G/-	F+/F+	F+/-
@@ -1279,7 +1282,7 @@ get_venting_summary <- function(date_from,date_to, simplified = TRUE) {
       cols_category, 'TOTAL'
     )
 
-    colnames(result)
+
     # result_simplified <-
     result_simplified <-  result %>%
       mutate(`G/F+`= `GOOD/GOOD` + `GOOD/FAIR`,
@@ -1291,23 +1294,28 @@ get_venting_summary <- function(date_from,date_to, simplified = TRUE) {
       select(any_of(cols_select))
 
     # - create a summarized result combine all the years
-result_combined <- result_simplified %>%
-  ungroup() %>%
-  pivot_longer(cols = cols_category) %>%
-  # mutate(frac = value/TOTAL) %>%
-  group_by(venting_area, month,name) %>%
-  summarise(value_avg = mean(value,na.rm = TRUE)) %>%
-  mutate(year = 'average') %>%
-  pivot_wider(names_from = name,values_from = value_avg,values_fill =0)
+    result_combined <- result_simplified %>%
+      ungroup() %>%
+      pivot_longer(cols = cols_category) %>%
+      # mutate(frac = value/TOTAL) %>%
+      group_by(venting_area, month,name) %>%
+      summarise(value_avg = mean(value,na.rm = TRUE)) %>%
+      mutate(year = 'average') %>%
+      pivot_wider(names_from = name,values_from = value_avg,values_fill =0)
 
-lvls_year <- c(unique(result_simplified$year),'average')
-result <- result_simplified %>%
-  mutate(year = as.character(year)) %>%
-   bind_rows(result_combined) %>%
-  mutate(year = factor(year,levels = lvls_year)) %>%
-  select(-TOTAL) %>%
-  arrange(venting_area,year,month)
+
+    lvls_year <- c(unique(result_simplified$year),'average')
+    result <- result_simplified %>%
+      mutate(year = as.character(year)) %>%
+      bind_rows(result_combined) %>%
+      mutate(year = factor(year,levels = lvls_year)) %>%
+      mutate(month = factor(month,levels = month.abb)) %>%
+      select(-TOTAL) %>%
+      arrange(venting_area,year,month)
   }
 
+  # -rename column
+  result <- RENAME_COLUMN(result,c('venting_area','month','year'),
+                          c('AREA','Month','Year'))
   return(result)
 }

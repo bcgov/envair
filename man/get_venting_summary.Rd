@@ -4,12 +4,14 @@
 \alias{get_venting_summary}
 \title{get_venting_monthly_summary}
 \usage{
-get_venting_summary(date_from, date_to)
+get_venting_summary(date_from, date_to, simplified = TRUE)
 }
 \arguments{
 \item{date_from}{is a the starting dates, as string in yyyy-mm or yyyy-mm-dd}
 
 \item{date_to}{is the end dates, as string in yyyy-mm or yyyy-mm-dd}
+
+\item{simplified}{would summarize the results and group together based on OBSCR}
 }
 \description{
 retrieves the monthly summary of today's ventilation index forecast
