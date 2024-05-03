@@ -88,7 +88,7 @@ importBC_data <- function(parameter_or_station,
     source('./r/get_caaqs_stn_history.R')
     source('./r/importbc_data.R')
 
-    parameter_or_station <- c('pm25')
+    parameter_or_station <- c('nox')
 
     years=2023
     flag_TFEE = TRUE
@@ -97,7 +97,7 @@ importBC_data <- function(parameter_or_station,
     use_openairformat = TRUE
 
     # parameter_or_station = c("wdir_vect")
-    years = 2020:2021
+    years = 1980:2021
     use_openairformat = FALSE
   }
 
@@ -313,7 +313,7 @@ importBC_data <- function(parameter_or_station,
   df_data <- NULL
   for (lst_ in lst_source) {
     if (0) {
-      lst_ <- lst_source[[1]]
+      lst_ <- lst_source[[10]]
     }
     message(paste('reading the file:',lst_))
 
@@ -329,6 +329,14 @@ importBC_data <- function(parameter_or_station,
       }
       if (grepl('.csv',lst_,ignore.case = TRUE)) {
         df_ <- readr::read_csv(a)
+      }
+
+      # -fix/standardize some parameter names, all caps for parameter name
+      col_ <- colnames(df_)
+      if (any(grepl('parameter',col_,ignore.case = TRUE))) {
+          col_param <- col_[grepl('parameter',col_,ignore.case = TRUE)]
+          df_[[col_param]] <- toupper(df_[[col_param]])
+
       }
 
       #filter based on parameter if parameter

@@ -2,6 +2,7 @@
 % Please edit documentation in R/envair.R
 \docType{package}
 \name{envair}
+\alias{envair-package}
 \alias{envair}
 \title{envair: R-based tools for retrieving B.C.'s air quality monitoring data}
 \description{
@@ -22,3 +23,24 @@ rolling 8-hour average, daily average concentrations
 }
 }
 
+\seealso{
+Useful links:
+\itemize{
+  \item Report bugs at \url{https://github.com/bcgov/envair/issues}
+}
+
+}
+\author{
+\strong{Maintainer}: Jerome Robles \email{jerome.robles@gov.bc.ca}
+
+Authors:
+\itemize{
+  \item Zoe Gao \email{zoe.gao@gov.bc.ca} [contractor]
+}
+
+Other contributors:
+\itemize{
+  \item Province of British Columbia [copyright holder]
+}
+
+}

@@ -29,22 +29,26 @@
 #' get_excel_table('ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/BC_CAAQS_station_history.xlsx',sheet = c('TFEE PM2.5','TFEE O3'))
 #' @export
 get_excel_table <- function(ExcelURL,sheet=NULL,header_row=NULL,data_row=NULL,silent = FALSE) {
-if (0) {
-  ExcelURL <- 'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/BC_CAAQS_station_history.xlsx'
-  sheet <- c('TFEE PM2.5','TFEE O3')
-  sheet <- NULL
-  header_row <- NULL
-  data_row <- NULL
-  ExcelURL <- woodstove_file
-  silent = FALSE
+  if (0) {
+    ExcelURL <- 'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/BC_CAAQS_station_history.xlsx'
+    ExcelURL <- '../../DataValidation/2024/sas/PM25_UNSUPPRESSED_2023.xlsx'
+    sheet <- c('TFEE PM2.5','TFEE O3')
+    sheet <- NULL
+    header_row <- NULL
+    data_row <- NULL
+    ExcelURL <- woodstove_file
+    silent = FALSE
 
-}
+  }
   require(dplyr)
 
-  Mytmpfile = tempfile()
-  RCurl::getBinaryURL(ExcelURL)%>%
-    writeBin(con=Mytmpfile)
-
+  if (grepl(':',ExcelURL)) {
+    Mytmpfile = tempfile()
+    RCurl::getBinaryURL(ExcelURL)%>%
+      writeBin(con=Mytmpfile)
+  } else {
+    Mytmpfile <- ExcelURL
+  }
   #retrieves list of sheets
 
   suppressWarnings(suppressMessages(sheetlist <- readxl::excel_sheets(Mytmpfile)))
@@ -54,69 +58,72 @@ if (0) {
     if (length(sheetlist) > 1) {
       #print sheet list and return null
       if (!silent) {print('Please specify sheet value. Choose among:')
-       print(sheetlist)
+        print(sheetlist)
       }
       return(sheetlist)
     }
+
+    # -this means only one sheet
+    sheet <- sheetlist
   }
   sheet <- sheet[sheet %in% sheetlist]
 
-df_result <- NULL
+  df_result <- NULL
 
-for (sheet_ in sheet)
-{
-  header_row_ <- header_row
-  if (is.null(header_row)) {
-    #scan for number of columns
-    #assumes header is somewhere within the first 50 rows
-    df_cols <- NULL
-    options(warn = -1)  #suppress warnings
-    for (i in 1:10)
-    {
-      df_ <- readxl::read_excel(Mytmpfile,sheet=sheet_,skip=i-1,n_max = 10)
-      df_cols <- df_cols %>%
-        bind_rows(
-          dplyr::tibble(
-            column=gsub('\\.\\.\\.','',colnames(df_))
-          ) %>%
-            dplyr::mutate(index =i) %>%
-            dplyr::mutate(rows = nrow(df_)) %>%
-            mutate(valid_col_name = (is.na(as.numeric(column))))
-        )
-    }
-    options(warn = 0)  #resume warnings
-    header_row_ <-  df_cols %>%
-      group_by(index) %>%
-      dplyr::summarise(columns = n(),allvalid = all(valid_col_name)) %>%
-      filter(allvalid) %>%
-      pull(index) %>%
-      min()
-
-    if (!silent) {print(paste('For quick future access, Use header_row=',header_row_))}
-  }
-  if (is.null(data_row)) {
-    data_row_ <- header_row_ + 1
-  }
-
-
-
-  df <- readxl::read_excel(Mytmpfile,sheet=sheet_,skip=header_row_ - 1)
-
-  colnames_df <- colnames(df)
-
-  if (data_row_ != header_row_ + 1)
+  for (sheet_ in sheet)
   {
-    df2 <- readxl::read_excel(Mytmpfile,sheet=sheet_,skip=header_row_ - 1,col_names=colnames(df))
-    df <- df2
-  }
-  df_result <- df_result %>%
-    dplyr::bind_rows(df %>% dplyr::mutate(sheet = sheet_))
-}
+    header_row_ <- header_row
+    if (is.null(header_row)) {
+      #scan for number of columns
+      #assumes header is somewhere within the first 50 rows
+      df_cols <- NULL
+      options(warn = -1)  #suppress warnings
+      for (i in 1:10)
+      {
+        df_ <- readxl::read_excel(Mytmpfile,sheet=sheet_,skip=i-1,n_max = 10)
+        df_cols <- df_cols %>%
+          bind_rows(
+            dplyr::tibble(
+              column=gsub('\\.\\.\\.','',colnames(df_))
+            ) %>%
+              dplyr::mutate(index =i) %>%
+              dplyr::mutate(rows = nrow(df_)) %>%
+              mutate(valid_col_name = (is.na(as.numeric(column))))
+          )
+      }
+      options(warn = 0)  #resume warnings
+      header_row_ <-  df_cols %>%
+        group_by(index) %>%
+        dplyr::summarise(columns = n(),allvalid = all(valid_col_name)) %>%
+        filter(allvalid) %>%
+        pull(index) %>%
+        min()
 
-if (length(sheet) == 1) {
-  #remove sheet column
-  df_result <- dplyr::select(df_result,-sheet)
-}
+      if (!silent) {print(paste('For quick future access, Use header_row=',header_row_))}
+    }
+    if (is.null(data_row)) {
+      data_row_ <- header_row_ + 1
+    }
+
+
+
+    df <- readxl::read_excel(Mytmpfile,sheet=sheet_,skip=header_row_ - 1)
+
+    colnames_df <- colnames(df)
+
+    if (data_row_ != header_row_ + 1)
+    {
+      df2 <- readxl::read_excel(Mytmpfile,sheet=sheet_,skip=header_row_ - 1,col_names=colnames(df))
+      df <- df2
+    }
+    df_result <- df_result %>%
+      dplyr::bind_rows(df %>% dplyr::mutate(sheet = sheet_))
+  }
+
+  if (length(sheet) == 1) {
+    #remove sheet column
+    df_result <- dplyr::select(df_result,-sheet)
+  }
   return(df_result)
 
 }
@@ -181,8 +188,8 @@ get_station_history <- function(ExcelURL=NULL) {
 
   # -remove hidden space characters
   try({
-  df_excel$STATION_NAME <- gsub('[^[:alnum:]]',' ',df_excel$STATION_NAME)
-  df_excel$STATION_NAME <- gsub('\\s+',' ',df_excel$STATION_NAME)
+    df_excel$STATION_NAME <- gsub('[^[:alnum:]]',' ',df_excel$STATION_NAME)
+    df_excel$STATION_NAME <- gsub('\\s+',' ',df_excel$STATION_NAME)
   })
   return(as.data.frame(df_excel))
 
@@ -208,11 +215,11 @@ get_station_history <- function(ExcelURL=NULL) {
 add_TFEE <- function(df,station_column = NULL,date_column = NULL,param_column = NULL, is_time_ending = TRUE) {
 
   if (0) {
-       df <- importBC_data('pm25',2020)
-       station_column <- NULL
-       date_column <- NULL
-       is_time_ending <- TRUE
-       param_column <- NULL
+    df <- importBC_data('pm25',2020)
+    station_column <- NULL
+    date_column <- NULL
+    is_time_ending <- TRUE
+    param_column <- NULL
   }
 
   cols <- colnames(df)
@@ -228,7 +235,7 @@ add_TFEE <- function(df,station_column = NULL,date_column = NULL,param_column = 
     station_column <- unique(lst_stations)[1]
   }
   if (is.null(date_column)) {
-      #in order of preference
+    #in order of preference
     lst_dates <- tolower(c('date','datetime','time'))
     lst_dates <- lst_dates[lst_dates %in% tolower(cols)][1]
     date_column <- cols[tolower(cols) %in% lst_dates]
@@ -242,7 +249,7 @@ add_TFEE <- function(df,station_column = NULL,date_column = NULL,param_column = 
   }
 
 
-# Add specified columns for station, parameter, dates
+  # Add specified columns for station, parameter, dates
   df$col_stn <- df[,station_column]
   df$col_param <- df[,param_column]
   df$col_datetime <- lubridate::force_tz(df[,date_column],tz='etc/Gmt+8')
@@ -374,7 +381,7 @@ merge_STATIONS <- function(df,station_column = NULL,data_column = NULL,instrumen
   df$col_date <- as.Date(lubridate::force_tz(df[,date_column],tz='etc/Gmt+8'))
 
   df <- df %>%
-      dplyr::mutate(index = paste(col_stn,col_inst))
+    dplyr::mutate(index = paste(col_stn,col_inst))
 
   #identify if date column is pure date or POSIX
   if (!all(df$col_datetime == df$col_date)) {
@@ -398,7 +405,7 @@ merge_STATIONS <- function(df,station_column = NULL,data_column = NULL,instrumen
                   INSTRUMENT = gsub('\u00A0',' ',INSTRUMENT),
                   `Start Date` = gsub('\u00A0',' ',`Start Date`),
                   `End Date` = gsub('\u00A0',' ',`End Date`)
-                  ) %>%
+    ) %>%
     mutate(STATION_NAME = gsub('\\s+',' ',STATION_NAME)) %>%
     dplyr::mutate(index = paste(STATION_NAME,INSTRUMENT))
 
