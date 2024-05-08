@@ -89,8 +89,8 @@ importBC_data <- function(parameter_or_station,
     source('./r/importbc_data.R')
 
     parameter_or_station <- c('nox')
-
-    years=2023
+    parameter_or_station <- 'aqhi'
+    years=2024
     flag_TFEE = TRUE
     merge_Stations = TRUE
     clean_names = TRUE
@@ -313,7 +313,7 @@ importBC_data <- function(parameter_or_station,
   df_data <- NULL
   for (lst_ in lst_source) {
     if (0) {
-      lst_ <- lst_source[[10]]
+      lst_ <- lst_source[[1]]
     }
     message(paste('reading the file:',lst_))
 
@@ -333,8 +333,8 @@ importBC_data <- function(parameter_or_station,
 
       # -fix/standardize some parameter names, all caps for parameter name
       col_ <- colnames(df_)
-      if (any(grepl('parameter',col_,ignore.case = TRUE))) {
-          col_param <- col_[grepl('parameter',col_,ignore.case = TRUE)]
+      if ('parameter' %in% tolower(col_)) {
+          col_param <- col_[tolower(col_) %in% 'parameter']
           df_[[col_param]] <- toupper(df_[[col_param]])
 
       }
