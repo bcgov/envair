@@ -1272,7 +1272,7 @@ get_venting_summary <- function(date_from,date_to, simplified = TRUE) {
     if (0) {
       result <- read_csv('C:/temp/venting_summary_all.csv',skip = 1)
     }
-    messsage('Calculating simplified results....')
+    message('Calculating simplified results....')
     # -update to simplify results
     # Add these columns G/F+	G/-	F+/F+	F+/-
 
