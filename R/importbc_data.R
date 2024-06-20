@@ -88,11 +88,11 @@ importBC_data <- function(parameter_or_station,
     source('./r/get_caaqs_stn_history.R')
     source('./r/importbc_data.R')
 
-    parameter_or_station <- c('kamloops')
-    # parameter_or_station <- 'aqhi'
+    # parameter_or_station <- c('kamloops')
+    parameter_or_station <- 'wspd_sclr'
     years=2017
     flag_TFEE = TRUE
-    merge_Stations = FALSE
+    merge_Stations = TRUE
     clean_names = TRUE
     use_openairformat = TRUE
 
@@ -540,7 +540,9 @@ importBC_data <- function(parameter_or_station,
   }
 
   if (merge_Stations) {
-
+    if (0) {
+      df0 <- df_data
+    }
     #add index to data to make reference easy
     df_data <- ungroup(df_data) %>%
       mutate(index = 1:n())
@@ -659,7 +661,7 @@ importBC_data <- function(parameter_or_station,
 
   if (0) {
     #-mark for debug
-    # df0 <- df_data
+    df0 <- df_data
   }
 
   suppressMessages({
@@ -683,7 +685,7 @@ importBC_data <- function(parameter_or_station,
 
 
       # -fix NA in STATION_NAME_FULL that results from the padding process
-      df_station_names_full <- df_ %>%
+      df_station_names_full <- ungroup(df_) %>%
         select(STATION_NAME,STATION_NAME_FULL) %>%
         distinct() %>%
         group_by(STATION_NAME) %>%
