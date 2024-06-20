@@ -678,6 +678,28 @@ importBC_data <- function(parameter_or_station,
         filter(year == yr) %>%
         select(-year) %>%
         pad_data(date_time = 'DATE_PST',values = c('RAW_VALUE','ROUNDED_VALUE','flag_tfee','STATION_NAME_FULL'))
+
+
+      # -fix NA in STATION_NAME_FULL that results from the padding process
+      df_station_names_full <- df_ %>%
+        select(STATION_NAME,STATION_NAME_FULL) %>%
+        distinct() %>%
+        group_by(STATION_NAME) %>%
+        slice(1) %>%
+        ungroup() %>%
+        RENAME_COLUMN('STATION_NAME_FULL','STATION_NAME_FULLBACKUP')
+
+      df_ <- df_ %>%
+        left_join(df_station_names_full) %>%
+        mutate(STATION_NAME_FULL = ifelse(is.na(STATION_NAME_FULL),
+                                                STATION_NAME_FULLBACKUP,
+                                                STATION_NAME_FULL)) %>%
+        select(-STATION_NAME_FULLBACKUP)
+
+
+
+
+
       df_pad <- bind_rows(df_pad,df_)
       gc()
     }
