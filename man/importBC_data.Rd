@@ -8,7 +8,7 @@ importBC_data(
   parameter_or_station,
   years = NULL,
   flag_TFEE = TRUE,
-  merge_Stations = TRUE,
+  merge_Stations = FALSE,
   clean_names = FALSE,
   use_openairformat = TRUE
 )
@@ -29,7 +29,7 @@ If not declared, the current year will be used}
 
 \item{flag_TFEE}{default is FALSE. If TRUE, it will add TFEE flags on days TFEE were verified}
 
-\item{merge_Stations}{default is FALSE. it will combine data from stations and alternative stations}
+\item{merge_Stations}{default is FALSE it will combine data from stations and alternative stations}
 
 \item{clean_names}{makes the output columns in lower case letters as acceptable with tidyverse
 This function retrieves thsoe details from the CAAQS station history excel file
