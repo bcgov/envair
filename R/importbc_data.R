@@ -685,6 +685,7 @@ importBC_data <- function(parameter_or_station,
         select(STATION_NAME,STATION_NAME_FULL) %>%
         distinct() %>%
         group_by(STATION_NAME) %>%
+        filter(!is.na(STATION_NAME_FULL)) %>%
         slice(1) %>%
         ungroup() %>%
         RENAME_COLUMN('STATION_NAME_FULL','STATION_NAME_FULLBACKUP')
@@ -694,6 +695,9 @@ importBC_data <- function(parameter_or_station,
         mutate(STATION_NAME_FULL = ifelse(is.na(STATION_NAME_FULL),
                                                 STATION_NAME_FULLBACKUP,
                                                 STATION_NAME_FULL)) %>%
+        mutate(STATION_NAME_FULL = ifelse(is.na(STATION_NAME_FULL),
+                                          STATION_NAME,
+                                          STATION_NAME_FULL)) %>%
         select(-STATION_NAME_FULLBACKUP)
 
 
