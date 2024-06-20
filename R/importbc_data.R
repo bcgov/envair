@@ -494,9 +494,11 @@ importBC_data <- function(parameter_or_station,
     })
     # -rename the columns
     df_data <- RENAME_COLUMN(df_data,cols_aqhi_rename$orig_name,cols_aqhi_rename$new_name)
+    df_data$DATE_PST <- extractDateTime(df_data$DATE_PST)
 
     # -add DATETIME time-beginning column
     df_data <- df_data %>%
+      mutate(DATE_PST = ymd_hm(DATE_PST)) %>%
       mutate(DATETIME = DATE_PST - lubridate::hours(1)) %>%
       select(PARAMETER,DATETIME,everything())
 
@@ -779,11 +781,35 @@ importBC_data <- function(parameter_or_station,
     }
   })
   # -add DATETIME time-beginning column
+
   try({
     df_data <- df_data %>%
       mutate(DATETIME = DATE_PST - lubridate::hours(1)) %>%
       select(PARAMETER,DATETIME,everything())
-  })
+  },silent = TRUE)
+
+  try({
+    df_data <- df_data %>%
+      mutate(datetime = date_pst - lubridate::hours(1)) %>%
+      select(parameter,datetime,everything())
+  },silent = TRUE)
+
+
+  try({
+    df_data$DATE_PST <- extractDateTime(df_data$DATE_PST)
+    df_data <- df_data %>%
+      mutate(DATE_PST = ymd_hm(DATE_PST)) %>%
+      mutate(DATETIME = DATE_PST - lubridate::hours(1)) %>%
+      select(PARAMETER,DATETIME,everything())
+  },silent = TRUE)
+
+  try({
+    df_data$date_pst <- extractDateTime(df_data$date_pst)
+    df_data <- df_data %>%
+      mutate(date_pst = ymd_hm(date_pst)) %>%
+      mutate(datetime = date_pst - lubridate::hours(1)) %>%
+      select(parameter,datetime,everything())
+  },silent = TRUE)
 
   if (clean_names) {
     df_data <- clean_names(df_data)
@@ -794,7 +820,7 @@ importBC_data <- function(parameter_or_station,
     try({
       df_data <- df_data %>%
         select(-flag_tfee)
-    })
+    },silent = TRUE)
   }
   message('DONE. Data retrieved.')
   return(df_data)
