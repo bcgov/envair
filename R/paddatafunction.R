@@ -53,14 +53,20 @@ pad_data <- function(df,date_time = NULL,padby='hour' ,values = NULL,time_ending
     padby='day'
     values = c('RAW_VALUE_D8HM','ROUNDED_VALUE_D8M','valid_hrs')
 
+    df <- readr::read_csv('C:/temp/data_test.csv') %>%
+      filter(STATION_NAME == 'Courtenay Elementary School')
+    date_time = NULL
+    padby='hour'
+    values = NULL
+    time_ending = TRUE
+    add_DATETIME = NULL
+
   }
 
   require(dplyr)
 
   message('padding the data')
-   if (0) {
-     # df1 <- df
-   }
+
   df <- ungroup(df)
   cols_ <- colnames(df)
 
@@ -96,7 +102,9 @@ pad_data <- function(df,date_time = NULL,padby='hour' ,values = NULL,time_ending
     }
 
     if (is.null(values)) {
-      values <- cols_[cols_ %in% c('RAW_VALUE','ROUNDED_VALUE','metric_value','VALIDATION_STATUS','validation_status')]
+      values <- cols_[cols_ %in% c('RAW_VALUE','ROUNDED_VALUE','metric_value',
+                                   'VALIDATION_STATUS','validation_status',
+                                   'STATION_NAME_FULL')]
     }
 
 
@@ -196,6 +204,7 @@ pad_data <- function(df,date_time = NULL,padby='hour' ,values = NULL,time_ending
 
     df_datetime <- dplyr::tibble(!!date_time := seq.Date(from = as.Date(start_date), to=as.Date(end_date) , by='day'))
 
+    # -this is where the padding happens
     df_result <- df_datetime %>%
       merge(
         df %>%
@@ -205,6 +214,7 @@ pad_data <- function(df,date_time = NULL,padby='hour' ,values = NULL,time_ending
       dplyr::left_join(df)
     message(paste('Added/padded rows:',nrow(df_result) - nrow(df)))
   }
+
 
   return(df_result)
 }
