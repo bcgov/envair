@@ -88,11 +88,11 @@ importBC_data <- function(parameter_or_station,
     source('./r/get_caaqs_stn_history.R')
     source('./r/importbc_data.R')
 
-    parameter_or_station <- c('wspd_sclr')
+    parameter_or_station <- c('kamloops')
     # parameter_or_station <- 'aqhi'
     years=2017
     flag_TFEE = TRUE
-    merge_Stations = TRUE
+    merge_Stations = FALSE
     clean_names = TRUE
     use_openairformat = TRUE
 
@@ -693,8 +693,8 @@ importBC_data <- function(parameter_or_station,
       df_ <- df_ %>%
         left_join(df_station_names_full) %>%
         mutate(STATION_NAME_FULL = ifelse(is.na(STATION_NAME_FULL),
-                                                STATION_NAME_FULLBACKUP,
-                                                STATION_NAME_FULL)) %>%
+                                          STATION_NAME_FULLBACKUP,
+                                          STATION_NAME_FULL)) %>%
         mutate(STATION_NAME_FULL = ifelse(is.na(STATION_NAME_FULL),
                                           STATION_NAME,
                                           STATION_NAME_FULL)) %>%
@@ -779,13 +779,12 @@ importBC_data <- function(parameter_or_station,
     }
   })
   # -add DATETIME time-beginning column
-  df_data <- df_data %>%
-    mutate(DATETIME = DATE_PST - lubridate::hours(1)) %>%
-    select(PARAMETER,DATETIME,everything())
+  try({
+    df_data <- df_data %>%
+      mutate(DATETIME = DATE_PST - lubridate::hours(1)) %>%
+      select(PARAMETER,DATETIME,everything())
+  })
 
-  if (clean_names == TRUE) {
-    df_data <- clean_names(df_data)
-  }
   if (clean_names) {
     df_data <- clean_names(df_data)
   }
