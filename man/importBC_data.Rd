@@ -10,7 +10,8 @@ importBC_data(
   flag_TFEE = TRUE,
   merge_Stations = FALSE,
   clean_names = FALSE,
-  use_openairformat = TRUE
+  use_openairformat = TRUE,
+  pad_data = FALSE
 )
 }
 \arguments{
@@ -31,11 +32,13 @@ If not declared, the current year will be used}
 
 \item{merge_Stations}{default is FALSE it will combine data from stations and alternative stations}
 
-\item{clean_names}{makes the output columns in lower case letters as acceptable with tidyverse
-This function retrieves thsoe details from the CAAQS station history excel file
-ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/}
+\item{clean_names}{makes the output columns in lower case letters as acceptable with tidyverse}
 
 \item{use_openairformat}{is boolean,if TRUE, output is compatible with openair. Applies only to station queries}
+
+\item{pad_data}{FALSE by default. if TRUE, it inserts and pads data gaps with NA
+This function retrieves thsoe details from the CAAQS station history excel file
+ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/}
 }
 \description{
 This function retrieves station or parameter hourly data from the BC open data portal

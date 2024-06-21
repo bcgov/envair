@@ -62,6 +62,7 @@ extractDateTime <- function(dateTimeString) {
 #' @param flag_TFEE default is FALSE. If TRUE, it will add TFEE flags on days TFEE were verified
 #' @param merge_Stations default is FALSE it will combine data from stations and alternative stations
 #' @param clean_names makes the output columns in lower case letters as acceptable with tidyverse
+#' @param pad_data FALSE by default. if TRUE, it inserts and pads data gaps with NA
 #' This function retrieves thsoe details from the CAAQS station history excel file
 #'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/
 #'
@@ -76,7 +77,8 @@ importBC_data <- function(parameter_or_station,
                           years=NULL,
                           flag_TFEE = TRUE,
                           merge_Stations = FALSE,
-                          clean_names = FALSE,use_openairformat = TRUE) {
+                          clean_names = FALSE,use_openairformat = TRUE,
+                          pad_data = FALSE) {
 
   #debug
   if (0)
@@ -664,68 +666,69 @@ importBC_data <- function(parameter_or_station,
     df0 <- df_data
   }
 
-  suppressMessages({
+  if (pad_data) {
+    suppressMessages({
 
-    df_data <- df_data %>%
-      ungroup() %>%
-      filter(!is.na(RAW_VALUE))
-
-    # -pad data for each year
-    df_data$year = lubridate::year(df_data$DATE)
-    years_pad <- unique(df_data$year)
-
-    df_pad <- NULL
-    for (yr in years_pad) {
-
-      message(paste('padding data  for year:',yr))
-      df_ <- df_data %>%
-        filter(year == yr) %>%
-        select(-year) %>%
-        pad_data(date_time = 'DATE_PST',values = c('RAW_VALUE','ROUNDED_VALUE','flag_tfee','STATION_NAME_FULL'))
-
-
-      # -fix NA in STATION_NAME_FULL that results from the padding process
-      df_station_names_full <- ungroup(df_) %>%
-        select(STATION_NAME,STATION_NAME_FULL) %>%
-        distinct() %>%
-        group_by(STATION_NAME) %>%
-        filter(!is.na(STATION_NAME_FULL)) %>%
-        slice(1) %>%
+      df_data <- df_data %>%
         ungroup() %>%
-        RENAME_COLUMN('STATION_NAME_FULL','STATION_NAME_FULLBACKUP')
+        filter(!is.na(RAW_VALUE))
 
-      df_ <- df_ %>%
-        left_join(df_station_names_full) %>%
-        mutate(STATION_NAME_FULL = ifelse(is.na(STATION_NAME_FULL),
-                                          STATION_NAME_FULLBACKUP,
-                                          STATION_NAME_FULL)) %>%
-        mutate(STATION_NAME_FULL = ifelse(is.na(STATION_NAME_FULL),
-                                          STATION_NAME,
-                                          STATION_NAME_FULL)) %>%
-        select(-STATION_NAME_FULLBACKUP)
+      # -pad data for each year
+      df_data$year = lubridate::year(df_data$DATE)
+      years_pad <- unique(df_data$year)
+
+      df_pad <- NULL
+      for (yr in years_pad) {
+
+        message(paste('padding data  for year:',yr))
+        df_ <- df_data %>%
+          filter(year == yr) %>%
+          select(-year) %>%
+          pad_data(date_time = 'DATE_PST',values = c('RAW_VALUE','ROUNDED_VALUE','flag_tfee','STATION_NAME_FULL'))
+
+
+        # -fix NA in STATION_NAME_FULL that results from the padding process
+        df_station_names_full <- ungroup(df_) %>%
+          select(STATION_NAME,STATION_NAME_FULL) %>%
+          distinct() %>%
+          group_by(STATION_NAME) %>%
+          filter(!is.na(STATION_NAME_FULL)) %>%
+          slice(1) %>%
+          ungroup() %>%
+          RENAME_COLUMN('STATION_NAME_FULL','STATION_NAME_FULLBACKUP')
+
+        df_ <- df_ %>%
+          left_join(df_station_names_full) %>%
+          mutate(STATION_NAME_FULL = ifelse(is.na(STATION_NAME_FULL),
+                                            STATION_NAME_FULLBACKUP,
+                                            STATION_NAME_FULL)) %>%
+          mutate(STATION_NAME_FULL = ifelse(is.na(STATION_NAME_FULL),
+                                            STATION_NAME,
+                                            STATION_NAME_FULL)) %>%
+          select(-STATION_NAME_FULLBACKUP)
 
 
 
 
 
-      df_pad <- bind_rows(df_pad,df_)
+        df_pad <- bind_rows(df_pad,df_)
+        gc()
+      }
+
+      df_data <- df_pad
+      rm(df_pad)
+
+      # -add flagtfee column values
+      # -adds NA column if flag_TFEE is FALSE
+      if (flag_TFEE) {
+        df_data$flag_tfee[is.na(df_data$flag_tfee)] <- FALSE
+      } else {
+        df_data$flag_tfee <- NA
+      }
+
       gc()
-    }
-
-    df_data <- df_pad
-    rm(df_pad)
-
-    # -add flagtfee column values
-    # -adds NA column if flag_TFEE is FALSE
-    if (flag_TFEE) {
-      df_data$flag_tfee[is.na(df_data$flag_tfee)] <- FALSE
-    } else {
-      df_data$flag_tfee <- NA
-    }
-
-    gc()
-  })
-
+    })
+  }
 
   # -select the columns, remove unneeded ones
   try({
