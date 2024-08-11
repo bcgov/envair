@@ -42,58 +42,7 @@ extractDateTime <- function(dateTimeString) {
 
 }
 
-#' Downloads files into the URL
-#'
-#' @param file_url defines the URLs and destinaton
-download_file <- function(file_url) {
 
-
-  # Download the file using RCurl
-  tryCatch({
-    curl::curl_download(file_url$url, file_url$destfile)
-    # download.file(file_url$url, file_url$destfile, method = "curl",mode='wb')
-    return(data.frame(URL = file_url$url, TempFile = file_url$destfile, Status = "Downloaded"))
-  }, error = function(e) {
-    return(data.frame(URL = file_url$url, TempFile = file_url$destfile, Status = paste("Failed:", e$message)))
-  })
-}
-
-
-
-#' Download a list of FTP files
-#'
-#' uses parallel CPU processing to perform simultaneous downloads
-#'
-#' @param url_list is a vector containing list of URLs to download
-download_files <- function(url_list) {
-
-  library(parallel)
-  library(curl)
-
-
-  # create list of tempfiles
-  df_urls <- tibble(url = url_list) %>%
-    group_by(url) %>%
-    mutate(destfile = tempfile()) %>%
-    ungroup()
-
-  df_urls <- split(df_urls, seq(nrow(df_urls)))
-  # Set up parallel processing
-  num_cores <- detectCores() - 1  # Use one less than the number of available cores
-  cl <- makeCluster(num_cores)
-
-  # Export the necessary function to the cluster
-  clusterExport(cl, c("download_file", "tempfile"))
-
-  # Perform the download in parallel and combine the results into a dataframe
-  download_results <- do.call(rbind, parLapply(cl, df_urls, download_file))
-
-  # Stop the cluster
-  stopCluster(cl)
-
-  # Print the results
-  return(download_results)
-}
 
 
 #' Import Hourly BC Data from station or parameter
