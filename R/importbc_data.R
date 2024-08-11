@@ -42,12 +42,19 @@ extractDateTime <- function(dateTimeString) {
 
 }
 
+
+#' download one file using curl method
+#'
+#' @param file_url contains url and destfile
+#'
+#' @export
 download_file <- function(file_url) {
 
 
   # Download the file using RCurl
   tryCatch({
-    download.file(file_url$url, file_url$destfile, method = "curl",mode='wb')
+    curl::curl_download(file_url$url, file_url$destfile)
+    # download.file(file_url$url, file_url$destfile, method = "curl",mode='wb')
     return(data.frame(URL = file_url$url, TempFile = file_url$destfile, Status = "Downloaded"))
   }, error = function(e) {
     return(data.frame(URL = file_url$url, TempFile = file_url$destfile, Status = paste("Failed:", e$message)))
@@ -364,9 +371,9 @@ importBC_data <- function(parameter_or_station,
   # - donwload data using parallel processing
 
   message(paste('downloading files:',length(lst_source)))
-  suppressWarnings(
-    df_datasource <- download_files(lst_source)
-  )
+
+  df_datasource <- download_files(lst_source)
+
   df_data <- NULL
   for (df_file in df_datasource$TempFile) {
     df_ <- NULL
@@ -840,7 +847,9 @@ importBC_data <- function(parameter_or_station,
   },silent = TRUE)
 
   if (clean_names) {
+    try({
     df_data <- clean_names(df_data)
+    },silent = TRUE)
   }
 
   # -fix for flag_TFEE is false
