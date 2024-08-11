@@ -364,8 +364,9 @@ importBC_data <- function(parameter_or_station,
   # - donwload data using parallel processing
 
   message(paste('downloading files:',length(lst_source)))
-  df_datasource <- download_files(lst_source)
-
+  suppressWarnings(
+    df_datasource <- download_files(lst_source)
+  )
   df_data <- NULL
   for (df_file in df_datasource$TempFile) {
     df_ <- NULL
@@ -455,7 +456,7 @@ importBC_data <- function(parameter_or_station,
 
       }
 
-            if (nrow(df_)>0) {
+      if (nrow(df_)>0) {
         df_data <- bind_rows(df_data,df_)
       }
     })
