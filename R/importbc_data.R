@@ -42,6 +42,54 @@ extractDateTime <- function(dateTimeString) {
 
 }
 
+download_file <- function(file_url) {
+
+
+  # Download the file using RCurl
+  tryCatch({
+    download.file(file_url$url, file_url$destfile, method = "curl",mode='wb')
+    return(data.frame(URL = file_url$url, TempFile = file_url$destfile, Status = "Downloaded"))
+  }, error = function(e) {
+    return(data.frame(URL = file_url$url, TempFile = file_url$destfile, Status = paste("Failed:", e$message)))
+  })
+}
+
+#' Download a list of FTP files
+#'
+#' uses parallel CPU processing to perform simultaneous downloads
+#'
+#' @param url_list is a vector containing list of URLs to download
+download_files <- function(url_list) {
+
+  library(parallel)
+  library(curl)
+
+
+  # create list of tempfiles
+  df_urls <- tibble(url = url_list) %>%
+    group_by(url) %>%
+    mutate(destfile = tempfile()) %>%
+    ungroup()
+
+  df_urls <- split(df_urls, seq(nrow(df_urls)))
+  # Set up parallel processing
+  num_cores <- detectCores() - 1  # Use one less than the number of available cores
+  cl <- makeCluster(num_cores)
+
+  # Export the necessary function to the cluster
+  clusterExport(cl, c("download_file", "tempfile"))
+
+  # Perform the download in parallel and combine the results into a dataframe
+  download_results <- do.call(rbind, parLapply(cl, df_urls, download_file))
+
+  # Stop the cluster
+  stopCluster(cl)
+
+  # Print the results
+  return(download_results)
+}
+
+
 #' Import Hourly BC Data from station or parameter
 #'
 #' This function retrieves station or parameter hourly data from the BC open data portal
@@ -90,9 +138,9 @@ importBC_data <- function(parameter_or_station,
     source('./r/get_caaqs_stn_history.R')
     source('./r/importbc_data.R')
 
-    # parameter_or_station <- c('kamloops')
+    parameter_or_station <- c('kamloops')
     parameter_or_station <- 'wspd_sclr'
-    years=2017
+    years=2022
     flag_TFEE = TRUE
     merge_Stations = TRUE
     clean_names = TRUE
@@ -109,6 +157,7 @@ importBC_data <- function(parameter_or_station,
   library(tibble)
   library(arrow)
   library(janitor)
+  library(stringr)
 
   parameter_or_station <- tolower(parameter_or_station)
 
@@ -229,72 +278,74 @@ importBC_data <- function(parameter_or_station,
   }
 
 
-
-  #get FTP details frr all datasources
-  suppressWarnings({
+  # -remove test
+  message('extracting details of available BC Data...')
+  suppressWarnings(
     df_datasource1 <- GET_FTP_DETAILS(data_source1) %>%
       filter(as.numeric(FILENAME)>=1970) %>%
       mutate(year = as.numeric(FILENAME))
+  )
+  df_datasource1$URL <- paste(df_datasource1$URL,'/binary',sep='')
+  df_datasource1_result <- GET_FTP_DETAILS(df_datasource1$URL )
 
-    df_datasource1$URL <- paste(df_datasource1$URL,'/binary',sep='')
+  # -retrieve details from datasource 1
+  df_datasource1_result <- df_datasource1_result %>%
+    ungroup() %>%
+    filter(grepl('.parquet',FILENAME,ignore.case = TRUE),
+           FILENAME != 'NA.parquet') %>%
+    mutate(index = 1:n()) %>%
+    group_by(index) %>%
+    mutate(url_str = (stringr::str_split(URL,'/'))) %>%
+    mutate(len_url = length(unlist(url_str))) %>%
+    mutate( year = unlist(url_str)[[len_url-2]]) %>%
+    ungroup() %>%
+    select(FILENAME,URL,year) %>%
+    mutate(parameter = toupper(gsub('.parquet','',FILENAME)),
+           year = as.numeric(year))
 
-
-    #latest validation year
-    max_year <- max(as.numeric(df_datasource1$year),na.rm = TRUE)
-    current_year <- lubridate::year(Sys.Date())
-    df_datasource2 <- GET_FTP_DETAILS(data_source2) %>%
-      merge(tibble(
-        year = (max_year +1):current_year
-      )) %>%
-      filter(grepl('dir',INDEX,ignore.case = TRUE))
-
-    df_datasource <- df_datasource1 %>%
-      bind_rows(df_datasource2)
-    try({
-      df_datasource <- df_datasource %>%
-        filter(!grepl('station',URL,ignore.case = TRUE)) %>%
-        select(-FILENAME)
-
-    })
-
-
-  })
-
-  #include several years of data for wspd and wdir
-  #added due to validation issue
-  #it will always include the current year (unverified)
-  #this also includes the station lookup
-  #2021 onwards
-  years_source <- years
-  if (grepl('WDIR|WSPD',paste(parameter_or_station,collapse = ','),ignore.case = TRUE) & any(years >= 2021)) {
-    years_source <- c(years,current_year)
-  }
+  # -retrieve details from datasource2
+  df_datasource2 <- GET_FTP_DETAILS(paste(data_source2,'binary',sep=''))%>%
+    ungroup() %>%
+    filter(grepl('.parquet',FILENAME,ignore.case = TRUE),
+           FILENAME != 'NA.parquet')%>%
+    select(FILENAME,URL) %>%
+    mutate(parameter = toupper(gsub('.parquet','',FILENAME)))
 
 
+  # -calculate years covered by each parameter
+  current_year <- lubridate::year(Sys.Date())
 
-  df_datasource <- df_datasource %>%
-    filter(year %in% years_source)
+  # -combime the results from the two sources
+  # -and insert the years covered vy
+  # -create a combined list of sources
+  # -by creating complete list of all parameters
+  # -parameters where the sourcefile is missing will take from the unverified data
+  df_param_source <- tibble(
+    year = min(df_datasource1_result$year):current_year
+  ) %>%
+    merge(
+      df_datasource1_result %>%
+        select(parameter,FILENAME)
+    ) %>%
+    left_join(df_datasource1_result)
+
+  # -insert values from datasource2
+  # -for those in datasource1 that are NA in URL
+  df_param_source <- df_param_source %>%
+    bind_rows(
+      df_param_source[(is.na(df_param_source$URL) & df_param_source$year>2000),] %>%
+        select(-URL) %>%
+        left_join(df_datasource2)
+    ) %>%
+    filter(!is.na(URL)) %>%
+    distinct()
 
 
-  # get list of all parquet files
+  df_datasource_result <- df_param_source %>%
+    filter(year %in% years)
 
-  df_datasource_result <- NULL
-  for (urls in unique(df_datasource$URL)) {
-    if (0) {
-      urls <- df_datasource$URL[1]
-    }
-    df_meta <- df_datasource[df_datasource$URL == urls,] %>%
-      select(year) %>% distinct()
-    try({
-      df_ <- GET_FTP_DETAILS(urls) %>%
-        merge(df_meta)
 
-      df_datasource_result <- df_datasource_result %>%
-        bind_rows(df_)
 
-    })
-
-  }
 
   #if parameter, retrieve only that parameter
   # if station, then everything except AQHI
@@ -310,28 +361,20 @@ importBC_data <- function(parameter_or_station,
     pull(URL) %>%
     unique()
 
-  #retrieve data----
-  #scan one file at a time
+  # - donwload data using parallel processing
+
+  message(paste('downloading files:',length(lst_source)))
+  df_datasource <- download_files(lst_source)
+
   df_data <- NULL
-  for (lst_ in lst_source) {
-    if (0) {
-      lst_ <- lst_source[[1]]
-    }
-    message(paste('reading the file:',lst_))
-
-
-    #read parquet file
+  for (df_file in df_datasource$TempFile) {
+    df_ <- NULL
     try({
-      a <- tempfile()
-      curl::curl_download(lst_,a,quiet = FALSE)
+      message(paste('Reading:',df_datasource$URL[df_datasource$TempFile %in% df_file]))
+      df_ <- arrow::read_parquet(df_file)
 
-      df_ <- NULL
-      if (grepl('.parquet',lst_,ignore.case = TRUE)) {
-        df_ <- arrow::read_parquet(a)
-      }
-      if (grepl('.csv',lst_,ignore.case = TRUE)) {
-        df_ <- readr::read_csv(a)
-      }
+
+      # -process individual data
 
       # -fix/standardize some parameter names, all caps for parameter name
       col_ <- colnames(df_)
@@ -340,6 +383,7 @@ importBC_data <- function(parameter_or_station,
         df_[[col_param]] <- toupper(df_[[col_param]])
 
       }
+
 
       #filter based on parameter if parameter
       #or station name if not isparametr
@@ -411,35 +455,15 @@ importBC_data <- function(parameter_or_station,
 
       }
 
-      #add if duplicate removal needed
-      if (0) {#remove duplicate data entries
-        df_data <- df_data %>%
-          filter(!is.na(RAW_VALUE)) %>%
-          group_by(DATE_PST,STATION_NAME,INSTRUMENT,PARAMETER) %>%
-          dplyr::mutate(index =1:n(), count =n()) %>%
-          filter(index ==1) %>%
-          ungroup()
-
-        if (any(df_data$count>1)) {
-          warning('Duplicate data detected but removed.')
-        } else {
-          df_data <- df_data %>%
-            ungroup() %>%
-            select(-count,-index)
-        }}
-
-
+            if (nrow(df_)>0) {
+        df_data <- bind_rows(df_data,df_)
+      }
     })
-
-    if (nrow(df_)>0) {
-      df_data <-  df_data %>%
-        bind_rows(df_)
-    }
-
     # -clear memory
     gc()
-  }
 
+
+  }
 
 
   # -for aqhi data-----

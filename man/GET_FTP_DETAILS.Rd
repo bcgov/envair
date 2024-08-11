@@ -7,7 +7,7 @@
 GET_FTP_DETAILS(path.ftp)
 }
 \arguments{
-\item{path.ftp}{the ftp path}
+\item{path.ftp}{the ftp path, can be a list}
 }
 \description{
 grabs the file and directory details of an ftp

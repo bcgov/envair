@@ -1,7 +1,7 @@
 Type: Package
 Package: envair
 Title: BC ENV Air Quality Monitoring Data Access
-Version: 0.4.2.300
+Version: 0.4.2.400
 Authors@R: 
     c(person(given = "Jerome", 
              family = "Robles", 

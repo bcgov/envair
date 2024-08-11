@@ -580,11 +580,22 @@ round3_old<-function(x,num_format=5.2)
 #' GET FTP DETAILS
 #'
 #' grabs the file and directory details of an ftp
-#' @param path.ftp the ftp path
-GET_FTP_DETAILS<-function(path.ftp)
+#' @param path.ftp the ftp path, can be a list
+GET_FTP_DETAILS <- function(path.ftp) {
+  result_list <- lapply(path.ftp, GET_FTP_DETAILS_)  # Apply function to each element
+  combined_df <- do.call(rbind, result_list)  # Combine all data frames
+  return(combined_df)
+}
+
+
+#' primary basic function for GET_FTPDetails
+#' added here to accommodate multiple list
+GET_FTP_DETAILS_<-function(path.ftp)
 {
   if (0) {
-    path.ftp <- "ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/AnnualSummary/1980/"
+    path.ftp <- c("ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/AnnualSummary/1980/",
+                  "ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/AnnualSummary/1981/")
+
   }
 
   #force string to end with "/"
@@ -593,7 +604,7 @@ GET_FTP_DETAILS<-function(path.ftp)
   data.filedetails<-
     data.frame(FILEALL=unlist(strsplit(x=
                                          RCurl::getURL(url=path.ftp,verbose=FALSE,
-                                                ftp.use.epsv=TRUE
+                                                       ftp.use.epsv=TRUE
                                          ),
                                        split='\n')))%>%
     mutate(FILEALL = gsub('\r','',FILEALL,ignore.case = TRUE)) %>%
