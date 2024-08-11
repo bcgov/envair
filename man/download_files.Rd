@@ -2,13 +2,18 @@
 % Please edit documentation in R/parallel_process.R
 \name{download_files}
 \alias{download_files}
-\title{Download a list of FTP files}
+\title{Downloads files into the URL}
 \usage{
 download_files(url_list)
 }
 \arguments{
 \item{url_list}{is a vector containing list of URLs to download}
+
+\item{file_url}{defines the URLs and destinaton
+Download a list of FTP files
+
+uses parallel CPU processing to perform simultaneous downloads}
 }
 \description{
-uses parallel CPU processing to perform simultaneous downloads
+Downloads files into the URL
 }
