@@ -65,8 +65,6 @@ download_file <- function(file_url) {
 #' uses parallel CPU processing to perform simultaneous downloads
 #'
 #' @param url_list is a vector containing list of URLs to download
-#'
-#' @export
 download_files <- function(url_list) {
 
   library(parallel)
