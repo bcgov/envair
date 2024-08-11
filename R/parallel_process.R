@@ -13,18 +13,18 @@
 #' Downloads files into the URL
 #'
 #' @param file_url defines the URLs and destinaton
-# download_file <- function(file_url) {
-#
-#
-#   # Download the file using RCurl
-#   tryCatch({
-#     curl::curl_download(file_url$url, file_url$destfile)
-#     # download.file(file_url$url, file_url$destfile, method = "curl",mode='wb')
-#     return(data.frame(URL = file_url$url, TempFile = file_url$destfile, Status = "Downloaded"))
-#   }, error = function(e) {
-#     return(data.frame(URL = file_url$url, TempFile = file_url$destfile, Status = paste("Failed:", e$message)))
-#   })
-# }
+download_file <- function(file_url) {
+
+
+  # Download the file using RCurl
+  tryCatch({
+    curl::curl_download(file_url$url, file_url$destfile)
+    # download.file(file_url$url, file_url$destfile, method = "curl",mode='wb')
+    return(data.frame(URL = file_url$url, TempFile = file_url$destfile, Status = "Downloaded"))
+  }, error = function(e) {
+    return(data.frame(URL = file_url$url, TempFile = file_url$destfile, Status = paste("Failed:", e$message)))
+  })
+}
 
 
 
@@ -52,22 +52,11 @@ download_files <- function(url_list) {
   cl <- makeCluster(num_cores)
 
   # Export the necessary function to the cluster
-  clusterExport(cl, c("download_file", "tempfile"))
+  # clusterExport(cl, c("download_file"))
 
   # Perform the download in parallel and combine the results into a dataframe
   download_results <- do.call(rbind,
-                              parallel::parLapply(cl, df_urls, function(file_url) {
-
-
-                                # Download the file using RCurl
-                                tryCatch({
-                                  curl::curl_download(file_url$url, file_url$destfile)
-                                  # download.file(file_url$url, file_url$destfile, method = "curl",mode='wb')
-                                  return(data.frame(URL = file_url$url, TempFile = file_url$destfile, Status = "Downloaded"))
-                                }, error = function(e) {
-                                  return(data.frame(URL = file_url$url, TempFile = file_url$destfile, Status = paste("Failed:", e$message)))
-                                })
-                              }))
+                              parallel::parLapply(cl, df_urls, download_file))
 
   # Stop the cluster
   stopCluster(cl)
