@@ -43,23 +43,6 @@ extractDateTime <- function(dateTimeString) {
 }
 
 
-#' download one file using curl method
-#'
-#' @param file_url contains url and destfile
-#'
-#' @export
-download_file <- function(file_url) {
-
-
-  # Download the file using RCurl
-  tryCatch({
-    curl::curl_download(file_url$url, file_url$destfile)
-    # download.file(file_url$url, file_url$destfile, method = "curl",mode='wb')
-    return(data.frame(URL = file_url$url, TempFile = file_url$destfile, Status = "Downloaded"))
-  }, error = function(e) {
-    return(data.frame(URL = file_url$url, TempFile = file_url$destfile, Status = paste("Failed:", e$message)))
-  })
-}
 
 #' Download a list of FTP files
 #'
@@ -73,6 +56,18 @@ download_files <- function(url_list) {
   library(parallel)
   library(curl)
 
+  download_file <- function(file_url) {
+
+
+    # Download the file using RCurl
+    tryCatch({
+      curl::curl_download(file_url$url, file_url$destfile)
+      # download.file(file_url$url, file_url$destfile, method = "curl",mode='wb')
+      return(data.frame(URL = file_url$url, TempFile = file_url$destfile, Status = "Downloaded"))
+    }, error = function(e) {
+      return(data.frame(URL = file_url$url, TempFile = file_url$destfile, Status = paste("Failed:", e$message)))
+    })
+  }
 
   # create list of tempfiles
   df_urls <- tibble(url = url_list) %>%
