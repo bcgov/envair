@@ -87,11 +87,15 @@ importBC_data <- function(parameter_or_station,
   if (0)
   {
 
+
+
+
     source('./r/paddatafunction.R')
     source('./r/listBC_stations.R')
     source('./r/envairfunctions.R')
     source('./r/get_caaqs_stn_history.R')
     source('./r/importbc_data.R')
+    source('./r/parallel_process.R')
 
     parameter_or_station <- c('kamloops')
     parameter_or_station <- 'wspd_sclr'
@@ -106,13 +110,14 @@ importBC_data <- function(parameter_or_station,
     # use_openairformat = FALSE
   }
 
-
   library(lubridate)
   library(dplyr)
   library(tibble)
   library(arrow)
   library(janitor)
   library(stringr)
+  library(parallel)
+
 
   parameter_or_station <- tolower(parameter_or_station)
 
@@ -233,15 +238,18 @@ importBC_data <- function(parameter_or_station,
   }
 
 
-  # -remove test
+  # -extract details of available files
+  # -include past 2 years, in case download of those are necessary
   message('extracting details of available BC Data...')
   suppressWarnings(
     df_datasource1 <- GET_FTP_DETAILS(data_source1) %>%
-      filter(as.numeric(FILENAME)>=1970) %>%
+      filter(as.numeric(FILENAME) >= (years-2)) %>%
       mutate(year = as.numeric(FILENAME))
   )
+
   df_datasource1$URL <- paste(df_datasource1$URL,'/binary',sep='')
-  df_datasource1_result <- GET_FTP_DETAILS(df_datasource1$URL )
+  df_datasource1_result <- GET_FTP_DETAILS(df_datasource1$URL)
+  # get_ftp_parallel(df_datasource1$URL) # replaces
 
   # -retrieve details from datasource 1
   df_datasource1_result <- df_datasource1_result %>%
@@ -319,8 +327,10 @@ importBC_data <- function(parameter_or_station,
   # - donwload data using parallel processing
 
   message(paste('downloading files:',length(lst_source)))
+  # -define temporary folder
+  savedir <- tempdir()
+  df_datasource <- download_files(lst_source,save_dir = savedir)
 
-  df_datasource <- download_files(lst_source)
 
   df_data <- NULL
   for (df_file in df_datasource$TempFile) {
@@ -332,7 +342,8 @@ importBC_data <- function(parameter_or_station,
 
       # -process individual data
 
-      # -fix/standardize some parameter names, all caps for parameter name
+      # -check if there is a "PARAMETER" or "parameter" column
+      # -all values in that column to be upper case
       col_ <- colnames(df_)
       if ('parameter' %in% tolower(col_)) {
         col_param <- col_[tolower(col_) %in% 'parameter']
@@ -359,10 +370,8 @@ importBC_data <- function(parameter_or_station,
       cols_df <- colnames(df_)
 
       #process the datetime from DATE_PST
-      df_$DATE_PST <- extractDateTime(df_$DATE_PST )
-
-
       df_ <- df_ %>%
+        mutate(DATE_PST = extractDateTime(DATE_PST)) %>%
         mutate(DATE_PST = ymd_hm(DATE_PST)) %>%
         mutate(datetime = DATE_PST - hours(1)) %>%
         mutate(DATE = lubridate::date(datetime)) %>%
@@ -421,6 +430,10 @@ importBC_data <- function(parameter_or_station,
 
   }
 
+  # -delete temporary files
+  file.remove(df_datasource$TempFile)
+
+  # -end of data retrieval from temporary files
 
   # -for aqhi data-----
   # return results immediately
@@ -606,23 +619,6 @@ importBC_data <- function(parameter_or_station,
   }
 
 
-  # - select columns
-  if (0) {
-    df0 <- df_data
-    colnames(df0)
-    unique(df0$VALIDATION_STATUS)
-    df_data %>%
-      filter(STATION_NAME == 'Warfield Haley Park') %>%
-      View()
-    group_by(PARAMETER,DATE_PST,STATION_NAME) %>%
-      dplyr::mutate(count =n()) %>%
-      filter(count>1)
-
-
-    df_data %>%
-      filter(is.na(RAW_VALUE)) %>%
-      View()
-  }
 
   cols_select <- unique(c('PARAMETER','DATE_PST','DATE','TIME','STATION_NAME','STATION_NAME_FULL','INSTRUMENT',
                           'RAW_VALUE','ROUNDED_VALUE','VALIDATION_STATUS','flag_tfee',cols_nonaqhi))
@@ -639,14 +635,7 @@ importBC_data <- function(parameter_or_station,
   gc()
 
 
-  # -pad data
-
-  if (0) {
-    #-mark for debug
-    df0 <- df_data
-  }
-
-  if (pad_data) {
+    if (pad_data) {
     suppressMessages({
 
       df_data <- df_data %>%
@@ -787,8 +776,9 @@ importBC_data <- function(parameter_or_station,
   },silent = TRUE)
 
   try({
-    df_data$date_pst <- extractDateTime(df_data$date_pst)
+
     df_data <- df_data %>%
+      mutate(date_pst = extractDateTime(date_pst)) %>%
       mutate(date_pst = ymd_hm(date_pst)) %>%
       mutate(datetime = date_pst - lubridate::hours(1)) %>%
       select(parameter,datetime,everything())
@@ -796,7 +786,7 @@ importBC_data <- function(parameter_or_station,
 
   if (clean_names) {
     try({
-    df_data <- clean_names(df_data)
+      df_data <- clean_names(df_data)
     },silent = TRUE)
   }
 

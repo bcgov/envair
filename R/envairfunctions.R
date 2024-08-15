@@ -590,6 +590,8 @@ GET_FTP_DETAILS <- function(path.ftp) {
 
 #' primary basic function for GET_FTPDetails
 #' added here to accommodate multiple list
+#'
+#' @import dplyr
 GET_FTP_DETAILS_<-function(path.ftp)
 {
   if (0) {
@@ -598,6 +600,7 @@ GET_FTP_DETAILS_<-function(path.ftp)
 
   }
 
+  library(dplyr)
   #force string to end with "/"
   path.ftp <- paste(path.ftp,'/',sep='')
   path.ftp <- gsub('\\//$','/',path.ftp)
