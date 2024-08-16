@@ -338,16 +338,20 @@ importBC_data <- function(parameter_or_station,
     pull(URL) %>%
     unique()
 
-  # - donwload data using parallel processing
+
 
   message(paste('downloading files:',length(lst_source)))
+
+  # DOWNLOAD and RETRIEVE---------
+  # Download data in a temporary folder
+  # 20240816 note: do not use tempdir() or tempfile(). some systems have issues with access
   # -define temporary folder
-  # savedir <- tempdir()
+  # savedir <- tempdir() # -issues in some systems
   savedir <- './'
   # suppressWarnings(dir.create(savedir,recursive = TRUE))
   df_datasource <- download_files(lst_source,save_dir = savedir)
 
-
+  # -read dataa from temporary files, scan one at a time
   df_data <- NULL
   for (df_file in df_datasource$TempFile) {
     df_ <- NULL
@@ -442,18 +446,17 @@ importBC_data <- function(parameter_or_station,
     })
     # -clear memory
     gc()
-
-
   }
 
   # -delete temporary files
   filelist <- list.files('./',full.names = TRUE)
   removelist <- filelist[grepl('.parquet_',filelist)]
   file.remove(removelist)
+  # END OF DOWNLOAD and RETRIEVE
 
-  # -end of data retrieval from temporary files
+  # PROCESS DATA------
 
-  # -for aqhi data-----
+  ##   for aqhi data-----
   # return results immediately
   if ('aqhi' %in% tolower(parameter_or_station)) {
 
@@ -523,7 +526,7 @@ importBC_data <- function(parameter_or_station,
     return(df_data)
   }
 
-  # -for non-aqhi data-----
+  ##     for non-aqhi data-----
   #DEBUG
   #when hour is 24, seems to be blank
   if (0) {
@@ -536,7 +539,9 @@ importBC_data <- function(parameter_or_station,
   }
 
 
-  #perform other functions
+  ### post processing functions------
+
+  #### flagging TFEE------
   if (flag_TFEE) {
     message('adding tfee flags')
 
@@ -552,6 +557,7 @@ importBC_data <- function(parameter_or_station,
 
   }
 
+  #### merging stations/instruments-------
   if (merge_Stations) {
     if (0) {
       df0 <- df_data
@@ -628,6 +634,7 @@ importBC_data <- function(parameter_or_station,
 
   gc()
 
+  #### standardize station names------------
   # -change STATION_NAME_FULL to all caps
   if ('STATION_NAME_FULL' %in% colnames(df_data)) {
     df_data$STATION_NAME_FULL <- toupper(df_data$STATION_NAME_FULL)
@@ -637,14 +644,14 @@ importBC_data <- function(parameter_or_station,
   }
 
 
-
+  #### select correct columns------
   cols_select <- unique(c('PARAMETER','DATE_PST','DATE','TIME','STATION_NAME','STATION_NAME_FULL','INSTRUMENT',
                           'RAW_VALUE','ROUNDED_VALUE','VALIDATION_STATUS','flag_tfee',cols_nonaqhi))
   df_data <-   df_data %>%
     select(any_of(cols_select))
 
 
-  # -filter the correct year
+  #### -filter the correct year-----
   message('removing extra data')
   df_data <- ungroup(df_data)
   df_data$year = lubridate::year(df_data$DATE)
@@ -652,7 +659,7 @@ importBC_data <- function(parameter_or_station,
   df_data <- df_data %>% select(-year)
   gc()
 
-
+  #### padding data-----
   if (pad_data) {
     suppressMessages({
 
@@ -717,7 +724,7 @@ importBC_data <- function(parameter_or_station,
     })
   }
 
-  # -select the columns, remove unneeded ones
+  #### sort column names, remove extra ones------
   try({
     if (is_parameter) {
 
@@ -772,7 +779,9 @@ importBC_data <- function(parameter_or_station,
 
     }
   })
-  # -add DATETIME time-beginning column
+
+
+  #### add DATETIME time-beginning column-----
 
   try({
     df_data <- df_data %>%
@@ -802,13 +811,14 @@ importBC_data <- function(parameter_or_station,
       select(parameter,datetime,everything())
   },silent = TRUE)
 
+  #### lower case version of column names (R standard)-----
   if (clean_names) {
     try({
       df_data <- clean_names(df_data)
     },silent = TRUE)
   }
 
-  # -fix for flag_TFEE is false
+  #### fill flag_TFEE column if not specified--------
   if (!flag_TFEE) {
     try({
       df_data <- df_data %>%
@@ -816,6 +826,8 @@ importBC_data <- function(parameter_or_station,
     },silent = TRUE)
   }
   message('DONE. Data retrieved.')
+
+  ## RETURN NON-AQHI Data------
   return(df_data)
 
 }

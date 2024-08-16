@@ -18,7 +18,8 @@ download_file <- function(file_url) {
 
   # Download the file using RCurl
   tryCatch({
-    # curl::curl_download(file_url$url, file_url$destfile)
+
+    # -note: do not use curl::curl_download. it has file access issues on some systems
     download.file(file_url$url, file_url$destfile, method = "curl",mode='wb')
     return(data.frame(URL = file_url$url, TempFile = file_url$destfile, Status = "Downloaded"))
   }, error = function(e) {
