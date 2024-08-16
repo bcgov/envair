@@ -342,8 +342,9 @@ importBC_data <- function(parameter_or_station,
 
   message(paste('downloading files:',length(lst_source)))
   # -define temporary folder
-  savedir <- tempdir()
-  suppressWarnings(dir.create(savedir,recursive = TRUE))
+  # savedir <- tempdir()
+  savedir <- './'
+  # suppressWarnings(dir.create(savedir,recursive = TRUE))
   df_datasource <- download_files(lst_source,save_dir = savedir)
 
 
@@ -446,7 +447,9 @@ importBC_data <- function(parameter_or_station,
   }
 
   # -delete temporary files
-  file.remove(df_datasource$TempFile)
+  filelist <- list.files('./',full.names = TRUE)
+  removelist <- filelist[grepl('.parquet_',filelist)]
+  file.remove(removelist)
 
   # -end of data retrieval from temporary files
 
