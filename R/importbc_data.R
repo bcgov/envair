@@ -348,6 +348,13 @@ importBC_data <- function(parameter_or_station,
   # -define temporary folder
   # savedir <- tempdir() # -issues in some systems
   savedir <- './'
+
+  # -initial delete temporary files (from previous run)
+  filelist <- list.files('./',full.names = TRUE)
+  removelist <- filelist[grepl('.parquet_',filelist)]
+  file.remove(removelist)
+
+
   # suppressWarnings(dir.create(savedir,recursive = TRUE))
   df_datasource <- download_files(lst_source,save_dir = savedir)
 
