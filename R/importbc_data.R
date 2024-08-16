@@ -97,9 +97,9 @@ importBC_data <- function(parameter_or_station,
     source('./r/importbc_data.R')
     source('./r/parallel_process.R')
 
-    parameter_or_station <- c('kamloops')
+    parameter_or_station <- c('plaza')
     parameter_or_station <- 'wspd_sclr'
-    years=2022
+    years=2024
     flag_TFEE = TRUE
     merge_Stations = TRUE
     clean_names = TRUE
@@ -239,20 +239,29 @@ importBC_data <- function(parameter_or_station,
 
 
   # -extract details of available files
+  # -can be slow if years are extensively long
   # -include past 2 years, in case download of those are necessary
   message('extracting details of available BC Data...')
   suppressWarnings(
     df_datasource1 <- GET_FTP_DETAILS(data_source1) %>%
-      filter(as.numeric(FILENAME) >= (years-2)) %>%
-      mutate(year = as.numeric(FILENAME))
+      # filter(as.numeric(FILENAME) %in% years) %>%
+      mutate(year = as.numeric(FILENAME)) %>%
+      filter(!is.na(year))
   )
 
   df_datasource1$URL <- paste(df_datasource1$URL,'/binary',sep='')
+
+  # -filter to the specified years
+  # -but will have to at least include the latest validated year
+  df_datasource1 <-  df_datasource1[(df_datasource1$year %in% years) |
+                   (df_datasource1$year %in% max(df_datasource1$year)),]
+
+
   df_datasource1_result <- GET_FTP_DETAILS(df_datasource1$URL)
   # get_ftp_parallel(df_datasource1$URL) # replaces
 
   # -retrieve details from datasource 1
-  df_datasource1_result <- df_datasource1_result %>%
+  df_datasource1_result <-   df_datasource1_result %>%
     ungroup() %>%
     filter(grepl('.parquet',FILENAME,ignore.case = TRUE),
            FILENAME != 'NA.parquet') %>%
@@ -260,7 +269,7 @@ importBC_data <- function(parameter_or_station,
     group_by(index) %>%
     mutate(url_str = (stringr::str_split(URL,'/'))) %>%
     mutate(len_url = length(unlist(url_str))) %>%
-    mutate( year = unlist(url_str)[[len_url-2]]) %>%
+    mutate(year = unlist(url_str)[[len_url-2]]) %>%
     ungroup() %>%
     select(FILENAME,URL,year) %>%
     mutate(parameter = toupper(gsub('.parquet','',FILENAME)),
@@ -283,12 +292,16 @@ importBC_data <- function(parameter_or_station,
   # -create a combined list of sources
   # -by creating complete list of all parameters
   # -parameters where the sourcefile is missing will take from the unverified data
+  df_parameter_filler <- tibble(
+    parameter = toupper(check_datalist)
+  ) %>%
+    mutate(FILENAME = paste(parameter,'.parquet',sep=''))
+
   df_param_source <- tibble(
     year = min(df_datasource1_result$year):current_year
   ) %>%
     merge(
-      df_datasource1_result %>%
-        select(parameter,FILENAME)
+      df_parameter_filler
     ) %>%
     left_join(df_datasource1_result)
 
@@ -304,6 +317,7 @@ importBC_data <- function(parameter_or_station,
     distinct()
 
 
+  # -
   df_datasource_result <- df_param_source %>%
     filter(year %in% years)
 
@@ -329,6 +343,7 @@ importBC_data <- function(parameter_or_station,
   message(paste('downloading files:',length(lst_source)))
   # -define temporary folder
   savedir <- tempdir()
+  suppressWarnings(dir.create(savedir,recursive = TRUE))
   df_datasource <- download_files(lst_source,save_dir = savedir)
 
 
@@ -635,7 +650,7 @@ importBC_data <- function(parameter_or_station,
   gc()
 
 
-    if (pad_data) {
+  if (pad_data) {
     suppressMessages({
 
       df_data <- df_data %>%
