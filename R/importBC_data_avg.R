@@ -57,7 +57,7 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
 
     years <- 2023
     # averaging_type <- c('annual mean 1hr','annual mean 24h')
-    averaging_type = 'annual mean 1hr'
+    averaging_type = 'exceedance 25 24h'
     data_threshold <- 0.75
     merge_stations <- TRUE
     flag_TFEE = TRUE
@@ -122,7 +122,7 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
 
     message(paste('retrieved data complete. added rows:',nrow(df)))
     cols <- colnames(df)
-    cols_values <- cols[grepl('raw|rounded',cols,ignore.case = TRUE)]
+    cols_values <- cols[grepl('raw|rounded|exceed',cols,ignore.case = TRUE)]
     df <- df %>%
       pivot_longer(cols = cols_values)
     gc()
