@@ -51,6 +51,8 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
     source('./r/get_caaqs_stn_history.R')
     source('./r/envairfunctions.R')
     source('./r/importBC_data_avg.R')
+    source('./r/parallel_process.R')
+
     parameter <- c('pm25')
 
     years <- 2023
@@ -409,7 +411,7 @@ importBC_data_avg0 <- function(parameter, years = NULL, averaging_type, data_thr
     source('./r/get_caaqs_stn_history.R')
     source('./r/envairfunctions.R')
     # parameter <- 'pm25'
-    parameter <- 'pm25'
+    parameter <- 'no2'
     years <- 2020
     averaging_type <- 'annual 98p 24hour'
     data_threshold <- 0.75
@@ -507,6 +509,11 @@ importBC_data_avg0 <- function(parameter, years = NULL, averaging_type, data_thr
                         flag_TFEE = flag_tfee,
                         merge_Stations = merge_stations,
                         clean_names = TRUE)
+
+    # -remove instrument name when it is not PM
+    df$instrument[!grepl('pm',df$parameter,ignore.case = TRUE)] <- 'UNSPECIFIED'
+
+
 
     # -add value to flag_TFEE even if not to be included
     if (!flag_tfee) {

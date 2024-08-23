@@ -2,18 +2,15 @@
 % Please edit documentation in R/parallel_process.R
 \name{download_files}
 \alias{download_files}
-\title{Downloads files into the URL}
+\title{Download a list of FTP files}
 \usage{
-download_files(url_list)
+download_files(url_list, save_dir = NULL)
 }
 \arguments{
 \item{url_list}{is a vector containing list of URLs to download}
 
-\item{file_url}{defines the URLs and destinaton
-Download a list of FTP files
-
-uses parallel CPU processing to perform simultaneous downloads}
+\item{save_dir}{is the directory where files are saved, NULL means temporary filenames used}
 }
 \description{
-Downloads files into the URL
+uses parallel CPU processing to perform simultaneous downloads
 }
