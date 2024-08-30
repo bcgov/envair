@@ -644,7 +644,7 @@ importBC_data_avg0 <- function(parameter, years = NULL, averaging_type, data_thr
         arrange(desc(value)) %>%
         dplyr::mutate(quant_idx=ceiling(n()*(1-quantile)),count=n(),index=1:n()) %>%
         filter(index == quant_idx) %>%
-        select(-c(quant_idx,count,index,date,date_time,date_pst,time)) %>%
+        select(-c(quant_idx,count,index,date,date_time,date_pst,time,flag_tfee)) %>%
 
         # -old method using quantile() replaced by CCME method
         # arrange(parameter,station_name,instrument,year,name)
