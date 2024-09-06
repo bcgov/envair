@@ -53,14 +53,15 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
     source('./r/importBC_data_avg.R')
     source('./r/parallel_process.R')
 
-    parameter <- c('o3')
+    parameter <- c('pm25')
 
-    years <- 2023
+    years <- 2021
     averaging_type <- c('annual mean 1hr','annual mean 24h')
     averaging_type = 'exceedance 25 24h'
+    averaging_type = 'annual 98p 24h'
     data_threshold <- 0.75
-    merge_stations <- TRUE
-    flag_TFEE = TRUE
+    merge_stations <- FALSE
+    flag_TFEE = FALSE
 
 
   }
@@ -153,8 +154,8 @@ importBC_data_avg_ <- function(df, averaging_type, data_threshold = 0.75) {
   require(lubridate)
 
   # -add datetime_ columns for time-beginning processing
-  df$date_time = df$date_pst - hours(1)
-  years = sort(unique(year(df$date_time)))
+  df$datetime = df$date_pst - hours(1)
+  years = sort(unique(year(df$datetime)))
 
   #list of alias names for the averaging_type
   #should be in order of significance
@@ -410,7 +411,7 @@ importBC_data_avg0 <- function(parameter, years = NULL, averaging_type, data_thr
     source('./r/paddatafunction.R')
     source('./r/get_caaqs_stn_history.R')
     source('./r/envairfunctions.R')
-    # parameter <- 'pm25'
+    parameter <- 'pm25'
     parameter <- 'no2'
     years <- 2020
     averaging_type <- 'annual 98p 24hour'
@@ -541,15 +542,15 @@ importBC_data_avg0 <- function(parameter, years = NULL, averaging_type, data_thr
 
   # -cleanup, remove unneeded columns, add date, time columns
   cols <- colnames(df)
-  if (!all(c('date','time') %in% cols)) {
-    df$date_time  <-  df$date_pst - hours(1)
-    df$date <-  date(df$date_time)
+  if (!all(c('date','time','datetime') %in% cols)) {
+    df$datetime  <-  df$date_pst - hours(1)
+    df$date <-  date(df$datetime)
     df$time <-  format(df$date_pst,'%H:00')
     df$time <- gsub('00:00','24:00',df$time)
   }
 
   df <- df %>%
-    select(parameter,station_name,instrument,date_pst,date,time,rounded_value,raw_value,flag_tfee)
+    select(parameter,station_name,instrument,date_pst,datetime,date,time,rounded_value,raw_value,flag_tfee)
 
 
 
@@ -644,7 +645,7 @@ importBC_data_avg0 <- function(parameter, years = NULL, averaging_type, data_thr
         arrange(desc(value)) %>%
         dplyr::mutate(quant_idx=ceiling(n()*(1-quantile)),count=n(),index=1:n()) %>%
         filter(index == quant_idx) %>%
-        select(-c(quant_idx,count,index,date,date_time,date_pst,time,flag_tfee)) %>%
+        RENAME_COLUMN(colname.orig = c('quant_idx','count','index','date','datetime','date_pst','time','flag_tfee')) %>%
 
         # -old method using quantile() replaced by CCME method
         # arrange(parameter,station_name,instrument,year,name)
