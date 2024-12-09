@@ -82,10 +82,23 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
   df_defaults <- tibble::tribble(
     ~parameter,~averaging_type,
     'pm25',c('annual mean 24hr','annual 98p 24hr'),
-    'o3','d8hm',
+    'o3','annual 4th d8hm',
     'so2',c('annual 99p d1hm','annual mean 1hr'),
     'no2',c('annual 98p d1hm','annual mean 1hr'),
     'pm10',c('annual mean 24hr')
+  )
+
+  #- define the rounding requirements (check CCME guidance)
+  #- will be applied at the end of function
+  df_rounding <- tribble(
+    ~parameter,~averaging_type,~rounding,
+    'pm25','rounded_mean_24h',1,
+    'pm25','rounded_98p_24h',0,
+    'o3','rounded_4th_d8hm',0,
+    'no2','rounded_98p_d1hm',0,
+    'no2','rounded_mean_1hr',1,
+    'so2','rounded_99p_d1hm',0,
+    'so2','rounded_mean_1hr',1
   )
 
   # -retrieve default avaeraging types if this was not specified
@@ -121,6 +134,17 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
     df <- importBC_data_avg0(parameter = parameter,years = years,averaging_type = averaging_type_,
                              data_threshold =data_threshold,flag_tfee = flag_TFEE,merge_stations= merge_stations)
 
+    #-round off based on CCME guidance
+    #-rounding off defined by df_rounding
+    try({
+      df_rounding_selected <- df_rounding[df_rounding$parameter %in% parameter,]
+      df_rounding_selected <- df_rounding_selected[df_rounding_selected$averaging_type %in% colnames(df),]
+      for (i in 1:nrow(df_rounding_selected)) {
+        df_rounding_selected_ <- df_rounding_selected[i,]
+        df <- roundall(df,df_rounding_selected_$averaging_type,df_rounding_selected_$rounding)
+      }
+    },silent = TRUE)
+
     message(paste('retrieved data complete. added rows:',nrow(df)))
     cols <- colnames(df)
     cols_values <- cols[grepl('raw|rounded|exceed',cols,ignore.case = TRUE)]
@@ -134,6 +158,14 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
   df_result <- df_result %>%
     pivot_wider()
   gc()
+
+  # -sort vaolue columns
+  cols <- colnames(df_result)
+  cols_value <- cols[grepl('raw|rounded',cols)]
+  cols_value <- sort(cols_value)
+  cols_nonvalue <- cols[!(cols %in% cols_value)]
+  df_result <- COLUMN_REORDER(df_result,c(cols_nonvalue,cols_value))
+
   return(df_result)
 }
 
