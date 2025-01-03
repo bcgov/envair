@@ -94,13 +94,13 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
     ~parameter,~averaging_type,~rounding,
     'pm25','rounded_mean_24h',1,
     'pm25','rounded_mean_24h_tfee',1,
-    'pm25','rounded_98p_24h',0,
-    'pm25','rounded_98p_24h_tfee',0,
-    'o3','rounded_4th_d8hm',0,
-    'o3','rounded_4th_d8hm_tfee',0,
-    'no2','rounded_98p_d1hm',0,
+    'pm25','rounded_98p_24h',1,
+    'pm25','rounded_98p_24h_tfee',1,
+    'o3','rounded_4th_d8hm',1,
+    'o3','rounded_4th_d8hm_tfee',1,
+    'no2','rounded_98p_d1hm',1,
     'no2','rounded_mean_1hr',1,
-    'so2','rounded_99p_d1hm',0,
+    'so2','rounded_99p_d1hm',1,
     'so2','rounded_mean_1hr',1
   )
 
