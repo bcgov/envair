@@ -93,8 +93,11 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
   df_rounding <- tribble(
     ~parameter,~averaging_type,~rounding,
     'pm25','rounded_mean_24h',1,
+    'pm25','rounded_mean_24h_tfee',1,
     'pm25','rounded_98p_24h',0,
+    'pm25','rounded_98p_24h_tfee',0,
     'o3','rounded_4th_d8hm',0,
+    'o3','rounded_4th_d8hm_tfee',0,
     'no2','rounded_98p_d1hm',0,
     'no2','rounded_mean_1hr',1,
     'so2','rounded_99p_d1hm',0,
@@ -739,3 +742,4 @@ importBC_data_avg0 <- function(parameter, years = NULL, averaging_type, data_thr
 
   return(ungroup(df_result))
 }
+
