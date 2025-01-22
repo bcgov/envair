@@ -105,6 +105,14 @@ importBC_data <- function(parameter_or_station,
     clean_names = TRUE
     use_openairformat = TRUE
 
+    parameter_or_station <- 'aqhi'
+    years=NULL
+    flag_TFEE = TRUE
+    merge_Stations = FALSE
+    clean_names = FALSE
+    use_openairformat = TRUE
+    pad_data = FALSE
+
     # parameter_or_station = c("wdir_vect")
     # years = 1980:2021
     # use_openairformat = FALSE
@@ -249,39 +257,56 @@ importBC_data <- function(parameter_or_station,
       filter(!is.na(year))
   )
 
-  df_datasource1$URL <- paste(df_datasource1$URL,'/binary',sep='')
+  # -updated 2025-01-21
+  # -include csv files in case parquet files are missing
+  df_datasource1 <- bind_rows(df_datasource1,
+                              df_datasource1 %>%
+                                mutate(URL = paste(URL,'binary',sep='/')))
+
 
   # -filter to the specified years
   # -but will have to at least include the latest validated year
   df_datasource1 <-  df_datasource1[(df_datasource1$year %in% years) |
-                   (df_datasource1$year %in% max(df_datasource1$year)),]
+                                      (df_datasource1$year %in% max(df_datasource1$year)),]
 
 
   df_datasource1_result <- GET_FTP_DETAILS(df_datasource1$URL)
+
+
   # get_ftp_parallel(df_datasource1$URL) # replaces
 
   # -retrieve details from datasource 1
-  df_datasource1_result <-   df_datasource1_result %>%
-    ungroup() %>%
-    filter(grepl('.parquet',FILENAME,ignore.case = TRUE),
-           FILENAME != 'NA.parquet') %>%
-    mutate(index = 1:n()) %>%
-    group_by(index) %>%
-    mutate(url_str = (stringr::str_split(URL,'/'))) %>%
-    mutate(len_url = length(unlist(url_str))) %>%
-    mutate(year = unlist(url_str)[[len_url-2]]) %>%
-    ungroup() %>%
-    select(FILENAME,URL,year) %>%
-    mutate(parameter = toupper(gsub('.parquet','',FILENAME)),
-           year = as.numeric(year))
+  suppressWarnings({
+    df_datasource1_result <- df_datasource1_result %>%
+      ungroup() %>%
+      filter(grepl('parquet|csv',FILENAME,ignore.case = TRUE),
+             FILENAME != 'NA.parquet',
+             !grepl('bc_air_monitoring_stations',FILENAME,ignore.case = TRUE)) %>%
+      mutate(index = 1:n()) %>%
+      group_by(index) %>%
+      mutate(url_str = (stringr::str_split(URL,'/'))) %>%
+      mutate(len_url = length(unlist(url_str))) %>%
+      # -selects years from URL, note difference in URL between parquet and csv files
+      mutate(year = unlist(url_str)[[len_url-2]]) %>%
+      mutate(year_csv = unlist(url_str)[[len_url-1]]) %>%
+      ungroup() %>%
+      mutate(parameter = toupper(gsub('.parquet','',FILENAME)),
+             year = as.numeric(year)) %>%
+      mutate(year = ifelse(is.na(year), as.numeric(year_csv),year)) %>%
+      select(FILENAME,URL,year)%>%
+      mutate(FILENAME = tolower(FILENAME))
+  })
 
-  # -retrieve details from datasource2
-  df_datasource2 <- GET_FTP_DETAILS(paste(data_source2,'binary',sep=''))%>%
+  # -retrieve details from datasource2, include csv files
+  df_datasource2 <- bind_rows(GET_FTP_DETAILS(paste(data_source2,'binary',sep='')),
+                              GET_FTP_DETAILS(data_source2)) %>%
     ungroup() %>%
-    filter(grepl('.parquet',FILENAME,ignore.case = TRUE),
-           FILENAME != 'NA.parquet')%>%
+    filter(grepl('csv|parquet',FILENAME,ignore.case = TRUE),
+           FILENAME != 'NA.parquet',
+           !grepl('bc_air_monitoring_stations',FILENAME,ignore.case = TRUE),
+           !grepl('airdata_yeartodate',FILENAME,ignore.case = TRUE)) %>%
     select(FILENAME,URL) %>%
-    mutate(parameter = toupper(gsub('.parquet','',FILENAME)))
+    mutate(FILENAME = tolower(FILENAME))
 
 
   # -calculate years covered by each parameter
@@ -292,21 +317,23 @@ importBC_data <- function(parameter_or_station,
   # -create a combined list of sources
   # -by creating complete list of all parameters
   # -parameters where the sourcefile is missing will take from the unverified data
-  df_parameter_filler <- tibble(
-    parameter = toupper(check_datalist)
-  ) %>%
-    mutate(FILENAME = paste(parameter,'.parquet',sep=''))
+  df_parameter_filler <- bind_rows(
+    tibble(parameter = tolower(check_datalist)) %>%
+      mutate(FILENAME = paste(parameter,'.parquet',sep='')),
+    tibble(parameter = tolower(check_datalist)) %>%
+      mutate(FILENAME = paste(parameter,'.csv',sep=''))
+  )
 
   df_param_source <- tibble(
     year = min(df_datasource1_result$year):current_year
   ) %>%
-    merge(
-      df_parameter_filler
-    ) %>%
+    merge(df_parameter_filler) %>%
     left_join(df_datasource1_result)
 
+
   # -insert values from datasource2
-  # -for those in datasource1 that are NA in URL
+  # -for those in datasource1 that are NA in URL, and at least from year 2000
+
   df_param_source <- df_param_source %>%
     bind_rows(
       df_param_source[(is.na(df_param_source$URL) & df_param_source$year>2000),] %>%
@@ -317,22 +344,38 @@ importBC_data <- function(parameter_or_station,
     distinct()
 
 
-  # -
+
+  # -remove redundant source and use csv as backup
   df_datasource_result <- df_param_source %>%
+    ungroup() %>%
+    group_by(FILENAME) %>%
+    mutate(filetype = str_split(FILENAME,pattern = '\\.')) %>%
+    mutate(filetype = unlist(filetype)[2]) %>%
+    mutate(filetype = factor(filetype,levels = c('parquet','csv')) ) %>%
+    ungroup() %>%
+    group_by(year,parameter) %>%
+    slice(1) %>% ungroup() %>%
     filter(year %in% years)
 
 
 
-
-  #if parameter, retrieve only that parameter
+  # determine based on whether user entered station or parameter
+  # if parameter, retrieve only that parameter
   # if station, then everything except AQHI
   if (is_parameter) {
+    # -parameter was selected
     df_datasource_result <- df_datasource_result %>%
       filter(grepl(paste(parameter_or_station,collapse = '|'),FILENAME,ignore.case = TRUE))
   } else {
     df_datasource_result <- df_datasource_result %>%
       filter(!grepl('aqhi',FILENAME,ignore.case = TRUE))
   }
+
+
+
+
+
+
 
   lst_source <- df_datasource_result %>%
     pull(URL) %>%
@@ -358,7 +401,7 @@ importBC_data <- function(parameter_or_station,
   # suppressWarnings(dir.create(savedir,recursive = TRUE))
   df_datasource <- download_files(lst_source,save_dir = savedir)
 
-  # -read dataa from temporary files, scan one at a time
+  # -read data from temporary files, scan one at a time
   df_data <- NULL
   for (df_file in df_datasource$TempFile) {
     df_ <- NULL
@@ -466,6 +509,7 @@ importBC_data <- function(parameter_or_station,
   ##   for aqhi data-----
   # return results immediately
   if ('aqhi' %in% tolower(parameter_or_station)) {
+
 
     if (0) {
       a <- df_data
