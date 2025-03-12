@@ -728,9 +728,12 @@ GET_VENTING_ECCC <- function(dates = NULL) {
 
   for (date_ in dates) {
     message(paste('=======Retrieving Venting Index from:',date_,'========'))
-    df <- GET_VENTING_ECCC0(date.start = date_)
-    df_result <- df_result %>%
-      bind_rows(df)
+
+    try({
+      df <- GET_VENTING_ECCC0(date.start = date_)
+      df_result <- df_result %>%
+        bind_rows(df)
+    })
   }
 
   return(df_result)
