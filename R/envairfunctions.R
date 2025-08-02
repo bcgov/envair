@@ -582,6 +582,9 @@ round3_old<-function(x,num_format=5.2)
 #' grabs the file and directory details of an ftp
 #' @param path.ftp the ftp path, can be a list
 GET_FTP_DETAILS <- function(path.ftp) {
+  if (0) {
+    path.ftp <- ('ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/AnnualSummary/2023/binary/')
+  }
   result_list <- lapply(path.ftp, GET_FTP_DETAILS_)  # Apply function to each element
   combined_df <- do.call(rbind, result_list)  # Combine all data frames
   return(combined_df)
@@ -596,7 +599,10 @@ GET_FTP_DETAILS_<-function(path.ftp)
 {
   if (0) {
     path.ftp <- c("ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/AnnualSummary/1980/",
-                  "ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/AnnualSummary/1981/")
+                  "ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/AnnualSummary/1981/",
+                  'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/AnnualSummary/2024/binary/')
+
+    path.ftp <- 'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/AnnualSummary/2024/binary/'
 
   }
 
@@ -604,6 +610,10 @@ GET_FTP_DETAILS_<-function(path.ftp)
   #force string to end with "/"
   path.ftp <- paste(path.ftp,'/',sep='')
   path.ftp <- gsub('\\//$','/',path.ftp)
+
+  data.filedetails <- NULL
+
+  try({
   data.filedetails<-
     data.frame(FILEALL=unlist(strsplit(x=
                                          RCurl::getURL(url=path.ftp,verbose=FALSE,
@@ -617,6 +627,9 @@ GET_FTP_DETAILS_<-function(path.ftp)
     dplyr::mutate(CREATION_TIME=as.POSIXct(strptime(CREATION_TIME,"%m-%d-%y %I:%M%p"),tz='etc/gmt+8'))%>%
     dplyr::mutate(DATE=format(strptime(DATE,"%m-%d-%y"),'%Y-%m-%d'))%>%
     dplyr::mutate(TIME=format(strptime(TIME,"%I:%M%p"),'%H:%M'))
+  })
+
+  return(data.filedetails)
 }
 
 

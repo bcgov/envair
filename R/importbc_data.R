@@ -105,8 +105,8 @@ importBC_data <- function(parameter_or_station,
     clean_names = TRUE
     use_openairformat = TRUE
 
-    parameter_or_station <- 'aqhi'
-    years=NULL
+    parameter_or_station <- 'so2'
+    years=2024
     flag_TFEE = TRUE
     merge_Stations = FALSE
     clean_names = FALSE
@@ -403,11 +403,23 @@ importBC_data <- function(parameter_or_station,
 
   # -read data from temporary files, scan one at a time
   df_data <- NULL
-  for (df_file in df_datasource$TempFile) {
+  for (i in 1:nrow(df_datasource)) {
+
+    df_file <-   df_datasource$TempFile[i]
     df_ <- NULL
+
+
+
     try({
       message(paste('Reading:',df_datasource$URL[df_datasource$TempFile %in% df_file]))
-      df_ <- arrow::read_parquet(df_file)
+
+      # -read partquet if it is a binary file
+      if (grepl('.csv',df_datasource$URL[i])) {
+        df_ <- readr::read_csv(df_file)
+      } else {
+        df_ <- arrow::read_parquet(df_file)
+      }
+
 
 
       # -process individual data
