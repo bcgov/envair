@@ -725,7 +725,7 @@ GET_PARAMETER_DATA<-function(data.parameter,
 
 
       list.data<-list.data%>%
-        dplyr::mutate(DATE_PST=as.POSIXct(as.character(DATE_PST),tz='etc/GMT+8'))%>%
+        dplyr::mutate(DATE_PST=as.POSIXct(as.character(DATE_PST),tz='Etc/GMT+8'))%>%
         merge(date.padding,all.y=TRUE)%>%
         dplyr::mutate(DATE_TEMP=as.POSIXct(as.character(DATE_PST),tz='Etc/GMT+8')-3600)%>%
         dplyr::mutate(DATE=as.character(DATE_TEMP,format='%Y-%m-%d'))%>%

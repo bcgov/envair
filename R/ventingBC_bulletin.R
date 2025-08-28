@@ -37,7 +37,7 @@ ventingBC_bulletin <- function(date.start=NULL,
   #end debug
   # RUN_PACKAGE(c('lubridate','curl','dplyr'))
   if (is.null(date.start)) {
-    date.start <- as.character(format(Sys.Date(),tz='etc/GMT+2',format ='%Y-%m-%d'))
+    date.start <- as.character(format(Sys.Date(),tz='Etc/GMT+2',format ='%Y-%m-%d'))
   }
   #These are pre-defined based on intended output locations if running on DAS server
   #results are based on whether it is saving into ftp or file
@@ -800,8 +800,8 @@ GET_VENTING_ECCC0 <-function(date.start=NULL)
   #sites older than 2 days will use ENV FTP site
 
 
-  date_diff <- difftime(as.POSIXct(Sys.Date(),tz='etc/gmt+8'),
-                        as.POSIXct(date.start.entry,tz='etc/gmt+8'),units='days')
+  date_diff <- difftime(as.POSIXct(Sys.Date(),tz='Etc/GMT+8'),
+                        as.POSIXct(date.start.entry,tz='Etc/GMT+8'),units='days')
 
   if (nrow(temp.list) != 0 & date_diff<3)
   {

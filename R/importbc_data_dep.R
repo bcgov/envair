@@ -152,7 +152,7 @@ importBC_data_<-function(parameter_or_station,
   # RUN_PACKAGE(c('plyr','dplyr','RCurl','readr','lubridate','tidyr','stringi'))  #,'feather'
   if (is.null(years))
   {
-    years=as.numeric(format(Sys.Date(),tz='etc/GMT+8',format = '%Y'))
+    years=as.numeric(format(Sys.Date(),tz='Etc/GMT+8',format = '%Y'))
   }
 
   if (is.null(pad)) {
@@ -275,7 +275,7 @@ importBC_data_<-function(parameter_or_station,
 
           try({
             df_data <- readr::read_csv(list.data,col_types = readr::cols(.default = "c"))
-            df_data$DATE_PST <- lubridate::ymd_hm(df_data$DATE_PST, tz='etc/GMT+8')
+            df_data$DATE_PST <- lubridate::ymd_hm(df_data$DATE_PST, tz='Etc/GMT+8')
             cols_rawvalue <- cols_data[tolower(cols_data) %in% tolower(cols_rawvalue)][1]
             df_data <-  df_data %>%
               dplyr::mutate_(RAW_VALUE = cols_rawvalue) %>%
@@ -299,7 +299,7 @@ importBC_data_<-function(parameter_or_station,
 
         }
 
-        try(df_data$DATE_PST <- lubridate::force_tz(df_data$DATE_PST,tz='etc/GMT+8'))
+        try(df_data$DATE_PST <- lubridate::force_tz(df_data$DATE_PST,tz='Etc/GMT+8'))
         #remove DATE,TIME column if it is there
         try(
           df_data <- df_data %>%
@@ -450,7 +450,7 @@ importBC_data_<-function(parameter_or_station,
             )
 
             #process date, filter by year
-            try(data.result_$DATE_PST <- lubridate::force_tz(data.result_$DATE_PST,tz='etc/GMT+8'))
+            try(data.result_$DATE_PST <- lubridate::force_tz(data.result_$DATE_PST,tz='Etc/GMT+8'))
             try({
               data.result_$year <- lubridate::year(data.result_$DATE_PST - lubridate::hours(1))
               data.result_ <- data.result_[data.result_$year == data.year,]

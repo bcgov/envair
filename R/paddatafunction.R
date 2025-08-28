@@ -199,8 +199,8 @@ pad_data <- function(df,date_time = NULL,padby='hour' ,values = NULL,time_ending
     lst_datetime <- df %>%
       pull(date_time)
 
-    start_date <- lubridate::ymd(paste(lubridate::year(min(lst_datetime)),'-01-01',sep=''), tz='Etc/GMT+8')
-    end_date <- lubridate::ymd(paste(lubridate::year(max(lst_datetime)),'-12-31',sep=''), tz='Etc/GMT+8')
+    start_date <- lubridate::ymd(paste(lubridate::year(min(lst_datetime)),'-01-01',sep=''))
+    end_date <- lubridate::ymd(paste(lubridate::year(max(lst_datetime)),'-12-31',sep=''))
 
     df_datetime <- dplyr::tibble(!!date_time := seq.Date(from = as.Date(start_date), to=as.Date(end_date) , by='day'))
 
