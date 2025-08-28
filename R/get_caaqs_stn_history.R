@@ -252,8 +252,8 @@ add_TFEE <- function(df,station_column = NULL,date_column = NULL,param_column = 
   # Add specified columns for station, parameter, dates
   df$col_stn <- df[,station_column]
   df$col_param <- df[,param_column]
-  df$col_datetime <- lubridate::force_tz(df[,date_column],tz='etc/Gmt+8')
-  df$col_date <- as.Date(lubridate::force_tz(df[,date_column],tz='etc/Gmt+8'))
+  df$col_datetime <- lubridate::force_tz(df[,date_column],tz='Etc/GMT+8')
+  df$col_date <- as.Date(lubridate::force_tz(df[,date_column],tz='Etc/GMT+8'))
 
   #identify if date column is pure date or POSIX
   if (!all(df$col_datetime == df$col_date)) {
@@ -263,7 +263,7 @@ add_TFEE <- function(df,station_column = NULL,date_column = NULL,param_column = 
     } else {
       df$col_datetime <- df[,date_column]
     }
-    df$col_date <- as.Date(df$col_datetime, tz='etc/GMt+8')
+    df$col_date <- as.Date(df$col_datetime, tz='Etc/GMT+8')
   }
   df <- df %>%
     dplyr::mutate(index = paste(col_stn,col_param,col_date))
@@ -377,8 +377,8 @@ merge_STATIONS <- function(df,station_column = NULL,data_column = NULL,instrumen
   df$col_data <- df[,data_column]
   df$col_inst <- df[,instrument_column]
   df$col_param <- df[,param_column]
-  df$col_datetime <- lubridate::force_tz(df[,date_column],tz='etc/Gmt+8')
-  df$col_date <- as.Date(lubridate::force_tz(df[,date_column],tz='etc/Gmt+8'))
+  df$col_datetime <- lubridate::force_tz(df[,date_column],tz='Etc/GMT+8')
+  df$col_date <- as.Date(lubridate::force_tz(df[,date_column],tz='Etc/GMT+8'))
 
   df <- df %>%
     dplyr::mutate(index = paste(col_stn,col_inst))
@@ -391,7 +391,7 @@ merge_STATIONS <- function(df,station_column = NULL,data_column = NULL,instrumen
     } else {
       df$col_datetime <- df[,date_column]
     }
-    df$col_date <- as.Date(df$col_datetime, tz='etc/GMt+8')
+    df$col_date <- as.Date(df$col_datetime, tz='Etc/GMT+8')
   }
 
   df$STATION_NAME_ORIGINAL <- df$col_stn
@@ -409,10 +409,10 @@ merge_STATIONS <- function(df,station_column = NULL,data_column = NULL,instrumen
     mutate(STATION_NAME = gsub('\\s+',' ',STATION_NAME)) %>%
     dplyr::mutate(index = paste(STATION_NAME,INSTRUMENT))
 
-  try(df_stn_history$`Start Date` <- lubridate::force_tz(df_stn_history$`Start Date`,tz='etc/Gmt+8'),silent = TRUE)
-  try(df_stn_history$`End Date` <- lubridate::force_tz(df_stn_history$`End Date`,tz='etc/Gmt+8'),silent = TRUE)
-  df_stn_history$`Start Date` <-  as.Date(df_stn_history$`Start Date`, tz='etc/Gmt+8')
-  df_stn_history$`End Date` <-  as.Date(df_stn_history$`End Date`, tz='etc/Gmt+8')
+  try(df_stn_history$`Start Date` <- lubridate::force_tz(df_stn_history$`Start Date`,tz='Etc/GMT+8'),silent = TRUE)
+  try(df_stn_history$`End Date` <- lubridate::force_tz(df_stn_history$`End Date`,tz='Etc/GMT+8'),silent = TRUE)
+  df_stn_history$`Start Date` <-  as.Date(df_stn_history$`Start Date`, tz='Etc/GMT+8')
+  df_stn_history$`End Date` <-  as.Date(df_stn_history$`End Date`, tz='Etc/GMT+8')
 
   #remove stations before start dates and after end dates----
   lst_remove <- NULL   #list of row_index to remove

@@ -624,7 +624,7 @@ GET_FTP_DETAILS_<-function(path.ftp)
     tidyr::separate(FILEALL,c('DATE','TIME','INDEX','FILENAME'),sep=' +',extra='drop')%>%
     dplyr::mutate(URL=paste(path.ftp,FILENAME,sep=''))%>%
     dplyr::mutate(CREATION_TIME=paste(DATE,TIME))%>%
-    dplyr::mutate(CREATION_TIME=as.POSIXct(strptime(CREATION_TIME,"%m-%d-%y %I:%M%p"),tz='etc/gmt+8'))%>%
+    dplyr::mutate(CREATION_TIME=as.POSIXct(strptime(CREATION_TIME,"%m-%d-%y %I:%M%p"),tz='Etc/GMT+8'))%>%
     dplyr::mutate(DATE=format(strptime(DATE,"%m-%d-%y"),'%Y-%m-%d'))%>%
     dplyr::mutate(TIME=format(strptime(TIME,"%I:%M%p"),'%H:%M'))
   })
@@ -713,8 +713,8 @@ GET_PARAMETER_DATA<-function(data.parameter,
                                                  'VALID','UNVERIFIED'))
 
       #pad mising data
-      temp.date.start<-min(as.POSIXct(as.character(list.data$DATE_PST),tz='etc/GMT+8'),na.rm = TRUE)
-      temp.date.end<-max(as.POSIXct(as.character(list.data$DATE_PST),tz='etc/GMT+8'),na.rm = TRUE)
+      temp.date.start<-min(as.POSIXct(as.character(list.data$DATE_PST),tz='Etc/GMT+8'),na.rm = TRUE)
+      temp.date.end<-max(as.POSIXct(as.character(list.data$DATE_PST),tz='Etc/GMT+8'),na.rm = TRUE)
 
       date.padding<-list.data%>%
         RENAME_COLUMN(c('DATE_PST','DATE','TIME','RAW_VALUE','ROUNDED_VALUE','UNIT'))%>%
@@ -727,7 +727,7 @@ GET_PARAMETER_DATA<-function(data.parameter,
       list.data<-list.data%>%
         dplyr::mutate(DATE_PST=as.POSIXct(as.character(DATE_PST),tz='etc/GMT+8'))%>%
         merge(date.padding,all.y=TRUE)%>%
-        dplyr::mutate(DATE_TEMP=as.POSIXct(as.character(DATE_PST),tz='etc/GMT+8')-3600)%>%
+        dplyr::mutate(DATE_TEMP=as.POSIXct(as.character(DATE_PST),tz='Etc/GMT+8')-3600)%>%
         dplyr::mutate(DATE=as.character(DATE_TEMP,format='%Y-%m-%d'))%>%
         dplyr::mutate(TIME=as.character(DATE_PST,format='%H:00'))%>%
         dplyr::mutate(TIME=ifelse(TIME=='00:00','24:00',TIME))%>%
@@ -1784,7 +1784,7 @@ GET_LOCAL_Time <- function(DATE_PST, format = '%Y-%m-%d %H:%M')
   #makes sure it is character
   DATE_PST <- as.character(DATE_PST,'%Y-%m-%d %H:%M')
 
-  result <- format(ymd_hm(DATE_PST,tz='etc/gmt+8'),tz='America/Vancouver',format = format)
+  result <- format(ymd_hm(DATE_PST,tz='Etc/GMT+8'),tz='America/Vancouver',format = format)
   return(result)
 }
 
@@ -1878,7 +1878,7 @@ isit_DST <- function(datetimePST = NULL,dateoutput = FALSE)
     #    - it will use system time
     #    - system time converted to PST
     if (is.null(datetime)) {
-      datetime <- format(Sys.time(), tz='etc/gmt+8')
+      datetime <- format(Sys.time(), tz='Etc/GMT+8')
     }
 
     #check if entered value is correct format for string
@@ -1891,9 +1891,9 @@ isit_DST <- function(datetimePST = NULL,dateoutput = FALSE)
 
       #fix for those ymd_hm or ymd_hms
       suppressWarnings({
-        datetime_ <- lubridate::ymd_hms(datetime, tz='etc/gmt+8')
+        datetime_ <- lubridate::ymd_hms(datetime, tz='Etc/GMT+8')
         if (is.na(datetime_)) {
-          datetime_ <- lubridate::ymd_hm(datetime, tz='etc/gmt+8')
+          datetime_ <- lubridate::ymd_hm(datetime, tz='Etc/GMT+8')
         }
       })
       if (is.na(datetime_)) {
@@ -1907,8 +1907,8 @@ isit_DST <- function(datetimePST = NULL,dateoutput = FALSE)
     #
     datetime = format(datetime,format = '%Y-%m-%d %H:%M')
 
-    str_time_pst <- format(lubridate::ymd_hm(datetime,tz='etc/gmt+8'),'%Y-%m-%d %H:%M')
-    str_time_local <- format(format(ymd_hm(str_time_pst,tz='etc/gmt+8'),
+    str_time_pst <- format(lubridate::ymd_hm(datetime,tz='Etc/GMT+8'),'%Y-%m-%d %H:%M')
+    str_time_local <- format(format(ymd_hm(str_time_pst,tz='Etc/GMT+8'),
                                     tz='America/Vancouver','%Y-%m-%d %H:%M'))
     time_diff <- difftime(ymd_hm(str_time_local),ymd_hm(str_time_pst),units ='hours')
 
