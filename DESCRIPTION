@@ -1,7 +1,7 @@
 Type: Package
 Package: envair
 Title: BC ENV Air Quality Monitoring Data Access
-Version: 0.4.2.422
+Version: 0.5.1.100
 Authors@R: 
     c(person(given = "Jerome", 
              family = "Robles", 
@@ -14,7 +14,7 @@ Authors@R:
       person(given = "Province of British Columbia",
              role = "cph")   
     )
-Description: Retrieve air quality monitoring data from the BC Ministry of Environnment and Climate Change Public FTP
+Description: Retrieve air quality monitoring data from the BC Ministry of Environnment and Parks Public FTP
 License: Apache License (== 2.0) | file LICENSE 
 BugReports: https://github.com/bcgov/envair/issues
 Depends: 
@@ -43,6 +43,6 @@ Suggests:
      rcaaqs,
      envreportutils
 LazyData: true
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.3
 Roxygen: list(markdown = TRUE)
 Encoding: UTF-8

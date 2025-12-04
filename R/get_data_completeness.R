@@ -42,6 +42,7 @@ get_data_completeness <- function(parameter,years=NULL,groupby = NULL, merge_Sta
     source('./r/get_caaqs_stn_history.R')
     source('./r/envairfunctions.R')
     source('./r/importBC_data_avg.R')
+    source('./r/parallel_process.R')
     groupby <- NULL
   }
 
@@ -166,6 +167,25 @@ get_data_completeness <- function(parameter,years=NULL,groupby = NULL, merge_Sta
     left_join(cap_complete) %>%
     mutate(perc_days_quarter = (valid_days_quarter/total_days_quarter)*100)
 
+  # -calculate quarterly captures of valid hours
+  cap_complete <- df_complete %>%
+    mutate(year = year(date),
+           quarter = quarter(date)) %>%
+    select(date_time,year,quarter) %>% distinct() %>%
+    group_by(year,quarter) %>%
+    summarise(total_hrs_quarter = n())
+
+  cap_hrs_quarter <-  df %>%
+    filter(!is.na(raw_value)) %>%
+    mutate(year = year(date),
+           quarter = quarter(date)) %>%
+     group_by_at(c(group_var,'year','quarter')) %>%
+    summarise(valid_hrs_quarter = n()) %>%
+    left_join(cap_complete) %>%
+    mutate(perc_hrs_quarter = (valid_hrs_quarter/total_hrs_quarter)*100)
+
+
+
   # -calculate q2+q3
   cap_complete <- df_complete %>%
     mutate(year = year(date),
@@ -199,6 +219,7 @@ get_data_completeness <- function(parameter,years=NULL,groupby = NULL, merge_Sta
   resultlist[['annual_hour']] <- cap_hour
   resultlist[['annual_days']] <-cap_days
   resultlist[['quarter_days']] <-cap_days_quarter
+  resultlist[['quarter_hours']] <-cap_hrs_quarter
   resultlist[['quarter_q2+q3']] <-cap_days_q2_q3
 
   return(resultlist)
