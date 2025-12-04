@@ -72,7 +72,7 @@ get_caaqs_result <- function(parameter,years) {
     'O3','8h','perc_q2+q3 '
   )
 
-  list_metrics <- unique(aq_data$na)
+
   # -retrieve relevant info, data, and data captures info
   aq_data <- importBC_data_avg(parameter = parameter_select,years = min_yrs:max_yrs,
                                flag_TFEE = TRUE, merge_stations =  TRUE)
