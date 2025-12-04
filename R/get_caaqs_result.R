@@ -16,10 +16,10 @@
 #' @param parameter is the pollutant that will be processed, one pollutant at a time.
 #' @param years are the years that will be included in the calculation of CAAQS values
 #' @examples
-#' get_caaqs_result('pm25',years = 2017:2020)
+#' get_caaqs_metrics('pm25',years = 2017:2020)
 #'
 #' @export
-get_caaqs_result <- function(parameter,years) {
+get_caaqs_metrics <- function(parameter,years) {
   if (0) {
 
     source('./r/importbc_data.R')
@@ -30,8 +30,8 @@ get_caaqs_result <- function(parameter,years) {
     source('./r/importBC_data_avg.R')
     source('./r/get_data_completeness.R')
     source('./r/parallel_process.R')
-    parameter <- 'pm25'
-    years <- 2016:2017
+    parameter <- 'o3'
+    years <- 2020
   }
 
 
@@ -69,7 +69,7 @@ get_caaqs_result <- function(parameter,years) {
     'SO2','annual','perc_hrs_quarter',
     'SO2','1h','perc_days',
     'SO2','1h','perc_days_quarter',
-    'O3','8h','perc_q2+q3 '
+    'O3','8h','perc_q2+q3'
   )
 
 
@@ -116,16 +116,28 @@ get_caaqs_result <- function(parameter,years) {
   aq_completeness <- get_data_completeness(parameter = parameter_select,
                                            years = min_yrs:max_yrs,merge_Stations = TRUE)
 
+
+
+
   aq_completeness_summary <- aq_completeness$annual_days %>%
     bind_rows(aq_completeness$quarter_days) %>%
     bind_rows(aq_completeness$`quarter_q2+q3`) %>%
     bind_rows(aq_completeness$annual_hour) %>%
     bind_rows(aq_completeness$quarter_hours)
 
+  # -fix if instrument column is not included
+  if (!'instrument' %in%  colnames(aq_completeness_summary)) {
+    aq_completeness_summary <- aq_completeness_summary %>%
+      left_join(aq_data_wide %>% select(station_name,instrument,parameter,year) %>% unique())
+  }
+
   cols_aq_all <- colnames(aq_completeness_summary)
   cols_aq_main <- c('parameter','station_name','instrument','year','quarter')
   cols_aq_values <- cols_aq_all[!(cols_aq_all %in% cols_aq_main)]
   cols_aq_values <- cols_aq_values[grepl('perc',cols_aq_values)]
+
+
+
 
   # -assess if data completeness satisfied
   # -this means >=75% data valid, but >=60% for quarter data
@@ -138,7 +150,7 @@ get_caaqs_result <- function(parameter,years) {
     mutate(is_quarter = grepl('quarter',name,ignore.case = TRUE)) %>%
     mutate(valid = ifelse(is_quarter,(value>=60),(value>=75))) %>%
     group_by(parameter,station_name,instrument,year,name,is_quarter) %>%
-    summarise(valid_all = all(valid), count = n()) %>% # note that count =4 if all quarter is complete
+    summarise(valid_all = all(valid), count = n())  %>%# note that count =4 if all quarter is complete
     mutate(valid_all = ifelse((is_quarter & count!=4), FALSE,valid_all)) %>%
     rename(data_count_category = name) %>%
     ungroup() %>%
@@ -196,6 +208,15 @@ get_caaqs_result <- function(parameter,years) {
 
  df_result_mgmt_level <- get_management(df_result)
 
+ result <- df_result_mgmt_level %>%
+   left_join(
+     df_result %>%
+       select(parameter,station_name,tfee,year,metric,valid_flag) %>%
+       unique()
+
+   )
+
+ return(result)
 }
 
 #' Define the caaqs values
@@ -421,4 +442,25 @@ get_management <- function(df) {
 
   return(df_calculate)
 
+}
+
+#' Get Annual metrics
+#'
+#' Same as importBC_data_avg, added for simplicity and consistent
+#'
+#' @param parameter is the pollutant. Only one pollutant at a time
+#' @param years are the years where the annual value is calculated
+#'
+#' @examples
+#' get_annual_metrics('pm25',years = 2017:2020)
+#'
+#' @export
+get_annual_metrics <- function(parameter,years) {
+
+  parameter_select <- parameter
+  yrs_select <- years
+
+  df <- importBC_data_avg(parameter = parameter_select,years = yrs_select,flag_TFEE = TRUE,merge_stations = TRUE)
+
+  return(df)
 }
