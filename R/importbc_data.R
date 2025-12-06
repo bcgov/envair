@@ -105,8 +105,8 @@ importBC_data <- function(parameter_or_station,
     clean_names = TRUE
     use_openairformat = TRUE
 
-    parameter_or_station <- 'so2'
-    years=2024
+    parameter_or_station <- 'pm25'
+    years=2020
     flag_TFEE = TRUE
     merge_Stations = FALSE
     clean_names = FALSE

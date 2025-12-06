@@ -32,9 +32,9 @@
 #' @export
 get_data_completeness <- function(parameter,years=NULL,groupby = NULL, merge_Stations=FALSE,stop_at_present = TRUE) {
   if (0) {
-    parameter <- 'pm25'
+    parameter <- 'no2'
     merge_Stations=TRUE
-    years <- 2015:2016
+    years <- 2019
     stop_at_present = TRUE
     source('./r/importbc_data.R')
     source('./r/paddatafunction.R')
@@ -44,6 +44,8 @@ get_data_completeness <- function(parameter,years=NULL,groupby = NULL, merge_Sta
     source('./r/importBC_data_avg.R')
     source('./r/parallel_process.R')
     groupby <- NULL
+    parameter <- 'no2'
+    years <- 2020
   }
 
   require(dplyr)
@@ -154,7 +156,9 @@ get_data_completeness <- function(parameter,years=NULL,groupby = NULL, merge_Sta
     group_by(year,quarter) %>%
     summarise(total_days_quarter = n())
 
-  cap_days_quarter <-       df %>%
+
+
+  cap_days_quarter <- df %>%
     filter(!is.na(raw_value)) %>%
     mutate(year = year(date),
            quarter = quarter(date)) %>%
@@ -163,7 +167,17 @@ get_data_completeness <- function(parameter,years=NULL,groupby = NULL, merge_Sta
     filter(valid_hrs >= 0.75*24) %>%
     ungroup() %>%
     group_by_at(c(group_var,'year','quarter')) %>%
-    summarise(valid_days_quarter = n()) %>%
+    summarise(valid_days_quarter = n())
+
+  # -added filler for quarter
+  cap_days_quarter_fill <- cap_days_quarter %>%
+    select(any_of(c('parameter','station_name','instrument','year'))) %>%
+    unique() %>%
+    cross_join(tibble(quarter = 1:4)) %>%
+    left_join(cap_days_quarter) %>%
+    mutate(valid_days_quarter = ifelse(is.na(valid_days_quarter),0,valid_days_quarter))
+
+  cap_days_quarter <- cap_days_quarter_fill %>%
     left_join(cap_complete) %>%
     mutate(perc_days_quarter = (valid_days_quarter/total_days_quarter)*100)
 
@@ -179,8 +193,17 @@ get_data_completeness <- function(parameter,years=NULL,groupby = NULL, merge_Sta
     filter(!is.na(raw_value)) %>%
     mutate(year = year(date),
            quarter = quarter(date)) %>%
-     group_by_at(c(group_var,'year','quarter')) %>%
-    summarise(valid_hrs_quarter = n()) %>%
+    group_by_at(c(group_var,'year','quarter')) %>%
+    summarise(valid_hrs_quarter = n())
+
+  cap_hrs_quarter_fill <- cap_hrs_quarter %>%
+    select(any_of(c('parameter','station_name','instrument','year'))) %>%
+    unique() %>%
+    cross_join(tibble(quarter = 1:4)) %>%
+    left_join(cap_hrs_quarter) %>%
+    mutate(valid_hrs_quarter = ifelse(is.na(valid_hrs_quarter),0,valid_hrs_quarter))
+
+  cap_hrs_quarter <- cap_hrs_quarter_fill %>%
     left_join(cap_complete) %>%
     mutate(perc_hrs_quarter = (valid_hrs_quarter/total_hrs_quarter)*100)
 
@@ -212,6 +235,14 @@ get_data_completeness <- function(parameter,years=NULL,groupby = NULL, merge_Sta
     summarise(`q2+q3` = sum(valid_days_quarter,na.rm = TRUE)) %>%
     left_join(cap_complete) %>%
     mutate(`perc_q2+q3` = (`q2+q3`/`total_q2+q3`)*100)
+
+  # -pad/complete the values for the quarter
+
+  cap_days_quarter_fill <- cap_days_quarter %>%
+    select(any_of(c('parameter','station_name','instrument','year'))) %>%
+    unique() %>%
+    cross_join(tibble(quarter = 1:4)) %>%
+    left_join(cap_days_quarter)
 
   # -create a list of the results
   resultlist <- list()

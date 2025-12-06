@@ -30,7 +30,7 @@ get_caaqs_metrics <- function(parameter,years) {
     source('./r/importBC_data_avg.R')
     source('./r/get_data_completeness.R')
     source('./r/parallel_process.R')
-    parameter <- 'o3'
+    parameter <- 'no2'
     years <- 2020
   }
 
@@ -118,7 +118,6 @@ get_caaqs_metrics <- function(parameter,years) {
 
 
 
-
   aq_completeness_summary <- aq_completeness$annual_days %>%
     bind_rows(aq_completeness$quarter_days) %>%
     bind_rows(aq_completeness$`quarter_q2+q3`) %>%
@@ -142,81 +141,139 @@ get_caaqs_metrics <- function(parameter,years) {
   # -assess if data completeness satisfied
   # -this means >=75% data valid, but >=60% for quarter data
   # -separate the two to quarter, and non-quarter requirements
-  aq_completeness_summary_result <- ungroup(aq_completeness_summary) %>%
+  # -also has marker for valid over 50% as part of NO2, SO2 exception requirements, set as FALSE for other pollutant
+
+  ### DEBUG 20251205
+  # aq_completeness_summary_result
+  aq_valid_ <- ungroup(aq_completeness_summary) %>%
+
+    #_DEBUG
+    # filter(grepl('plaza',station_name,ignore.case = TRUE)) %>%
+
+
     select(c(cols_aq_main,cols_aq_values)) %>%
     pivot_longer(cols = cols_aq_values) %>%
-    filter(!is.na(value)) %>%
-    mutate(value = round2(value)) %>%
-    mutate(is_quarter = grepl('quarter',name,ignore.case = TRUE)) %>%
-    mutate(valid = ifelse(is_quarter,(value>=60),(value>=75))) %>%
-    group_by(parameter,station_name,instrument,year,name,is_quarter) %>%
-    summarise(valid_all = all(valid), count = n())  %>%# note that count =4 if all quarter is complete
-    mutate(valid_all = ifelse((is_quarter & count!=4), FALSE,valid_all)) %>%
-    rename(data_count_category = name) %>%
-    ungroup() %>%
-    select(-is_quarter,-count)
+    rename(data_count_category = name,
+           count = value) %>%
+    filter(!is.na(count)) %>%
+    mutate(count = round2(count)) %>%
+    mutate(is_quarter = grepl('quarter',data_count_category,ignore.case = TRUE)) %>%
+    mutate(valid_quarter = (count>=60),
+           valid_annual = (count>=75),
+           valid_over50 = ifelse(parameter %in% c('NO2','SO2'),(count>=50),FALSE)) %>%
+    left_join(df_data_requirement, by = c('parameter','data_count_category'),
+              relationship = 'many-to-many') %>%
+    filter(!is.na(metric))
 
-  #-remake the list based on the data completeness requirement
-  aq_complteness_criteria <- aq_completeness_summary_result %>%
-    select(parameter,station_name,instrument,year) %>%
-    distinct() %>%
-    left_join(df_data_requirement, by = c('parameter'),relationship = 'many-to-many') %>%
-    left_join(aq_completeness_summary_result)
+  # -evaluate if CAAQS exceeded, since this forms an exception in some cases
+  # -the CAAQS_exceeded boolean is set to FALSE for PM2.5 annual
+  aq_valid_data_ <- aq_valid_  %>%
+    #_DEBUG
+    # filter(grepl('plaza',station_name,ignore.case = TRUE)) %>%
 
-  # -combine the values
-  # -also check how many metrics data completion categories are there
-  # -all metrics have two categories except for ozone
-  # -for PM2.5, no exception on annual metric, fix added at end
-  aq_data_wide_result <- aq_data_wide %>%
-    left_join(aq_complteness_criteria,relationship = 'many-to-many') %>%
-    mutate(value_rounded = round2(value,data_precision)) %>%
-    mutate(CAAQS_exceeded = value_rounded>CAAQS_value) %>%
-    mutate(valid = ifelse((!valid_all & CAAQS_exceeded),TRUE,valid_all)) %>%
-    mutate(valid_exception = (valid != valid_all)) %>%
-    select(-valid_all) %>%
-    group_by(parameter,station_name,instrument,year,metric,tfee,value,years_averaged,data_precision ) %>%
-    summarize(valid = all(valid),valid_exception = any(valid_exception)) %>%
-    ungroup()%>%
+    left_join(aq_data_wide,by = c('parameter','station_name','instrument','year','metric'),
+              relationship = 'many-to-many') %>%
+    mutate(value_rounded = round2(value,n=data_precision)) %>%
+    mutate(CAAQS_exceeded = (value_rounded>CAAQS_value)) %>%
+    mutate(CAAQS_exceeded = ifelse((parameter == 'PM25' & metric == 'annual'),FALSE,
+                                   CAAQS_exceeded))
 
-    mutate(valid = ifelse((parameter == 'PM25' & metric == 'annual' & valid_exception),
-                          FALSE,valid))
+  # -separate evaluation of annual and of quarter
 
+  # evaluate annual
+  aq_valid_data_annual_ <- aq_valid_data_ %>%
+    filter(!is_quarter) %>%
+    mutate(valid = ifelse(valid_annual,
+                          TRUE,
+                          (CAAQS_exceeded & valid_over50)
+    )) %>%
+    mutate(valid_flag = ifelse(valid_annual,
+                               FALSE,
+                               (CAAQS_exceeded & valid_over50)
+    ))%>%
+    group_by(parameter,station_name,instrument,year,metric,tfee,data_count_category) %>%
+    summarise(valid = all(valid), valid_flag =any(valid_flag),quarter_count = n())%>%
+    ungroup()
+
+  #evaluate quarter
+
+  aq_valid_data_quarter_ <- aq_valid_data_ %>%
+    filter(is_quarter)%>%
+    mutate(valid = ifelse(valid_quarter,
+                          TRUE,
+                          (CAAQS_exceeded)
+    ))%>%
+    mutate(valid_flag = ifelse(valid_quarter,
+                               FALSE,
+                               (CAAQS_exceeded)
+    )) %>%
+    group_by(parameter,station_name,instrument,year,metric,tfee,data_count_category) %>%
+    summarise(valid = all(valid), valid_flag =any(valid_flag),quarter_count = n()) %>%
+    ungroup()
+
+  # -error stop if quarter <4
+  if (any(aq_valid_data_quarter_$quarter_count != 4)) {
+    stop('Error in quarter assessment')
+  }
+
+
+  aq_valid_result <- bind_rows(aq_valid_data_annual_,aq_valid_data_quarter_) %>%
+    group_by(parameter,station_name,instrument,year,metric,tfee) %>%
+    summarise( valid = all(valid),valid_flag = any(valid_flag)) %>%
+    mutate(valid_flag = ifelse(!valid,FALSE,valid_flag)) %>%
+    ungroup()
+
+
+  aq_wide <- left_join( aq_valid_result,aq_data_wide,relationship = 'many-to-many') %>%
+    mutate(value = ifelse(valid,value,NA)) %>%
+    mutate(value_rounded = round2(value,n=data_precision))
 
 
   # -calculate three year averaging
-  df <- aq_data_wide_result
+  df <- aq_wide %>%
+    mutate(orig_year = year)
   for (i in 1:2) {
-    df_ <- aq_data_wide_result %>%
+    df_ <- aq_wide %>%
+      mutate(orig_year = year) %>%
       mutate(year = year + i)
     df <- bind_rows(df,df_)
   }
 
-  # -extract only the relevant metric
-  # -note that this scans if the metric is based on 1 year or 3 years
-  # -and then adds necessary result
- df_result <- df %>%
-   filter(year %in% years) %>%
-   filter(valid) %>%
-   group_by(parameter,station_name,instrument,year,metric,tfee,years_averaged,data_precision ) %>%
-   mutate(value_3yr = mean(value), count =n(), valid_exception_3yr = any(valid_exception)) %>%
-   mutate(valid_3yr = (count>=2),valid_3yr_flag = (count==2)) %>%
-   mutate(metric_value = ifelse(years_averaged == 3,value_3yr,value),
-          valid = ifelse(years_averaged == 3, valid_3yr,valid),
-          valid_flag = ifelse(years_averaged == 3, valid_3yr_flag,valid_exception)) %>%
-   ungroup() %>%
-   select(parameter,station_name,instrument,year,metric,metric_value,tfee,valid,valid_flag,data_precision )
+  df_result <- df %>%
+    filter(year %in% years) %>%
+    mutate(counter = ifelse(is.na(value),0,1)) %>%
+    group_by(parameter,station_name,instrument,
+             year,metric,tfee,years_averaged,data_precision) %>%
+    mutate(value_3yr = mean(value,na.rm = TRUE), count = sum(counter)) %>%
+    mutate(valid_3yr = (count>=2),
+           valid_flag_yrs_3 = any(valid_flag),
+           valid_2of3 = (count == 2)) %>%
+    mutate(value_3yr = ifelse(valid_3yr,value_3yr,NA)) %>%
+    mutate(metric_value = ifelse(years_averaged == 3,value_3yr,value),
+           valid = ifelse(years_averaged == 3,valid_3yr,valid),
+           valid_flag = ifelse(years_averaged == 3,valid_flag_yrs_3,valid_flag),
+           valid_2of3 = ifelse(years_averaged == 3,valid_2of3,NA)
 
- df_result_mgmt_level <- get_management(df_result)
+           )%>%
+    ungroup() %>%
+    select(parameter,station_name,instrument,year,metric,
+           metric_value,tfee,valid,valid_flag,valid_2of3,data_precision,orig_year) %>%
+    filter(year == orig_year) %>%
+    distinct()
 
- result <- df_result_mgmt_level %>%
-   left_join(
-     df_result %>%
-       select(parameter,station_name,tfee,year,metric,valid_flag) %>%
-       unique()
 
-   )
+  df_result_mgmt_level <- get_management(df_result)
 
- return(result)
+
+  result <- df_result %>%
+    select(parameter,station_name,instrument,
+           tfee,year,metric,valid,valid_flag,valid_2of3) %>%
+    unique() %>%
+    left_join(df_result_mgmt_level)
+
+
+
+  return(result)
 }
 
 #' Define the caaqs values

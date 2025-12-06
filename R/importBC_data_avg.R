@@ -63,6 +63,11 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
     merge_stations <- FALSE
     flag_TFEE = FALSE
 
+    parameter = "pm25"
+    years = 2018:2024
+    flag_TFEE = TRUE
+    merge_stations =  TRUE
+
 
   }
 
@@ -454,6 +459,13 @@ importBC_data_avg0 <- function(parameter, years = NULL, averaging_type, data_thr
     merge_stations <- FALSE
     flag_tfee = FALSE
 
+
+    parameter = parameter
+    years = years
+    averaging_type = averaging_type_
+    data_threshold =data_threshold
+    flag_tfee = flag_TFEE
+    merge_stations= TRUE
   }
 
 
