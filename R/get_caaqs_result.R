@@ -31,7 +31,7 @@ get_caaqs_metrics <- function(parameter,years) {
     source('./r/get_data_completeness.R')
     source('./r/parallel_process.R')
     parameter <- 'no2'
-    years <- 2020
+    years <- 2023:2024
   }
 
 
