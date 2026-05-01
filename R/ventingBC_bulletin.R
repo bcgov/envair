@@ -1281,18 +1281,20 @@ extract_file_date <- function(filenames) {
 get_venting <- function(dates_included) {
 
   if (0) {
-    dates_included <- ymd('2014-11-19')
+    dates_included <- ymd('2020-11-19')
   }
   require(lubridate)
   require(janitor)
   require(tidyr)
   require(dplyr)
+  require(readr)
 
   yrs_include <- unique(year(dates_included))
   venting_url <- 'ftp://ftp.env.gov.bc.ca/pub/outgoing/Air/VentingBulletins/'
   venting_url_year <- paste(venting_url,yrs_include,'/',sep='')
 
   # -list the files in FTP folder
+
   df_venting_files <- NULL
   for (v_files in  venting_url_year) {
     try({
@@ -1301,8 +1303,8 @@ get_venting <- function(dates_included) {
       v_files_read <- sub(".*\\s+", "", v_files_read)
       txt_files <- v_files_read[grepl("\\.txt$", v_files_read)]
 
-      venting_files <- c(venting_files,
-                         readLines(v_files))
+      # venting_files <- c(venting_files,
+      #                    readLines(v_files))
 
       df_ <- tibble(filename = txt_files) %>%
         mutate(url = paste(v_files,filename,sep=''),
