@@ -20,8 +20,7 @@ if 'ftp' then it will save into the Open Data Portal FTP page
 if 'csv' it creates the csv file that populates the http://www.env.gov.bc.ca/epd/bcairquality/aqo/csv/VentingIndex.csv}
 }
 \description{
-This function retrieves venting data from ECCC datamart
-to generate the text bulletin
+This function retrieves venting data from BC Archive
 }
 \examples{
 ventingBC_bulletin()

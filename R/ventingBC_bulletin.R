@@ -4,8 +4,8 @@
 
 #' generate the venting index bulletin for BC env
 #'
-#' This function retrieves venting data from ECCC datamart
-#' to generate the text bulletin
+#' This function retrieves venting data from BC Archive
+#'
 #'
 #' @param date.start is the date of the venting data. if NULL, it retrieves the latest available
 #' @param savefile is the location where the file will be saved. If null it will default to locations
@@ -277,6 +277,114 @@ ventingBC_bulletin <- function(date.start=NULL,
   {
     message(paste('Venting of the date not found, only found',venting.date, 'and today is', date.start))
   }
+}
+
+
+#' Read venting file, extract information, tabulate
+#'
+#' @param url is the URL for the text bulletin
+read_venting_file <- function(url) {
+
+  if (0) {
+    url <- 'ftp://ftp.env.gov.bc.ca/pub/outgoing/Air/VentingBulletins/2020/EC_BBS_200110_Fri_January_10_20.txt'
+  }
+
+  #1. fetch data
+  txt_lines <- readLines(url, warn = FALSE)
+
+  # -retrieve venting metadata
+  venting_metadata <- read_csv('https://envistaweb.env.gov.bc.ca/aqo/files/VentingMetaData.csv',
+                               progress = FALSE,show_col_types = FALSE)
+
+  #2. Parse the bulletin date from the header
+  parse_bulletin_date <- function(lines) {
+    hdr <- paste(head(lines, 10), collapse = " ")
+    # e.g. "01-JANUARY-2022"
+    m <- regmatches(hdr,
+                    regexpr("\\d{1,2}-[A-Z]+-\\d{4}", hdr))
+    if (length(m) == 0) {
+      # -failsafe if date not found
+      m <- regmatches(hdr,
+                      regexpr("\\d{1,2}-[A-Za-z]+-\\d{4}", hdr))
+
+    }
+
+    if (length(m) == 0) return(as.Date(NA))
+    as.Date(m, format = "%d-%B-%Y")
+  }
+
+  txt_date <- parse_bulletin_date(txt_lines)
+
+  #3. Parse a single data row
+  # Returns NULL if the line is not a station row.
+  parse_row <- function(line) {
+
+    df_result <- NULL
+
+    tokens <-  strsplit(trimws(line), "\\s+")[[1]]
+
+    # A station row has exactly 3 "NN/CATEGORY" tokens
+    vi_pat  <- "^\\d+/(POOR|FAIR|GOOD)$"
+    vi_pos  <- which(grepl(vi_pat, tokens))
+
+    # note that in 2026, TODAY AM VI was removed
+    if (!length(vi_pos) %in% 2:3) return(NULL)
+
+    # if (length(tokens) < 10)  return(NULL)
+
+    vi_values <- unlist(strsplit(trimws(tokens[vi_pos]), "/"))
+
+    # -process VI data, differentiating between pre-2026 and 2026
+    # -note that in 2026, current (morning) VI was removed
+    if (length(vi_pos) == 2) {
+      # -
+      vi_values <- c(NA,NA,vi_values)
+    }
+
+    # - add name of area, consider case where name is two words
+    if (vi_pos[1]>3 & (tokens[2] != 'NA/NA') &  (tokens[3] != 'NA/NA')) {
+      area_name <- paste(tokens[1],tokens[2],tokens[3],sep='_')
+    } else if (vi_pos[1]>2 & (tokens[2] != 'NA/NA')) {
+
+      area_name <- paste(tokens[1],tokens[2],sep='_')
+    } else {
+      area_name <- tokens[1]
+    }
+
+    vi_values <- c(area_name,vi_values)
+    df_result <-data.frame(t(vi_values))
+    colnames(df_result) <- c('VENTING_INDEX_ABBREV','CURRENT_VI','CURRENT_VI_DESC',
+                             'TODAY_VI','TODAY_VI_DESC',
+                             'TOMORROW_VI','TOMORROW_VI_DESC')
+
+    return(df_result)
+
+  }
+
+  # run the parse_row line by line
+  df_rows <- NULL
+  for (i in 1:length(txt_lines)) {
+    df <- parse_row(txt_lines[i])
+    if (!is.null(df)) {
+      df_rows <- bind_rows(df_rows,df)
+    }
+  }
+
+  #-insert other details
+  df_rows$DATE_ISSUED = txt_date
+
+
+  #-reformat abbrev, replace space with underscore
+  venting_metadata$VENTING_INDEX_ABBREV <-
+    gsub(' ','_',venting_metadata$VENTING_INDEX_ABBREV)
+
+  df_rows <- left_join(df_rows,venting_metadata,by='VENTING_INDEX_ABBREV')
+  df_rows <- df_rows %>%
+    select(DATE_ISSUED,NAME,VENTING_INDEX_ABBREV,REGION,LAT,LONG,
+           CURRENT_VI,CURRENT_VI_DESC,TODAY_VI,TODAY_VI_DESC,
+           TOMORROW_VI,TOMORROW_VI_DESC)
+
+  return(df_rows)
 }
 
 
@@ -709,6 +817,7 @@ ventingBC_kml<-function(path.output=NULL,HD=TRUE,isCOVID = FALSE,fireban=NULL)
 #' GET_VENTING_ECCC(dates = seq(from = lubridate::ymd('2021-01-01'),
 #'        to = lubridate::ymd('2021-05-01'), by = 'day'))
 #'
+#' NOTE: deprecated Apr2026, ECCC no longer issue FLCN39 bulletin
 #' @export
 GET_VENTING_ECCC <- function(dates = NULL) {
 
@@ -1132,6 +1241,96 @@ get_CGNDB <- function(lat,lon,radius = 50) {
 
   readLines(srch_api)
 }
+#' Extract the date based on the filename specified in FTP
+extract_file_date <- function(filenames) {
+  # ---- Try short form first: 6-digit YYMMDD
+  short_match <- regmatches(filenames,
+                            regexpr("\\d{6}", filenames))
+  # regexpr returns "" (length 0) for non-matches; normalize to NA-aligned vector
+  short <- rep(NA_character_, length(filenames))
+  hits  <- regexpr("\\d{6}", filenames) != -1
+  short[hits] <- regmatches(filenames[hits],
+                            regexpr("\\d{6}", filenames[hits]))
+  dates <- as.Date(short, format = "%y%m%d")
+
+  # ---- Fall back to long form: Month_DD_YY
+  need_fallback <- is.na(dates)
+  if (any(need_fallback)) {
+    long_pat <- "[A-Z][a-z]+_\\d{2}_\\d{2}(?=\\.txt$)"
+    long_hits <- regexpr(long_pat, filenames[need_fallback], perl = TRUE) != -1
+    idx <- which(need_fallback)[long_hits]
+    if (length(idx) > 0) {
+      m <- regmatches(filenames[idx],
+                      regexpr(long_pat, filenames[idx], perl = TRUE))
+      dates[idx] <- as.Date(gsub("_", " ", m), format = "%B %d %y")
+    }
+  }
+
+  dates
+}
+
+
+#' get ventilation index
+#' Update: 2026-04-29
+#'
+#' retrieve data from FTP
+#' ftp://ftp.env.gov.bc.ca/pub/outgoing/Air/VentingBulletins/<yyyy>
+#' @param dates_included is the sequence of dates to include
+#'
+#' @export
+get_venting <- function(dates_included) {
+
+  if (0) {
+    dates_included <- ymd('2014-11-19')
+  }
+  require(lubridate)
+  require(janitor)
+  require(tidyr)
+  require(dplyr)
+
+  yrs_include <- unique(year(dates_included))
+  venting_url <- 'ftp://ftp.env.gov.bc.ca/pub/outgoing/Air/VentingBulletins/'
+  venting_url_year <- paste(venting_url,yrs_include,'/',sep='')
+
+  # -list the files in FTP folder
+  df_venting_files <- NULL
+  for (v_files in  venting_url_year) {
+    try({
+      v_files_read <- readLines(v_files)
+      # process files in the FTP folder
+      v_files_read <- sub(".*\\s+", "", v_files_read)
+      txt_files <- v_files_read[grepl("\\.txt$", v_files_read)]
+
+      venting_files <- c(venting_files,
+                         readLines(v_files))
+
+      df_ <- tibble(filename = txt_files) %>%
+        mutate(url = paste(v_files,filename,sep=''),
+               vi_date = extract_file_date(filename))
+
+      df_venting_files <- bind_rows(df_venting_files,df_)
+    })
+
+  }
+
+  # - specify only selected files
+  df_venting_files_select <- df_venting_files %>%
+    filter(vi_date %in% dates_included)
+
+  # -read each VI bulletin, extract data
+  df_vi <- NULL
+  for (url in df_venting_files_select$url) {
+
+    message(paste('Scanning:',url))
+    try({
+      df <- read_venting_file(url)
+      df_vi <- bind_rows(df_vi,df)
+    })
+  }
+
+  return(df_vi)
+}
+
 
 #' get_venting_monthly_summary
 #'
@@ -1145,8 +1344,8 @@ get_CGNDB <- function(lat,lon,radius = 50) {
 get_venting_summary <- function(date_from,date_to, simplified = TRUE) {
   if (0) {
     source('../envair/R/envairfunctions.R')
-    date_from <- ymd('2023-10-01')
-    date_to <- '2023-12'
+    date_from <- ymd('2020-01-01')
+    date_to <- '2020-01-10'
   }
 
   require(lubridate)
@@ -1188,7 +1387,13 @@ get_venting_summary <- function(date_from,date_to, simplified = TRUE) {
 
   dates_included <- seq.Date(from = ymd(date_from) , to =ymd(date_to), by='day')
 
-  venting_data <- GET_VENTING_ECCC(dates = dates_included)
+  # -retrieve venting data
+  venting_data <- get_venting(dates_included = dates_included)
+
+
+
+
+  # venting_data <- GET_VENTING_ECCC(dates = dates_included)
 
   venting_data <- clean_names(venting_data) %>%
     mutate(month = format((ymd(date_issued)),'%b'),
@@ -1302,12 +1507,12 @@ get_venting_summary <- function(date_from,date_to, simplified = TRUE) {
       pivot_longer(cols = cols_category) %>%
       # mutate(frac = value/TOTAL) %>%
       group_by(venting_area, month,name) %>%
-      summarise(value_avg = mean(value,na.rm = TRUE)) %>%
+      summarise(value_avg = round2(mean(value,na.rm = TRUE),n=1)) %>%
       mutate(year = 'average') %>%
       pivot_wider(names_from = name,values_from = value_avg,values_fill =0)
 
 
-    lvls_year <- c(unique(result_simplified$year),'average')
+    lvls_year <- c(sort(unique(result_simplified$year)),'average')
     result <- result_simplified %>%
       mutate(year = as.character(year)) %>%
       bind_rows(result_combined) %>%
@@ -1322,3 +1527,4 @@ get_venting_summary <- function(date_from,date_to, simplified = TRUE) {
                           c('AREA','Month','Year'))
   return(result)
 }
+

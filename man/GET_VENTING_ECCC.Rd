@@ -18,4 +18,5 @@ GET_VENTING_ECCC()
 GET_VENTING_ECCC(dates = seq(from = lubridate::ymd('2021-01-01'),
        to = lubridate::ymd('2021-05-01'), by = 'day'))
 
+NOTE: deprecated Apr2026, ECCC no longer issue FLCN39 bulletin
 }
