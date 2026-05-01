@@ -286,7 +286,7 @@ ventingBC_bulletin <- function(date.start=NULL,
 read_venting_file <- function(url) {
 
   if (0) {
-    url <- 'ftp://ftp.env.gov.bc.ca/pub/outgoing/Air/VentingBulletins/2020/EC_BBS_200110_Fri_January_10_20.txt'
+    url <- 'ftp://ftp.env.gov.bc.ca/pub/outgoing/Air/VentingBulletins/2023/EC_BBS_230108_Sun_January_08_23.txt'
   }
 
   #1. fetch data
@@ -357,6 +357,11 @@ read_venting_file <- function(url) {
                              'TODAY_VI','TODAY_VI_DESC',
                              'TOMORROW_VI','TOMORROW_VI_DESC')
 
+    # -cleanup, in cases VENTING_INDEX_ABBREV containing 10/POOR, etc
+    if (any(grepl(vi_pat,df_result$VENTING_INDEX_ABBREV))) {
+      df_result <- NULL
+
+    }
     return(df_result)
 
   }
