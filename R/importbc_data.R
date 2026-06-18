@@ -42,7 +42,25 @@ extractDateTime <- function(dateTimeString) {
 
 }
 
+#' replace space in string to underscore or space
+#' elso ensure removal of non-visible characters
+#'
+#' @param x is the string
+#' @param replace is the character that the space will be replaced to
+#' @param collapse removes double space
+space_to_underscore <- function(x, replace = '_',collapse = TRUE) {
+  # 1. Strip zero-width / invisible format chars entirely
+  #    (ZWSP, ZWNJ, ZWJ, word-joiner, BOM/ZWNBSP, soft hyphen)
+  x <- str_remove_all(x, "[\u200B\u200C\u200D\u2060\uFEFF\u00AD]")
 
+  # 2. Trim leading/trailing whitespace — incl. NBSP, narrow NBSP,
+  #    ideographic space, etc. (\s in stringr/ICU is unicode-aware)
+  x <- str_replace_all(x, "^\\s+|\\s+$", "")
+
+  # 3. Internal whitespace -> underscore
+  pat <- if (collapse) "\\s+" else "\\s"
+  str_replace_all(x, pat, replace)
+}
 
 
 #' Import Hourly BC Data from station or parameter
@@ -189,7 +207,7 @@ importBC_data <- function(parameter_or_station,
 
   #remove other options if parameter_or_station is selected
 
-  #primary data location
+  #primary data location/URL
   data_source1<-'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/AnnualSummary/'
   data_source2<-'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/Hourly_Raw_Air_Data/Year_to_Date/'
 
@@ -373,10 +391,7 @@ importBC_data <- function(parameter_or_station,
 
 
 
-
-
-
-
+  #  Retrieve the URL into a simple list
   lst_source <- df_datasource_result %>%
     pull(URL) %>%
     unique()
@@ -420,10 +435,21 @@ importBC_data <- function(parameter_or_station,
         df_ <- arrow::read_parquet(df_file)
       }
 
+      # Update: 0.5.2.100
+      # Added as update 2026-06-18
+      # replace space to underscores in instrument name
+      # try on both versions of instrument
+      suppressWarnings(suppressMessages({
+        try(df_$INSTRUMENT <- space_to_underscore(df_$INSTRUMENT,replace = '_'),silent = TRUE)
+        try(df_$instrument <- space_to_underscore(df_$instrument,replace = '_'),silent = TRUE)
+      }))
+      # fix on station name, to remove hidden characters
+      suppressWarnings(suppressMessages({
+      try(df_$STATION_NAME <- space_to_underscore(df_$STATION_NAME,replace = ' '),silent = TRUE)
+      try(df_$station_name <- space_to_underscore(df_$station_name,replace = ' '),silent = TRUE)
+      }))
 
-
-      # -process individual data
-
+      # -process individual file
       # -check if there is a "PARAMETER" or "parameter" column
       # -all values in that column to be upper case
       col_ <- colnames(df_)

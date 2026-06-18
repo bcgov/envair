@@ -55,7 +55,7 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
 
     parameter <- c('pm25')
 
-    years <- 2021
+    years <- 2025
     averaging_type <- c('annual mean 1hr','annual mean 24h')
     averaging_type = 'exceedance 25 24h'
     averaging_type = 'annual 98p 24h'
@@ -64,9 +64,11 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
     flag_TFEE = FALSE
 
     parameter = "pm25"
-    years = 2018:2024
+    years = 2023:2025
+    averaging_type =  NULL
     flag_TFEE = TRUE
     merge_stations =  TRUE
+    data_threshold = 0.75
 
 
   }
@@ -134,7 +136,6 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
   averaging_type <- gsub('average','mean',averaging_type,ignore.case = TRUE)
   averaging_type <- gsub('ave','mean',averaging_type,ignore.case = TRUE)
 
-
   # -retrieve result one averaging_type at a time
   df_result <- NULL
   for (averaging_type_ in averaging_type) {
@@ -185,7 +186,12 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
 importBC_data_avg_ <- function(df, averaging_type, data_threshold = 0.75) {
 
   if (0) {
-    df <- importBC_data('pm25',2015,clean_names = TRUE)
+    # write_csv(df,'importBC_data_avg_test_20260618.csv')
+    # df <- importBC_data('pm25',2015,clean_names = TRUE)
+    # from temporary
+
+    # BUG FIX ATTEMPT: 20260618
+    df <- read_csv('importBC_data_avg_test_20260618.csv')
     years = NULL
     averaging_type =  '24h'
     data_threshold = 0.75
@@ -441,7 +447,6 @@ importBC_data_avg_ <- function(df, averaging_type, data_threshold = 0.75) {
 #'
 #' This function is capable of compoung averaging_type (e.g., "annual 98p d1hm")
 #' But not ideal for multiple years or parameters
-#'
 importBC_data_avg0 <- function(parameter, years = NULL, averaging_type, data_threshold = 0.75,
                                flag_tfee = FALSE,merge_stations = FALSE)
 {
@@ -451,21 +456,17 @@ importBC_data_avg0 <- function(parameter, years = NULL, averaging_type, data_thr
     source('./r/paddatafunction.R')
     source('./r/get_caaqs_stn_history.R')
     source('./r/envairfunctions.R')
+
     parameter <- 'pm25'
-    parameter <- 'no2'
-    years <- 2020
-    averaging_type <- 'annual 98p 24hour'
-    data_threshold <- 0.75
-    merge_stations <- FALSE
+    years = 2024:2025
+    averaging_type <- 'annual mean 24hr'
+    data_threshold = 0.75
     flag_tfee = FALSE
+    merge_stations = FALSE
 
-
-    parameter = parameter
-    years = years
-    averaging_type = averaging_type_
-    data_threshold =data_threshold
-    flag_tfee = flag_TFEE
-    merge_stations= TRUE
+    # 2026-06-17
+    # BUG ISSUE
+    # Duplicated row when retrieving multi-years
   }
 
 
@@ -597,7 +598,8 @@ importBC_data_avg0 <- function(parameter, years = NULL, averaging_type, data_thr
   }
 
   df <- df %>%
-    select(parameter,station_name,instrument,date_pst,datetime,date,time,rounded_value,raw_value,flag_tfee)
+    select(parameter,station_name,instrument,date_pst,
+           datetime,date,time,rounded_value,raw_value,flag_tfee)
 
 
 

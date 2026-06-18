@@ -128,6 +128,29 @@ get_excel_table <- function(ExcelURL,sheet=NULL,header_row=NULL,data_row=NULL,si
 
 }
 
+#' replace space in string to underscore or space
+#' elso ensure removal of non-visible characters
+#'
+#' @param x is the string
+#' @param replace is the character that the space will be replaced to
+#' @param collapse removes double space
+space_to_underscore <- function(x, replace = '_',collapse = TRUE) {
+  # 1. Strip zero-width / invisible format chars entirely
+  #    (ZWSP, ZWNJ, ZWJ, word-joiner, BOM/ZWNBSP, soft hyphen)
+  x <- str_remove_all(x, "[\u200B\u200C\u200D\u2060\uFEFF\u00AD]")
+
+  # 2. Trim leading/trailing whitespace — incl. NBSP, narrow NBSP,
+  #    ideographic space, etc. (\s in stringr/ICU is unicode-aware)
+  x <- str_replace_all(x, "^\\s+|\\s+$", "")
+
+  # 3. Internal whitespace -> underscore
+  pat <- if (collapse) "\\s+" else "\\s"
+  str_replace_all(x, pat, replace)
+}
+
+
+
+
 #' Retrieve TFEE data
 #'
 #' This function retrieve TFEE data from the FTP
@@ -162,6 +185,10 @@ get_tfee <- function(ExcelURL = NULL) {
     dplyr::mutate(PARAMETER = gsub(' ','',PARAMETER)) %>%
     arrange(DATE)
 
+  # UPDATED: 2026-06-18
+  # added more cleanup
+  df$STATION_NAME <- space_to_underscore(df$STATION_NAME,replace =' ')
+
   return(df)
 
 }
@@ -191,6 +218,15 @@ get_station_history <- function(ExcelURL=NULL) {
     df_excel$STATION_NAME <- gsub('[^[:alnum:]]',' ',df_excel$STATION_NAME)
     df_excel$STATION_NAME <- gsub('\\s+',' ',df_excel$STATION_NAME)
   })
+
+  # Added 20260618
+  # additional check in station_name format
+  suppressWarnings(suppressMessages({
+    try(df_excel$STATION_NAME <- space_to_underscore(df_excel$STATION_NAME,replace = ' '),silent = TRUE)
+
+  }))
+
+
   return(as.data.frame(df_excel))
 
 }
@@ -331,6 +367,23 @@ merge_STATIONS <- function(df,station_column = NULL,data_column = NULL,instrumen
   cols <- colnames(df)
   df <- ungroup(df)
   df <- tibble::rowid_to_column(df,'row_index')
+
+
+  # Update: 0.5.2.100
+  # Added as update 2026-06-18
+  # replace space to underscores in instrument name
+  # try on both versions of instrument
+  suppressWarnings(suppressMessages({
+    try(df$INSTRUMENT <- space_to_underscore(df$INSTRUMENT,replace = '_'),silent = TRUE)
+    try(df$instrument <- space_to_underscore(df$instrument,replace = '_'),silent = TRUE)
+  }))
+  # fix on station name, to remove hidden characters
+  suppressWarnings(suppressMessages({
+    try(df$STATION_NAME <- space_to_underscore(df$STATION_NAME,replace = ' '),silent = TRUE)
+    try(df$station_name <- space_to_underscore(df$station_name,replace = ' '),silent = TRUE)
+  }))
+
+
 
   #find the columns if not defined
   if (is.null(station_column)) {

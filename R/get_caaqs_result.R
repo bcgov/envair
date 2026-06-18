@@ -30,8 +30,8 @@ get_caaqs_metrics <- function(parameter,years) {
     source('./r/importBC_data_avg.R')
     source('./r/get_data_completeness.R')
     source('./r/parallel_process.R')
-    parameter <- 'no2'
-    years <- 2023:2024
+    parameter <- 'pm25'
+    years <- 2025
   }
 
 
@@ -117,7 +117,7 @@ get_caaqs_metrics <- function(parameter,years) {
                                            years = min_yrs:max_yrs,merge_Stations = TRUE)
 
 
-
+  # -unpack completeness data to generate consolidated summary
   aq_completeness_summary <- aq_completeness$annual_days %>%
     bind_rows(aq_completeness$quarter_days) %>%
     bind_rows(aq_completeness$`quarter_q2+q3`) %>%
@@ -146,11 +146,6 @@ get_caaqs_metrics <- function(parameter,years) {
   ### DEBUG 20251205
   # aq_completeness_summary_result
   aq_valid_ <- ungroup(aq_completeness_summary) %>%
-
-    #_DEBUG
-    # filter(grepl('plaza',station_name,ignore.case = TRUE)) %>%
-
-
     select(c(cols_aq_main,cols_aq_values)) %>%
     pivot_longer(cols = cols_aq_values) %>%
     rename(data_count_category = name,
@@ -168,9 +163,6 @@ get_caaqs_metrics <- function(parameter,years) {
   # -evaluate if CAAQS exceeded, since this forms an exception in some cases
   # -the CAAQS_exceeded boolean is set to FALSE for PM2.5 annual
   aq_valid_data_ <- aq_valid_  %>%
-    #_DEBUG
-    # filter(grepl('plaza',station_name,ignore.case = TRUE)) %>%
-
     left_join(aq_data_wide,by = c('parameter','station_name','instrument','year','metric'),
               relationship = 'many-to-many') %>%
     mutate(value_rounded = round2(value,n=data_precision)) %>%
@@ -284,6 +276,10 @@ get_caaqs_metrics <- function(parameter,years) {
 #'
 #' @export
 get_caaqs <- function(years = NULL) {
+
+  if (0) {
+    years <- 2025
+  }
   caaqs_history <- tribble(
     ~parameter,~metric,    ~year,  ~value,~data_precision,~years_averaged,
     'PM25',    'annual',   2015,   10,    1,              3,
