@@ -14,6 +14,6 @@ importBC_data_avg0(
 )
 }
 \description{
-This function is capable of compoung averaging_type (e.g., "annual 98p d1hm")
+This function is capable of compound averaging_type (e.g., "annual 98p d1hm")
 But not ideal for multiple years or parameters
 }
