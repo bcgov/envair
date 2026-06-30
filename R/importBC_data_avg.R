@@ -53,7 +53,7 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
     source('./r/importBC_data_avg.R')
     source('./r/parallel_process.R')
 
-    parameter <- c('pm25')
+    parameter <- c('o3')
 
     years <- 2025
     averaging_type <- c('annual mean 1hr','annual mean 24h')
@@ -63,11 +63,11 @@ importBC_data_avg <- function(parameter, years = NULL, averaging_type =  NULL, d
     merge_stations <- FALSE
     flag_TFEE = FALSE
 
-    parameter = "pm25"
+    parameter = "o3"
     years = 2023:2025
-    averaging_type =  NULL
+    averaging_type =  '8h'
     flag_TFEE = TRUE
-    merge_stations =  TRUE
+    merge_stations =  FALSE
     data_threshold = 0.75
 
 
@@ -445,7 +445,7 @@ importBC_data_avg_ <- function(df, averaging_type, data_threshold = 0.75) {
 
 #' Back end function, see importBC_data_avg for main script
 #'
-#' This function is capable of compoung averaging_type (e.g., "annual 98p d1hm")
+#' This function is capable of compound averaging_type (e.g., "annual 98p d1hm")
 #' But not ideal for multiple years or parameters
 importBC_data_avg0 <- function(parameter, years = NULL, averaging_type, data_threshold = 0.75,
                                flag_tfee = FALSE,merge_stations = FALSE)
@@ -457,14 +457,14 @@ importBC_data_avg0 <- function(parameter, years = NULL, averaging_type, data_thr
     source('./r/get_caaqs_stn_history.R')
     source('./r/envairfunctions.R')
 
-    parameter <- 'pm25'
-    years = 2024:2025
-    averaging_type <- 'annual mean 24hr'
+    parameter <- 'no2'
+    years = 2023
+    averaging_type <- 'annual 98p d1hm'
     data_threshold = 0.75
     flag_tfee = FALSE
     merge_stations = FALSE
 
-    # 2026-06-17
+    # 2026-06-17 (FIXED)
     # BUG ISSUE
     # Duplicated row when retrieving multi-years
   }
@@ -680,7 +680,7 @@ importBC_data_avg0 <- function(parameter, years = NULL, averaging_type, data_thr
 
     }
 
-    # -calculatio for percentiles
+    # -calculation for percentiles
     # -follows the procedures outlined in the CCME, which is based on ranked order
     if (grepl('p',annual_summary,ignore.case = TRUE)) {
       message('Calculating the percentiles of the year')
@@ -692,7 +692,9 @@ importBC_data_avg0 <- function(parameter, years = NULL, averaging_type, data_thr
         group_by(parameter,year,station_name,instrument,name) %>%
         filter(!is.na(value)) %>%
         arrange(desc(value)) %>%
-        dplyr::mutate(quant_idx=ceiling(n()*(1-quantile)),count=n(),index=1:n()) %>%
+        # 2026-06-30 BUG FIX for ceiling issue when value is 7.0000001
+        # Fixed when n=350, and it gives the 8th highest for 98th percentile, instead of 7
+        dplyr::mutate(quant_idx=ceiling(round2(n()*(1-quantile),n=3)),count=n(),index=1:n()) %>%
         filter(index == quant_idx) %>%
         RENAME_COLUMN(colname.orig = c('quant_idx','count','index','date','datetime','date_pst','time','flag_tfee')) %>%
 
