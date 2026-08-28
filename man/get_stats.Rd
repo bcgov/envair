@@ -2,20 +2,33 @@
 % Please edit documentation in R/get_stats.R
 \name{get_stats}
 \alias{get_stats}
-\title{Calculate the statistics for the pollutants based on CAAQS}
+\title{Calculate the CAAQS metric values for the pollutants}
 \usage{
-get_stats(param, years = NULL, add_TFEE = FALSE, merge_Stations = FALSE)
+get_stats(param, years = NULL, add_TFEE = FALSE, merge_stations = FALSE)
 }
 \arguments{
-\item{param}{is the parameter or vector of parameters.}
+\item{param}{is the parameter or vector of parameters (PM25, NO2, SO2, O3).}
+
+\item{years}{is the year or vector of years. If NULL, the current year is used.}
 
 \item{add_TFEE}{default FALSE. If TRUE, it will also calculate on data without TFEE}
 
-\item{merge_Stations}{default FALSE. If TRUE, it will combine stations as practiced in air zone reporting}
-
-\item{datetime}{is a string defining the datetime field. This field shoule be in time-ending format.}
+\item{merge_stations}{default FALSE. If TRUE, it will combine stations as practiced in air zone reporting}
+}
+\value{
+A dataframe with columns \code{station_name}, \code{parameter},
+\code{instrument} (populated only for PM25, \code{NA} otherwise), \code{year},
+\code{metric} (the CAAQS averaging period, e.g. 'annual', '24h', '1h', '8h'),
+\code{value} (the raw metric value) and \code{value_rounded} (the metric
+value rounded to the CAAQS-defined precision via \code{round2}).
 }
 \description{
+Returns a long (tidy) table with one row per station / parameter / year /
+CAAQS metric. Both the \code{raw_} (un-rounded) statistic (\code{value}) and
+the value rounded to the CAAQS-defined precision (\code{value_rounded}, using
+envair's \code{round2}) are reported.
+}
+\details{
 Note that these are based on the metrics defined by the CCME
-Guidance Document of Achievement Determination
+Guidance Document of Achievement Determination.
 }

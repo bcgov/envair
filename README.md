@@ -34,13 +34,17 @@ See the License for the specific language governing permissions and limitations 
 
 ## Overview
 
-bcgov/envair is an R package developed by the BC Ministry of Environment
-and Climate Change Strategy Knowledge Management Branch/Environmental
-and Climate Monitoring Section (ENV/KMB/ECMS) air quality monitoring
-unit. Package enables R-based retrieval and processing of [air quality
-monitoring data](https://envistaweb.env.gov.bc.ca/). Output is now
-compatible with the popular [openair
-package](https://cran.r-project.org/web/packages/openair/openair.pdf).
+bcgov/envair is an R package developed by the air quality monitoring
+unit of the BC Ministry of Environment and Climate Change Strategy,
+Knowledge Management Branch / Environmental and Climate Monitoring
+Section (ENV/KMB/ECMS). It provides R-based retrieval and processing of
+[air quality monitoring data](https://envistaweb.env.gov.bc.ca/) from
+BC's provincial monitoring network. By default the output is compatible
+with the widely used [openair
+package](https://cran.r-project.org/web/packages/openair/openair.pdf),
+and the data-processing functions follow the CCME Guidance Document on
+Achievement Determination for the Canadian Ambient Air Quality
+Standards (CAAQS).
 
 ## Installation
 
@@ -62,58 +66,69 @@ library(envair)
 
 ## Features
 
-- Retrieve data from the Air Quality Data Archive by specifying
-  parameter (pollutant) or station. Functions have the option to add
-  Transboundary Flow Exceptional Event (TFEE) flags. Data archive is
-  located in the ENV’s FTP server:
-  <ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/>
+- Retrieve hourly data from the Air Quality Data Archive by pollutant
+  (parameter) or by station, for any year from 1980 to yesterday.
+  Retrieval can optionally flag Transboundary Flow Exceptional Events
+  (TFEE) and merge relocated stations. The archive lives on ENV’s FTP
+  server: <ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/>
 
-- Generate annual metrics, data captures and statistical summaries
-  following the Guidance Document on Achievement Determination and the
-  Canadian Ambient Air Quality Standards
+- Compute averaged and rolled statistics (24-hour, rolling 8-hour, daily
+  1-hour and 8-hour maxima) and annual metrics, data captures, and
+  exceedance counts, following the CCME Guidance Document on Achievement
+  Determination and the Canadian Ambient Air Quality Standards (CAAQS).
 
-- Most of data processing functions can automatically process a
-  parameter as input, or a dataframe of air quality data.
+- Accept either a parameter name (data is fetched automatically) or an
+  existing air quality dataframe as input to most processing functions.
 
-- Retrieve archived and current ventilation index data with options to
-  generate a kml map.
+- Retrieve archived and current ventilation index data, with an option
+  to generate a KML map.
 
 ## Functions
 
-- `importBC_data()` Retrieves station or parameter data from specified
-  year/s between 1980 and yesterday.
+- `importBC_data()` Retrieves hourly station or parameter data for the
+  specified year/s (1980 to yesterday). If no year is given, the current
+  year is retrieved.
 
-  - for you can specify one or several parameters, or name of one or
-    several stations
-  - if station is specified, output returns a wide table following the
-    format of the openair package. It also renames all columns into
-    lowercase letters, changes scalar wind speed to ws, and vector wind
-    direction to wd. It also shifts the datetime to the time-beginning
-    format
-  - if parameter is specified, output displays data from all air quality
-    monitoring stations that reported this data.
-  - use *flag_TFEE = TRUE* to add a new boolean (TRUE/FALSE) column
-    called *flag_tfee*. This option only works when you enter parameter
-    (not station) in the parameter_or_station.
-  - use merge_Stations = TRUE to merge data from monitoring stations and
-    corresponding alternative stations, especially in locations where
-    the monitoring station was relocated. This function may also change
-    the name of the air quality monitoring station.
-  - set *pad = TRUE* to pad missing dates, set *use_ws_vector = TRUE* to
-    use vector wind speed instead of scalar, and set *use_openairformat
-    = FALSE* to produce the original *non-openair* output.
+  - accepts one or more parameters (e.g. `'pm25'`, `c('no2','so2')`) or
+    one or more station names. Station matching is case-insensitive and
+    matches on partial text, so `'Prince George'` returns every station
+    with that text in its name.
+  - when a station is specified, the output is a wide, openair-style
+    table: column names are lower-cased, scalar wind speed and vector
+    wind direction are renamed to *ws* and *wd*, and the timestamp is
+    shifted from time-ending to time-beginning.
+  - when a parameter is specified, the output is a long table with one
+    row per station-hour for every station that reported that pollutant.
+  - *flag_TFEE = TRUE* (the default) adds a boolean *flag_tfee* column
+    marking days verified as Transboundary Flow Exceptional Events. This
+    applies only to parameter queries.
+  - *merge_Stations = TRUE* combines a monitoring station with its
+    designated alternative station (used where a station was relocated),
+    as done in air zone reporting. This can change the reported station
+    name.
+  - *use_openairformat = FALSE* returns the original, non-openair output
+    and keeps the timestamp in time-ending format; *clean_names = TRUE*
+    forces lower-case, tidyverse-friendly column names; *pad_data =
+    TRUE* inserts rows for missing dates and fills them with `NA`.
 
-- `importBC_data_avg()` Retrieves pollutant (parameter) data and
-  performs statistical averaging based on the specified averaging_type
+- `importBC_data_avg()` Retrieves pollutant (parameter) data and reduces
+  it to the averaging or summary statistic named by *averaging_type*. It
+  accepts a parameter name or an existing `importBC_data()` dataframe,
+  and can process several parameters and years at once (one
+  *averaging_type* per call).
 
-  - function can retrieve 24-hour averages (24-hr), daily 1-hour maximum
-    (d1hm), daily 8-hour maximum (d8hm), rolling 8-hour values (8-hr)
-  - it can also make annual summaries such as 98th percentile of daily
-    1-hour maximum, annual mean of 24-hour values. To perform annual
-    summaries, the averaging_type should include “annual
-    \<averaging/percentile\> \<1-hour or 24-hour or dxhm\>”
-    - function can calculate the number of times a certain value has
-      been exceeded
+  - sub-annual statistics: 24-hour averages (`"24-hr"`), rolling 8-hour
+    values (`"8-hr"`), daily 1-hour maximum (`"d1hm"`), daily 8-hour
+    maximum (`"d8hm"`)
+  - annual summaries: pass `"annual <statistic> <averaging>"`, e.g.
+    `"annual 98p d1hm"` (98th percentile of the daily 1-hour maxima) or
+    `"annual mean 24-hr"` (annual mean of the daily values)
+  - values are excluded when they do not meet the *data_threshold*
+    data-capture requirement (0.75 by default); set *data_threshold = 0*
+    to keep all values
+    - exceedance counts: pass `"exceed <value> <averaging>"` to count how
+      many values exceed *value*; the count is rounded to the precision
+      of the number entered
 
       <table style="width:99%;">
       <caption>List of possible values for the
@@ -198,32 +213,54 @@ library(envair)
 
       List of possible values for the *averaging_type*.
 
-- `get_stats()` Retrieves a statistical summary based on the default for
-  the pollutant. Currently applies to PM2.5, O3, NO2, and SO2. Output
-  includes data captures, annual metrics, and exceedances.
+- `get_stats()` Calculates the year-by-year CAAQS metric values for a
+  specified pollutant and year/s.
 
-- `get_captures()` Calculates the data captures for a specified
-  pollutant or dataframe. Output is a long list of capture statistics
-  such as hourly, daily, quarterly, and annual sumamaries.
+  - applies to PM2.5, O3, NO2, and SO2
+  - returns a long (tidy) table with one row per station / parameter /
+    year / CAAQS metric
+  - reports both the raw (un-rounded) statistic (*value*) and the value
+    rounded to the CAAQS-defined precision (*value_rounded*)
+  - results are year-by-year statistics only, not the actual
+    (multi-year) CAAQS metrics; use `get_caaqs_metrics()` for those
 
-- `listBC_stations()` Lists details of all air quality monitoring
-  stations (active or inactive)
+- `get_caaqs_metrics()` Calculates the CAAQS (Canadian Ambient Air
+  Quality Standards) achievement results for a specified parameter and
+  year/s, following the Guidance Document on Achievement Determination.
 
-- `list_parameters()` Lists the parameters that can be imported by
-  `importBC_data()`
+  - applies to PM2.5, O3, NO2, and SO2
+  - automatically retrieves the required data, applies TFEE flagging
+    and station merging, checks data completeness/validity, and
+    applies 3-year averaging where required by the CAAQS metric
+  - output includes the calculated metric value, whether the result is
+    valid (*valid*), whether it was flagged due to an exceedance-based
+    exception (*valid_flag*), whether it is based on only 2 of 3 years
+    (*valid_2of3*), and the resulting management level (*mgmt_level*)
+
+- `get_captures()` Calculates data-capture statistics for a pollutant or
+  an air quality dataframe. Output is a tidy table of hourly, daily,
+  quarterly, and annual capture summaries (valid counts, total counts,
+  and percentages).
+
+- `listBC_stations()` Lists the details of every air quality monitoring
+  station, active or inactive. Pass a year to get the station list as it
+  stood in that year.
+
+- `list_parameters()` Returns the vector of parameter names that
+  `importBC_data()` can retrieve.
 
 - `importECCC_forecast()` Retrieves AQHI, PM2.5, PM10, O3, and NO2
-  forecasts from the ECCC datamart
+  forecasts from the ECCC datamart.
 
-- `get_venting_summary()` Summarizes the ventilation index, counting the
-  number of GOOD, FAIR, or POOR days for the month
+- `get_venting_summary()` Summarizes the ventilation index over a date
+  range, counting GOOD, FAIR, and POOR days.
 
-- `GET_VENTING_ECCC()` Retrieve the venting index FLCN39 from
-  Environment and Climate Change Canada datamart or from the B.C.’s Open
-  Data Portal
+- `GET_VENTING_ECCC()` Retrieves the venting index bulletin (FLCN39)
+  from the Environment and Climate Change Canada datamart or from the
+  B.C. Open Data Portal.
 
-- `ventingBC_kml()` Creates a kml or shape file based on the 2019 OBSCR
-  rules. This incorporates venting index and sensitivity zones.
+- `ventingBC_kml()` Creates a KML or shape file based on the 2019 OBSCR
+  rules, combining the venting index with the sensitivity zones.
 
 ## Usage and Examples
 
@@ -231,11 +268,12 @@ library(envair)
 
 ------------------------------------------------------------------------
 
-##### Retrieving air quality data, include TFEE adjustment and combine related stations
+##### Retrieving air quality data with TFEE flagging and merged stations
 
-> Use flag_TFEE = TRUE an merge_Stations = TRUE to produce a result that
-> defines the TFEE and merges station and instruments, as performed
-> during the CAAQS-reporting process.
+> Set *flag_TFEE = TRUE* and *merge_Stations = TRUE* to flag
+> Transboundary Flow Exceptional Events and merge relocated stations and
+> their instruments, matching the data preparation used in the
+> CAAQS-reporting process.
 
 ``` r
 
@@ -247,14 +285,13 @@ knitr::kable(df_data[1:4,])
 
 ##### Using *openair* package function on BC ENV data.
 
-> By default, this function produces openair-compatible dataframe
-> output. This renames *WSPD_VECT*,*WDIR_VECT* into *ws* and *wd*,
-> changes pollutant names to lower case characters (e.g.,
-> *pm25*,*no2*,*so2*), and shifts the date from time-ending to
-> time-beginning format. To use, specify station name and year/s. For a
-> list of stations, use *listBC_stations()* function. If no year is
-> specified, function retrieves latest data, typically the unverfied
-> data from start of year to current date.
+> By default, a station query returns an openair-compatible dataframe:
+> wind columns are renamed to *ws* and *wd*, pollutant names are
+> lower-cased (e.g. *pm25*, *no2*, *so2*), and timestamps are shifted
+> from time-ending to time-beginning. Specify a station name and
+> year/s; get station names from *listBC_stations()*. If no year is
+> given, the function retrieves the latest data, which is typically
+> unverified data from the start of the year to the current date.
 
 ``` r
 library(openair)
@@ -266,26 +303,27 @@ pollutionRose(PG_data,pollutant='pm25')
 
 ##### Other features for station data retrieval
 
-- To import without renaming column names, specify *use_openairformat =
-  FALSE*. This also keeps date in time-ending format
-- By default, *vector wind direction* and *scalar wind speeds* are used
-- To use vector wind speed, use *use_ws_vector = TRUE*
-- Station name is not case sensitive, and works on partial text match
-- Multiple stations can be specified *c(‘Prince George’,‘Kamloops’)*
-- For non-continuous multiple years, use *c(2010,2011:2014)*
+- *use_openairformat = FALSE* keeps the original column names and the
+  time-ending timestamp
+- wind columns come from vector wind direction and scalar wind speed
+- station names are not case sensitive and match on partial text
+- pass several stations as a vector, e.g. *c(‘Prince George’,‘Kamloops’)*
+- for non-consecutive years, use a vector, e.g. *c(2010,2011:2014)*
+- *pad_data = TRUE* fills gaps in the date sequence with `NA`
 
 ``` r
 importBC_data('Prince George Plaza 400',2010:2012,use_openairformat = FALSE)
 importBC_data('Kamloops',2015)
 importBC_data(c('Prince George','Kamloops'),c(2010,2011:2014))
-importBC_data('Trail',2015,pad = TRUE)              
+importBC_data('Trail',2015,pad_data = TRUE)
 ```
 
 ##### Retrieve parameter data
 
-> Specify parameter name to retrieve data. Note that these are very
-> large files and may use up your computer’s resources. List of
-> parameters can be found using the *list_parameters()* function.
+> Specify a parameter name to retrieve data from every station that
+> reported it. These can be very large files and may use up your
+> computer’s resources. Use *list_parameters()* for the list of
+> available parameters.
 
 ``` r
 pm25_3year <- importBC_data('PM25',2010:2012)
@@ -297,65 +335,90 @@ pm25_3year <- importBC_data('PM25',2010:2012)
 
 ##### Retrieving the annual average of daily values for multiple parameters
 
-> The function is capable of processing multiple parameters, and
-> multiple years, but it can only do one averaging type. The averaging
-> type can be a simple averaging (e.g., 24-hour, 8-hour, or combined
-> averaging (e.g., annual 98p d1hm, annual mean 24-hour). Check the
-> table above for a comprehensive list of averaging_type.
+> The function processes multiple parameters and multiple years in one
+> call, but only one *averaging_type* at a time. The *averaging_type*
+> can be a simple average (e.g. 24-hour or 8-hour) or an annual summary
+> (e.g. `annual 98p d1hm`, `annual mean 24-hr`). See the table above for
+> the full list of *averaging_type* values.
 >
 > ``` r
-> #user can specify the parameter, enter parameter name as input
+> #using a parameter name as input, the data is fetched automatically
 > annual_mean <- importBC_data_avg(c('pm25','o3'), years = 2015:2018, averaging_type = 'annual mean 24-hr')
 >
-> #or if you already have a dataframe, you can use the dataframe as input to for the statistical summary
-> df_input <- importBC_data(param = c('pm25','o3'), years = 2015:2018)
-> annual_mean <- importBC_data_avg(df_input,averaging_type = 'annual mean 24-hr')
+> #or pass a dataframe you already retrieved
+> df_input <- importBC_data(c('pm25','o3'), years = 2015:2018)
+> annual_mean <- importBC_data_avg(df_input, averaging_type = 'annual mean 24-hr')
 > ```
 
 #### `get_stats()`
 
 ------------------------------------------------------------------------
 
-##### Calculate the annual metrics of PM2.5
+##### Calculate the year-by-year CAAQS metric values
 
-> The function will calculate statistical summaries , data captures, and
-> number of exceedances based on the CAAQS metrics and values. The
-> function will only perform a year-by-year calculation so the results
-> are not the actual CAAQS metrics, but can be used to derive it. For
-> ozone, it creates Q2 + Q3
+> The function calculates the CAAQS metric value (e.g. annual mean, 98th
+> percentile, 4th-highest daily 8-hour maximum) for each station,
+> parameter, and year. It performs a year-by-year calculation only, so
+> the results are not the actual (multi-year) CAAQS metrics, but can be
+> used to derive them. Use `get_caaqs_metrics()` for the actual CAAQS
+> achievement results. Output is a long (tidy) table with both the raw
+> statistic (*value*) and the value rounded to the CAAQS-defined
+> precision (*value_rounded*).
 >
 > ``` r
-> #example retrieves stat summaries
-> stats_result <- get_stats(param = 'o3', years = 2016,add_TFEE = TRUE, merge_Stations = TRUE)
+> #example retrieves the year-by-year CAAQS metric values
+> stats_result <- get_stats(param = 'o3', years = 2016, add_TFEE = TRUE, merge_stations = TRUE)
+> ```
+
+#### `get_caaqs_metrics()`
+
+------------------------------------------------------------------------
+
+##### Calculate the CAAQS achievement results
+
+> The function retrieves the required data (applying TFEE flagging and
+> station merging), checks data completeness and validity, applies
+> 3-year averaging where the CAAQS metric requires it, and determines
+> the resulting management level for the specified parameter and
+> year/s. Unlike *get_stats()*, the results reflect the actual CAAQS
+> metric (e.g. 3-year averages), not just year-by-year statistics. The
+> output also reports whether the result is valid (*valid*), whether it
+> was flagged for an exceedance-based exception (*valid_flag*), and
+> whether it rests on only 2 of 3 years (*valid_2of3*).
+>
+> ``` r
+> #example retrieves the CAAQS achievement results
+> caaqs_result <- get_caaqs_metrics("pm25", years = 2017:2020)
 > ```
 
 #### `get_captures()`
 
 ------------------------------------------------------------------------
 
-##### Calculate the data captures of PM2.5
+##### Summarize data captures
 
-> The function will create a summary of data captures for the parameter
-> or for dataframe. You can specify the parameter or, if available, use
-> an air quality dataframe as input.
+> The function summarizes data captures (valid counts, total counts, and
+> percentages) by hour, day, quarter, and year. The input can be a
+> parameter name (data is fetched automatically) or an air quality
+> dataframe from *importBC_data()*.
 >
 > ``` r
-> #you can use the parameter as input
-> data_captures <- get_captures(param = c('pm25','o3'), years = 2015:2018,merge_Stations = TRUE)
+> #using a parameter name as input
+> data_captures <- get_captures(parameter = c('pm25','o3'), years = 2015:2018, merge_Stations = TRUE)
 >
-> #or you can use a dataframe 
-> air_data <- importBC_data(c('pm25','o3'), years = 2015:201,merge_Stations = TRUE)
-> data_captures <- get_captures(param = air_data, years = 2015:2018)
+> #or using a dataframe you already retrieved
+> air_data <- importBC_data(c('pm25','o3'), years = 2015:2018, merge_Stations = TRUE)
+> data_captures <- get_captures(parameter = air_data, years = 2015:2018)
 > ```
 
 #### `listBC_stations()`
 
 ------------------------------------------------------------------------
 
-> produces a dataframe that lists all air quality monitoring station
-> details. if year is specified, it retrieves the station details from
-> that year. Note that this entry may not be accurate since system has
-> not been in place to generate these station details.
+> Returns a dataframe of details for every air quality monitoring
+> station. Pass a year to get the station details as they stood in that
+> year. Historical entries may be incomplete, as no system has been in
+> place to track these details over time.
 
 ``` r
 listBC_stations()
@@ -373,14 +436,16 @@ listBC_stations(2016)
 
 ------------------------------------------------------------------------
 
-> produce a vector string of available parameters that can be retrieved
-> with *importBC_data()*
+> Returns a character vector of the parameters that *importBC_data()*
+> can retrieve.
 
 #### `GET_VENTING_ECCC()`
 
 ------------------------------------------------------------------------
 
-> produces a dataframe containing the recent venting index.
+> Returns a dataframe of the venting index. With no argument it
+> retrieves the most recent bulletin; pass a date or a vector of dates
+> to retrieve those days.
 
 ``` r
 GET_VENTING_ECCC()
@@ -400,8 +465,8 @@ GET_VENTING_ECCC((dates = seq(from = lubridate::ymd('2021-01-01'),
 
 ------------------------------------------------------------------------
 
-- Retrieves forecasts and model data from ECCC
-- parameters include AQHI, PM25, NO2, O3, PM10
+- Retrieves forecast and model data from the ECCC datamart
+- available parameters: AQHI, PM25, PM10, NO2, O3
 
 ``` r
 importECCC_forecast('no2')
@@ -411,9 +476,9 @@ importECCC_forecast('no2')
 
 ------------------------------------------------------------------------
 
-- creates a kml object based on the 2019 OBSCR rules
-- directory to save kml file can be specified. File will be saved in
-  that directory as *Venting_Index_HD.kml*.
+- creates a KML object based on the 2019 OBSCR rules
+- pass an output directory to save the file there as
+  *Venting_Index_HD.kml*
 
 ``` r
 ventingBC_kml()

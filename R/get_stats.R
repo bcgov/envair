@@ -21,7 +21,7 @@
 #' @param merge_Stations default FALSE. If TRUE, it will combine stations as practiced in air zone reporting
 #' @export
 #'
-get_stats <- function(param, years=NULL,add_TFEE = FALSE, merge_Stations = FALSE)
+get_stats_ <- function(param, years=NULL,add_TFEE = FALSE, merge_Stations = FALSE)
 {
   if (0) {
 
@@ -122,7 +122,7 @@ get_stats <- function(param, years=NULL,add_TFEE = FALSE, merge_Stations = FALSE
 
     # View()
     dplyr::rename(capture_type = name) %>%
-    dplyr::mutate(index=paste(PARAMETER,date_category,capture_type)) %>%
+    dplyr::mutate(index=paste(parameter,date_category,capture_type)) %>%
     filter(index %in% (
       df_captures_list %>% dplyr::mutate(index=paste(PARAMETER,date_category,capture_type)) %>% pull(index)
     )) %>%
@@ -195,3 +195,129 @@ get_stats <- function(param, years=NULL,add_TFEE = FALSE, merge_Stations = FALSE
 }
 
 
+
+#' Calculate the CAAQS metric values for the pollutants
+#'
+#' Returns a long (tidy) table with one row per station / parameter / year /
+#' CAAQS metric. Both the \code{raw_} (un-rounded) statistic (\code{value}) and
+#' the value rounded to the CAAQS-defined precision (\code{value_rounded}, using
+#' envair's \code{round2}) are reported.
+#'
+#' Note that these are based on the metrics defined by the CCME
+#' Guidance Document of Achievement Determination.
+#'
+#' @param param is the parameter or vector of parameters (PM25, NO2, SO2, O3).
+#' @param years is the year or vector of years. If NULL, the current year is used.
+#' @param add_TFEE default FALSE. If TRUE, it will also calculate on data without TFEE
+#' @param merge_stations default FALSE. If TRUE, it will combine stations as practiced in air zone reporting
+#'
+#' @return A dataframe with columns \code{station_name}, \code{parameter},
+#'   \code{instrument} (populated only for PM25, \code{NA} otherwise), \code{year},
+#'   \code{metric} (the CAAQS averaging period, e.g. 'annual', '24h', '1h', '8h'),
+#'   \code{value} (the raw metric value) and \code{value_rounded} (the metric
+#'   value rounded to the CAAQS-defined precision via \code{round2}).
+#' @export
+#'
+get_stats <- function(param, years = NULL, add_TFEE = FALSE, merge_stations = FALSE) {
+  if (0) {
+    param <- c('pm25', 'o3')
+    years <- 2024:2025
+    add_TFEE <- FALSE
+    merge_stations <- FALSE
+  }
+
+  require(dplyr)
+
+  # -lookup of CAAQS metric <-> raw statistic column for each parameter
+  df_metrics <- get_metrics(parameter = param)
+
+  # -retrieve the annual statistics, one parameter at a time
+  #  (the importBC_data_avg back-end handles a single parameter at a time)
+  # -averaging_type is left NULL so the CAAQS default statistics are used
+  df_stats <- NULL
+  for (param_ in unique(tolower(param))) {
+    df_stats <- df_stats %>%
+      dplyr::bind_rows(
+        importBC_data_avg(parameter = param_,
+                          years = years,
+                          flag_TFEE = add_TFEE,
+                          merge_stations = merge_stations)
+      )
+  }
+
+  if (is.null(df_stats) || nrow(df_stats) == 0) {
+    return(NULL)
+  }
+
+  # -keep only the identifier columns and the raw_ value columns
+  cols <- colnames(df_stats)
+  cols_raw <- cols[grepl('^raw_', cols, ignore.case = TRUE) &
+                     !grepl('tfee', cols, ignore.case = TRUE)]
+
+  df_stats <- df_stats %>%
+    dplyr::select(dplyr::any_of(c('station_name', 'parameter', 'instrument', 'year')),
+                  dplyr::all_of(cols_raw)) %>%
+    tidyr::pivot_longer(cols = dplyr::all_of(cols_raw),
+                        names_to = 'stat_form',
+                        values_to = 'value') %>%
+    dplyr::mutate(parameter = toupper(parameter),
+                  stat_form = sub('^raw_', '', stat_form, ignore.case = TRUE))
+
+  # -attach the CAAQS metric name; drop statistics that are not CAAQS metrics
+  df_stats <- df_stats %>%
+    dplyr::inner_join(df_metrics, by = c('parameter', 'stat_form')) %>%
+    # -instrument is only meaningful for PM25
+    dplyr::mutate(instrument = ifelse(toupper(parameter) == 'PM25',
+                                      instrument, NA_character_)) %>%
+    # -value_rounded applies the CAAQS-defined precision using envair's round2
+    dplyr::mutate(value_rounded = round2(value, precision)) %>%
+    dplyr::select(dplyr::any_of(c('station_name', 'parameter', 'instrument',
+                                  'year', 'metric', 'value', 'value_rounded'))) %>%
+    dplyr::arrange(station_name, parameter, metric)
+
+  return(df_stats)
+}
+
+
+
+#' List the CAAQS metrics and their statistical form for each parameter
+#'
+#' Provides the lookup between a parameter (PM25, NO2, SO2, O3), its CAAQS
+#' \code{metric} (the averaging period: '24h', '1h', '8h', or 'annual'), and the
+#' \code{stat_form} - the annual statistic used to derive that metric. The
+#' \code{stat_form} matches the \code{raw_} value column produced by
+#' \code{importBC_data_avg()} once the \code{raw_} prefix is dropped
+#' (e.g. 'mean_24h', '98p_24h', '98p_d1hm', '99p_d1hm', '4th_d8hm'). The
+#' \code{precision} column gives the number of decimal places used by
+#' \code{get_stats()} to round the metric value (via \code{round2}).
+#'
+#' @param parameter optional character vector used to filter the result. Matching
+#'   is case-insensitive. If NULL (default), all parameters are returned.
+#'
+#' @examples
+#' get_metrics()
+#' get_metrics(c("pm25", "o3"))
+#'
+#' @export
+get_metrics <- function(parameter = NULL) {
+
+  parameter_select <- parameter
+
+  df_metrics <- tidyr::tribble(
+    ~parameter, ~metric,  ~stat_form,~precision,
+    'PM25',     'annual', 'mean_24h',1,
+    'PM25',     '24h',    '98p_24h',0,
+    'NO2',      'annual', 'mean_1hr',1,
+    'NO2',      '1h',     '98p_d1hm',0,
+    'SO2',      'annual', 'mean_1hr',1,
+    'SO2',      '1h',     '99p_d1hm',0,
+    'O3',       '8h',     '4th_d8hm',0
+  )
+
+  if (!is.null(parameter_select)) {
+    df_metrics <- df_metrics %>%
+      dplyr::filter(toupper(parameter) %in% toupper(parameter_select))
+  }
+
+  return(df_metrics)
+}

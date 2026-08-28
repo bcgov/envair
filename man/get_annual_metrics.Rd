@@ -15,6 +15,6 @@ get_annual_metrics(parameter, years)
 Same as importBC_data_avg, added for simplicity and consistent
 }
 \examples{
-get_annual_metrics('pm25',years = 2017:2020)
+get_annual_metrics("pm25", years = 2017:2020)
 
 }

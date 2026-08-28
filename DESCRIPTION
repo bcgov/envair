@@ -1,7 +1,7 @@
 Type: Package
 Package: envair
 Title: BC ENV Air Quality Monitoring Data Access
-Version: 0.5.2.200
+Version: 0.5.2.300
 Authors@R: 
     c(person(given = "Jerome", 
              family = "Robles", 
@@ -46,3 +46,4 @@ LazyData: true
 Roxygen: list(markdown = TRUE)
 Encoding: UTF-8
 Config/roxygen2/version: 8.0.0
+RoxygenNote: 7.3.3

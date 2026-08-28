@@ -15,6 +15,6 @@ get_caaqs_metrics(parameter, years)
 Calculates the CAAQS values for a particular year and parameter
 }
 \examples{
-get_caaqs_metrics('pm25',years = 2017:2020)
+get_caaqs_metrics("pm25", years = 2017:2020)
 
 }
