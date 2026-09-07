@@ -124,7 +124,7 @@ importBC_data <- function(parameter_or_station,
     use_openairformat = TRUE
 
     parameter_or_station <- 'pm25'
-    years=2020
+    years=2021
     flag_TFEE = TRUE
     merge_Stations = FALSE
     clean_names = FALSE
@@ -136,13 +136,13 @@ importBC_data <- function(parameter_or_station,
     # use_openairformat = FALSE
   }
 
-  library(lubridate)
-  library(dplyr)
-  library(tibble)
-  library(arrow)
-  library(janitor)
-  library(stringr)
-  library(parallel)
+  require(lubridate)
+  require(dplyr)
+  require(tibble)
+  require(arrow)
+  require(janitor)
+  require(stringr)
+  require(parallel)
 
 
   parameter_or_station <- tolower(parameter_or_station)
@@ -637,7 +637,8 @@ importBC_data <- function(parameter_or_station,
     df_tfee <- get_tfee() %>%
       select(PARAMETER,STATION_NAME,DATE) %>%
       mutate(DATE = as.Date(DATE)) %>%
-      mutate(flag_tfee  = TRUE)
+      mutate(flag_tfee  = TRUE) %>%
+      distinct()
 
 
     df_data <- df_data %>%
