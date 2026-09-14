@@ -4,9 +4,11 @@
 \alias{get_station_history}
 \title{Retrieve station history for CAAQS-reporting}
 \usage{
-get_station_history(ExcelURL = NULL)
+get_station_history(history_type = NULL, ExcelURL = NULL)
 }
 \arguments{
+\item{history_type}{is either 'instrument' or 'station', idenfitied history of either pm25 instrument changes or station merge. NULL for legacy values}
+
 \item{ExcelURL}{is the complete URL of the excel file containing station history data
 leave NULL to use known location of FTP at 'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/BC_CAAQS_station_history.xlsx'}
 }

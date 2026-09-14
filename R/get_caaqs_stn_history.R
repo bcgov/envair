@@ -198,20 +198,32 @@ get_tfee <- function(ExcelURL = NULL) {
 #' This function retrieves station and instrument history for CAAQS-reporting purposes
 #' The output is a dataframe showing the station and instrument start and end dates, and merged name
 #'
+#' @param history_type is either 'instrument' or 'station', idenfitied history of either pm25 instrument changes or station merge. NULL for legacy values
 #' @param ExcelURL is the complete URL of the excel file containing station history data
 #' leave NULL to use known location of FTP at 'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/BC_CAAQS_station_history.xlsx'
 #' @export
-get_station_history <- function(ExcelURL=NULL) {
+get_station_history <- function(history_type = NULL, ExcelURL=NULL) {
   if (0) {
     ExcelURL <- NULL
+    history_type <- 'STATION'
   }
 
   if (is.null(ExcelURL)) {
     ExcelURL <- 'ftp://ftp.env.gov.bc.ca/pub/outgoing/AIR/CAAQS/BC_CAAQS_station_history.xlsx'
   }
 
+  df_excel <- NULL
+  if (is.null(history_type)) {
+    suppressWarnings(suppressMessages(df_excel <- get_excel_table(ExcelURL,sheet = 'Data Merge',silent=TRUE)))
+  } else {
 
-  suppressWarnings(suppressMessages(df_excel <- get_excel_table(ExcelURL,sheet = 'Data Merge',silent=TRUE)))
+    if (tolower(history_type) == 'station') {
+      suppressWarnings(suppressMessages(df_excel <- get_excel_table(ExcelURL,sheet = 'Station Merge',silent=TRUE)))
+    }
+    if (tolower(history_type) == 'instrument') {
+      suppressWarnings(suppressMessages(df_excel <- get_excel_table(ExcelURL,sheet = 'Instrument Merge',silent=TRUE)))
+    }
+  }
 
   # -remove hidden space characters
   try({
