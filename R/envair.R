@@ -28,7 +28,6 @@
 #'    }
 #'
 #' @import dplyr
-#' @importFrom tidyr replace_na
 #'
 #' @docType package
 #' @name envair

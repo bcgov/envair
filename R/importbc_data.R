@@ -868,6 +868,8 @@ importBC_data <- function(parameter_or_station,
 
 #' CHeck the history of station and instruments
 #' and updated the data
+#'
+#' @importFrom tidyr replace_na
 process_data_history <- function(df_data) {
 
   if (0) {
