@@ -676,6 +676,7 @@ importBC_data <- function(parameter_or_station,
 
   #### select correct columns------
   cols_select <- unique(c('PARAMETER','DATE_PST','DATE','TIME','STATION_NAME','STATION_NAME_FULL','INSTRUMENT',
+                          'STATION_NAME_OLD','INSTRUMENT_OLD',
                           'RAW_VALUE','ROUNDED_VALUE','VALIDATION_STATUS','flag_tfee',cols_nonaqhi))
   df_data <-   df_data %>%
     select(any_of(cols_select))
@@ -781,6 +782,7 @@ importBC_data <- function(parameter_or_station,
                  value = raw_value) %>%
           COLUMN_REORDER(c('parameter','date_time','date_pst','date','time','site','instrument','value'))
 
+        # note: station_name_old/instrument_old are not kept in openair (wide) format; use use_openairformat = FALSE
         df_data <- df_data %>%
           select(parameter,date_time,site,parameter,value) %>%
           filter(!is.na(value)) %>%
@@ -931,7 +933,7 @@ process_data_history <- function(df_data) {
     inner_join(inst_history_clean, by = c("STATION_NAME","INSTRUMENT"), relationship = "many-to-many") |>
     filter(DATE >= start_date, DATE < end_date) |>
     group_by(new_instrument, PARAMETER, STATION_NAME, DATE_PST) |>
-    arrange(index_inst_age) |>
+    arrange(is.na(RAW_VALUE), index_inst_age) |>   # prefer non-NA values, then instrument priority
     slice(1) |>
     ungroup() |>
     rename(INSTRUMENT_OLD = INSTRUMENT) |>
@@ -982,7 +984,7 @@ process_data_history <- function(df_data) {
     inner_join(stn_history_clean, by = "STATION_NAME", relationship = "many-to-many") |>
     filter(DATE >= start_date, DATE < end_date) |>
     group_by(new_name,PARAMETER,DATE_PST) |>
-    arrange(index_age) |>
+    arrange(is.na(RAW_VALUE), start_date, index_age) |>   # prefer non-NA values, then earliest history start_date, then station age
     slice(1) |>
     ungroup() |>
     rename(STATION_NAME_OLD = STATION_NAME) |>
