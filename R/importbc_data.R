@@ -124,7 +124,7 @@ importBC_data <- function(parameter_or_station,
     use_openairformat = TRUE
 
     parameter_or_station <- 'pm25'
-    years=2021
+    years=2023:2025
     flag_TFEE = TRUE
     merge_Stations = FALSE
     clean_names = FALSE
@@ -143,7 +143,7 @@ importBC_data <- function(parameter_or_station,
   require(janitor)
   require(stringr)
   require(parallel)
-
+  require(tidyr)
 
   parameter_or_station <- tolower(parameter_or_station)
 
@@ -445,8 +445,8 @@ importBC_data <- function(parameter_or_station,
       }))
       # fix on station name, to remove hidden characters
       suppressWarnings(suppressMessages({
-      try(df_$STATION_NAME <- space_to_underscore(df_$STATION_NAME,replace = ' '),silent = TRUE)
-      try(df_$station_name <- space_to_underscore(df_$station_name,replace = ' '),silent = TRUE)
+        try(df_$STATION_NAME <- space_to_underscore(df_$STATION_NAME,replace = ' '),silent = TRUE)
+        try(df_$station_name <- space_to_underscore(df_$station_name,replace = ' '),silent = TRUE)
       }))
 
       # -process individual file
@@ -542,6 +542,12 @@ importBC_data <- function(parameter_or_station,
   file.remove(removelist)
   # END OF DOWNLOAD and RETRIEVE
 
+  # DEBUG 20260921
+  if (0) {
+    df_data_backup <- df_data
+    df_data <- df_data %>%
+      filter(grepl('Agassiz',STATION_NAME))
+  }
   # PROCESS DATA------
 
   ##   for aqhi data-----
@@ -647,80 +653,14 @@ importBC_data <- function(parameter_or_station,
 
   }
 
-  #### merging stations/instruments-------
+
+  # if merge stations is TRUE
+  # it merges in both station and instruments
+  # these are for instances that instruments had relocated
   if (merge_Stations) {
-    if (0) {
-      df0 <- df_data
-    }
-    #add index to data to make reference easy
-    df_data <- ungroup(df_data) %>%
-      mutate(index = 1:n())
-
-    lst_history <- get_station_history() %>%
-      select(STATION_NAME,INSTRUMENT,`Merged Station Name`,`Merged Instrument Name`,`Start Date`,`End Date`) %>%
-      mutate(start = lubridate::date(`Start Date`),
-             end =lubridate::date(`End Date`))
-
-    #note that instrument matching only applies to PM
-    #but renaming of station names applies to all
-
-    lst_remove <- NULL  #start of indexing
-
-    # -remove station and instrument before start date
-    lst_remove_start <- lst_history %>%
-      filter(!is.na(`Start Date`))
-    for (i in 1:nrow(lst_remove_start)) {
-      index_remove <- df_data %>%
-        filter(STATION_NAME == lst_remove_start$STATION_NAME[i],
-               INSTRUMENT == lst_remove_start$INSTRUMENT[i],
-               DATE < lst_remove_start$start[i]) %>%
-        pull(index)
-
-      lst_remove <- c(lst_remove,index_remove)
-    }
-
-    # -remove station and instrument after end date
-    lst_remove_end <- lst_history %>%
-      filter(!is.na(`End Date`))
-    for (i in 1:nrow(lst_remove_end)) {
-      index_remove <- df_data %>%
-        filter(STATION_NAME == lst_remove_end$STATION_NAME[i],
-               INSTRUMENT == lst_remove_end$INSTRUMENT[i],
-               DATE >= lst_remove_end$end[i]) %>%
-        pull(index)
-
-      lst_remove <- c(lst_remove,index_remove)
-    }
-
-    # -remove from data
-    df_data <- df_data %>%
-      filter(!index %in% lst_remove) %>%
-      select(-index)
-    #change the instrument name
-    suppressMessages(
-      df_data <- df_data %>%
-        left_join(lst_history %>%
-                    select(STATION_NAME,INSTRUMENT,`Merged Station Name`,
-                           `Merged Instrument Name`)) %>%
-        mutate(INSTRUMENT_NEW = ifelse(is.na(`Merged Instrument Name`),INSTRUMENT,`Merged Instrument Name`)) %>%
-        select(-`Merged Station Name`,-`Merged Instrument Name`) %>%
-        dplyr::rename(INSTRUMENT_ORIGINAL = INSTRUMENT) %>%
-        dplyr::rename(INSTRUMENT = INSTRUMENT_NEW)
-    )
-    #change the station name
-    suppressMessages(
-      df_data <-  df_data %>%
-        left_join(lst_history %>%
-                    select(STATION_NAME,`Merged Station Name`) %>%
-                    distinct()) %>%
-        mutate(STATION_NAME_NEW = ifelse(is.na(`Merged Station Name`),STATION_NAME,`Merged Station Name`)) %>%
-        select(-`Merged Station Name`) %>%
-        dplyr::rename(STATION_NAME_ORIGINAL = STATION_NAME) %>%
-        dplyr::rename(STATION_NAME = STATION_NAME_NEW) %>%
-        COLUMN_REORDER(c('PARAMETER','DATE_PST','DATE','TIME','STATION_NAME','STATION_NAME_ORIGINAL',
-                         'INSTRUMENT','INSTRUMENT_ORIGINAL'))
-    )
+    df_data <- process_data_history(df_data)
   }
+
 
   gc()
 
@@ -923,6 +863,137 @@ importBC_data <- function(parameter_or_station,
 }
 
 
+
+#' CHeck the history of station and instruments
+#' and updated the data
+process_data_history <- function(df_data) {
+
+  if (0) {
+    df_data <- importBC_data('pm25',2023:2025,merge_Stations = FALSE)
+
+    backup <- df_data
+  }
+  #add index to data to make reference easy
+  #remove space in instrument names
+  df_data <- ungroup(df_data) |>
+    mutate(index = 1:n()) |>
+    mutate(INSTRUMENT = gsub('\\s+','_',INSTRUMENT))
+
+  # retrieve station and instrument histories
+  # some have start and end date, without that, assume simple merge
+  # on the station, rename for non-standard station name
+  # on instrument, rename to remove spaces and unwanted blank characters
+
+  #Update instrument names first before updating station names
+
+  inst_history <- get_station_history(history_type = 'instrument')
+  inst_history$INSTRUMENT <- gsub('\\s+','_',inst_history$INSTRUMENT)
+  inst_history$STATION_NAME = gsub('[^[:alnum:]]',' ',inst_history$STATION_NAME)
+  inst_history$STATION_NAME = gsub('\\s+',' ',inst_history$STATION_NAME)
+
+  # reformat and add dates replacing NA
+  inst_history_clean <- inst_history |>
+    rename(new_instrument = 'Merged Instrument Name',
+           start_date = 'Start Date',
+           end_date = 'End Date') |>
+    mutate(
+      start_date = as.Date(start_date),
+      end_date   = as.Date(end_date),
+      start_date = replace_na(start_date, as.Date("1900-01-01")),  # active since start of record
+      end_date   = replace_na(end_date, as.Date("9999-12-31"))     # still active
+
+    )
+
+
+  # -separate df_data into df_data_history and df_data_nohistory
+  df_data_history <- df_data |>
+    semi_join(inst_history_clean, by = c('STATION_NAME','INSTRUMENT'))
+
+  df_data_no_history <- df_data |>
+    anti_join(inst_history_clean, by = c('STATION_NAME','INSTRUMENT'))
+
+  # order instrument priority
+  # helps address duplicate issues
+  inst_all <- unique(inst_history_clean$INSTRUMENT)
+  inst_high <- c('BAM1020','PM25_SHARP5030','PM25_SHARP5030i') # Beta-based FEM instruments, historically used in BC
+  inst_low <- c('PM25_R&P_TEOM','API_T640','API_T640X','PM25_T640')  #optical has low priority due to issues in BC monitoring
+  inst_all_notlisted <- unique(inst_all[!inst_all %in% c(inst_high,inst_low)])
+  inst_sorted <- c(inst_high,inst_all_notlisted,inst_low)
+
+  df_data_history$index_inst_age <- match(df_data_history$INSTRUMENT,inst_sorted)
+
+
+  # filter based on history
+  # remove all outside based on start and end dates
+  # and then rename the INSTRUMENt to the new_instrument,
+  # keeping the old instrument name under INSTRUMENT_OLD
+  df_data_history <- df_data_history |>
+    inner_join(inst_history_clean, by = c("STATION_NAME","INSTRUMENT"), relationship = "many-to-many") |>
+    filter(DATE >= start_date, DATE < end_date) |>
+    group_by(new_instrument, PARAMETER, STATION_NAME, DATE_PST) |>
+    arrange(index_inst_age) |>
+    slice(1) |>
+    ungroup() |>
+    rename(INSTRUMENT_OLD = INSTRUMENT) |>
+    rename(INSTRUMENT = new_instrument) |>
+    select(-index_inst_age,-start_date,-end_date)
+
+  # merge the two data together
+  df_data <- bind_rows(df_data_no_history,df_data_history)
+
+
+  # now work on station history
+
+
+  stn_history <- get_station_history(history_type = 'station')
+  stn_history$STATION_NAME = gsub('[^[:alnum:]]',' ',stn_history$STATION_NAME)
+  stn_history$STATION_NAME = gsub('\\s+',' ',stn_history$STATION_NAME)
+
+  # reformat and add dates replacing NA
+  stn_history_clean <- stn_history |>
+    rename(new_name = 'Merged Station Name',
+           start_date = 'Station Start',
+           end_date = 'Station End') |>
+    mutate(
+      start_date = as.Date(start_date),
+      end_date   = as.Date(end_date),
+      start_date = replace_na(start_date, as.Date("1900-01-01")),  # active since start of record
+      end_date   = replace_na(end_date, as.Date("9999-12-31"))     # still active
+    )
+
+  # -separate df_data into df_data_history and df_data_nohistory
+  df_data_history <- df_data |>
+    semi_join(stn_history, by = c('STATION_NAME'))
+
+  df_data_no_history <- df_data |>
+    anti_join(stn_history, by = c('STATION_NAME'))
+
+  # add station age, prioritize older statoins if duplicate exists
+  stn_age <- df_data_history |>
+    arrange(DATE_PST) |>
+    pull(STATION_NAME) |>
+    unique()
+
+  df_data_history$index_age <- match(df_data_history$STATION_NAME,stn_age)
+
+
+
+  df_data_history <- df_data_history |>
+    inner_join(stn_history_clean, by = "STATION_NAME", relationship = "many-to-many") |>
+    filter(DATE >= start_date, DATE < end_date) |>
+    group_by(new_name,PARAMETER,DATE_PST) |>
+    arrange(index_age) |>
+    slice(1) |>
+    ungroup() |>
+    rename(STATION_NAME_OLD = STATION_NAME) |>
+    rename(STATION_NAME = new_name) |>
+    select(-index_age,-start_date,-end_date)
+
+
+  # merge the two data together
+  df_data <- bind_rows(df_data_no_history,df_data_history)
+  return(df_data)
+}
 
 
 
